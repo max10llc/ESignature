@@ -1,0 +1,295 @@
+<apex:page controller="PDFESignaturePageController" action="{!initializePage}" showHeader="false" sidebar="false" standardStylesheets="false" docType="html-5.0" applyHtmlTag="false" applyBodyTag="false">
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Electronic Signature</title>
+    <script src="{!URLFOR($Resource.PDFESign_PdfJs, 'pdf.min.js')}"></script>
+    <style>
+        body { margin:0; font-family:Arial, sans-serif; background:#f3f4f6; color:#111827; }
+        .wrap { max-width:1100px; margin:0 auto; padding:24px; }
+        .card { background:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.08); padding:24px; margin-bottom:18px; }
+        h1 { margin:0 0 8px; font-size:28px; }
+        h2 { margin:0 0 12px; font-size:21px; }
+        label { display:block; font-weight:700; margin:14px 0 6px; }
+        input[type=text], input[type=email], textarea { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-size:15px; }
+        .btn { background:#1e51a4; color:#fff; border:0; border-radius:8px; padding:11px 18px; font-weight:700; cursor:pointer; margin-top:14px; }
+        .btn.secondary { background:#6b7280; }
+        .btn.danger { background:#b91c1c; }
+        .fineprint { color:#4b5563; font-size:13px; line-height:1.45; }
+        .msg { border-radius:8px; padding:12px 14px; margin:12px 0; background:#ecfdf5; color:#065f46; }
+        .msg.err { background:#fef2f2; color:#991b1b; }
+        .required-marker { color:#c23934; font-weight:bold; }
+        .pdf-tools { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 10px 0 14px; }
+        .prepared-doc { border:1px solid #d1d5db; border-radius:8px; background:#e8edf5; padding:16px; max-height:780px; overflow:auto; }
+        .pdf-page { position:relative; margin:0 auto 18px auto; background:#fff; box-shadow:0 3px 14px rgba(15,23,42,.18); width:fit-content; }
+        .pdf-page canvas { display:block; }
+        .page-label { position:absolute; top:8px; left:8px; background:rgba(17,24,39,.72); color:#fff; font-size:12px; border-radius:999px; padding:3px 8px; z-index:3; }
+        .field-layer { position:absolute; inset:0; z-index:5; }
+        .prepared-field { position:absolute; box-sizing:border-box; border:2px solid #1e51a4; background:rgba(219,234,254,.90); color:#0f172a; border-radius:4px; padding:3px 6px; font-size:12px; font-weight:700; cursor:pointer; overflow:hidden; text-align:left; }
+        .prepared-field.required { border-color:#c23934; }
+        .prepared-field.completed { border-color:#188038; background:rgba(220,252,231,.92); }
+        .prepared-field .field-label { opacity:.78; display:block; font-size:10px; line-height:11px; }
+        .prepared-field .field-value { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .signature-methods { margin:14px 0; padding:14px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; }
+        .signature-methods label { display:inline-flex; align-items:center; gap:6px; margin-right:18px; font-weight:700; }
+        .signature-pad-wrap { border:1px solid #cbd5e1; border-radius:8px; background:#fff; padding:10px; }
+        #signaturePad { width:100%; height:180px; border:1px dashed #94a3b8; border-radius:6px; background:#fff; touch-action:none; display:block; }
+        .errors { color:#991b1b; background:#fef2f2; border-radius:8px; padding:8px 12px; margin: 12px 0; }
+    </style>
+</head>
+<body>
+<apex:form id="form">
+    <apex:inputHidden value="{!signatureImageDataUrl}" id="signatureImageDataUrl" />
+    <apex:inputHidden value="{!signerFieldsJson}" id="signerFieldsJson" />
+    <div class="wrap">
+        <div class="card">
+            <h1>Electronic Signature</h1>
+            <h2>{!documentTitle}</h2>
+            <apex:outputPanel rendered="{!envelope != null}">
+                <p>Signer: <strong>{!envelope.Signer_Name__c}</strong> ({!envelope.Signer_Email__c})</p>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!hasError}">
+                <div class="msg err">{!pageMessage}</div>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!submitted}">
+                <div class="msg">{!pageMessage}</div>
+            </apex:outputPanel>
+        </div>
+
+        <apex:pageMessages />
+
+        <apex:outputPanel rendered="{!canSign}">
+            <div class="card">
+                <h2>Step 1: Complete the Required Fields</h2>
+                <p class="fineprint">Review the document and click each highlighted field to fill it. Required fields are marked with an asterisk.</p>
+                <div class="pdf-tools">
+                    <button type="button" class="btn secondary" onclick="zoomOut();">Zoom Out</button>
+                    <span class="fineprint" id="zoomLabel">125%</span>
+                    <button type="button" class="btn secondary" onclick="zoomIn();">Zoom In</button>
+                </div>
+                <div class="prepared-doc" id="pdfContainer">
+                    <div class="fineprint">Loading document...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Step 2: Sign Electronically</h2>
+                <p class="fineprint">Your field entries, signature, IP address, browser user agent, and timestamp will be recorded.</p>
+
+                <label>Type Your Full Legal Name <span class="required-marker">*</span></label>
+                <apex:inputText value="{!typedName}" id="typedName" />
+
+                <div class="signature-methods">
+                    <p class="fineprint">Choose how you want to provide your signature image.</p>
+                    <label><input checked="checked" name="signatureMode" onclick="toggleSignatureMode();" type="radio" value="typed" /> Use Typed Name</label>
+                    <label><input name="signatureMode" onclick="toggleSignatureMode();" type="radio" value="draw" /> Draw Signature</label>
+                    <div id="typedSignaturePanel"><p class="fineprint">Your typed name will be used for signature fields.</p></div>
+                    <div id="drawSignaturePanel" style="display:none;">
+                        <label>Draw Your Signature</label>
+                        <div class="signature-pad-wrap"><canvas id="signaturePad"></canvas></div>
+                        <button type="button" class="btn secondary" onclick="clearSignaturePad();">Clear Signature</button>
+                    </div>
+                </div>
+
+                <label>Title <span class="required-marker">*</span></label>
+                <apex:inputText value="{!signerTitle}" id="signerTitle" />
+
+                <label><apex:inputCheckbox value="{!consent}" /> I agree to sign this document electronically.</label>
+                <apex:commandButton value="Sign Document" action="{!sign}" onclick="return buildSignatureAndFields();" styleClass="btn" />
+
+                <hr />
+                <h2>Decline Instead</h2>
+                <label>Reason for Declining</label>
+                <apex:inputTextarea value="{!declineReason}" rows="3" />
+                <apex:commandButton value="Decline Request" action="{!decline}" styleClass="btn danger" />
+            </div>
+        </apex:outputPanel>
+    </div>
+</apex:form>
+<script>
+var sitePrefix = '{!JSENCODE($Site.Prefix)}';
+if (!sitePrefix || sitePrefix === '/') { sitePrefix = ''; }
+var pdfToken = '{!JSENCODE(token)}';
+var pdfUrl = sitePrefix + '/services/apexrest/PDFESign/v1/pdf?t=' + encodeURIComponent(pdfToken);
+var preparedFields = JSON.parse('{!JSENCODE(fieldsJson)}');
+var zoom = 1.25;
+var pdfDocument = null;
+var signaturePadInitialized = false;
+var signaturePadIsDrawing = false;
+var signaturePadHasInk = false;
+var signaturePadCanvas;
+var signaturePadCtx;
+
+if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '{!URLFOR($Resource.PDFESign_PdfJs, 'pdf.worker.min.js')}';
+}
+
+function getTypedName() {
+    var input = document.querySelector('[id$="typedName"]');
+    return input && input.value ? input.value.trim() : '';
+}
+function getSignerTitle() {
+    var input = document.querySelector('[id$="signerTitle"]');
+    return input && input.value ? input.value.trim() : '';
+}
+function getSignatureMode() {
+    var selected = document.querySelector('input[name="signatureMode"]:checked');
+    return selected ? selected.value : 'typed';
+}
+function toggleSignatureMode() {
+    var mode = getSignatureMode();
+    document.getElementById('typedSignaturePanel').style.display = mode === 'typed' ? 'block' : 'none';
+    document.getElementById('drawSignaturePanel').style.display = mode === 'draw' ? 'block' : 'none';
+    if (mode === 'draw') { initSignaturePad(); }
+}
+function signaturePadPoint(evt) {
+    var rect = signaturePadCanvas.getBoundingClientRect();
+    var source = evt.touches && evt.touches.length ? evt.touches[0] : evt;
+    return { x: (source.clientX - rect.left) * (signaturePadCanvas.width / rect.width), y: (source.clientY - rect.top) * (signaturePadCanvas.height / rect.height) };
+}
+function signaturePadStart(evt) { evt.preventDefault(); initSignaturePad(); signaturePadIsDrawing = true; var p = signaturePadPoint(evt); signaturePadCtx.beginPath(); signaturePadCtx.moveTo(p.x, p.y); }
+function signaturePadMove(evt) { if (!signaturePadIsDrawing) { return; } evt.preventDefault(); var p = signaturePadPoint(evt); signaturePadCtx.lineTo(p.x, p.y); signaturePadCtx.stroke(); signaturePadHasInk = true; }
+function signaturePadEnd(evt) { if (evt) { evt.preventDefault(); } signaturePadIsDrawing = false; }
+function initSignaturePad() {
+    if (signaturePadInitialized) { return; }
+    signaturePadCanvas = document.getElementById('signaturePad');
+    if (!signaturePadCanvas) { return; }
+    signaturePadCanvas.width = 700;
+    signaturePadCanvas.height = 180;
+    signaturePadCtx = signaturePadCanvas.getContext('2d');
+    signaturePadCtx.lineWidth = 4;
+    signaturePadCtx.lineCap = 'round';
+    signaturePadCtx.lineJoin = 'round';
+    signaturePadCtx.strokeStyle = '#111111';
+    signaturePadCanvas.addEventListener('mousedown', signaturePadStart);
+    signaturePadCanvas.addEventListener('mousemove', signaturePadMove);
+    signaturePadCanvas.addEventListener('mouseup', signaturePadEnd);
+    signaturePadCanvas.addEventListener('mouseleave', signaturePadEnd);
+    signaturePadCanvas.addEventListener('touchstart', signaturePadStart, { passive:false });
+    signaturePadCanvas.addEventListener('touchmove', signaturePadMove, { passive:false });
+    signaturePadCanvas.addEventListener('touchend', signaturePadEnd, { passive:false });
+    signaturePadInitialized = true;
+}
+function clearSignaturePad() { initSignaturePad(); signaturePadCtx.clearRect(0,0,signaturePadCanvas.width,signaturePadCanvas.height); signaturePadHasInk = false; }
+
+function valueForField(field) {
+    var type = (field.type || '').toLowerCase();
+    var name = getTypedName();
+    var title = getSignerTitle();
+    if (type === 'signature' || type === 'name') {
+        if (!name) { alert('Type your full legal name first.'); return null; }
+        return name;
+    }
+    if (type === 'initials') {
+        if (!name) { alert('Type your full legal name first.'); return null; }
+        return name.split(/\s+/).filter(Boolean).map(function(p) { return p.charAt(0).toUpperCase(); }).join('');
+    }
+    if (type === 'title') {
+        if (!title) { alert('Enter your title first.'); return null; }
+        return title;
+    }
+    if (type === 'date') { return new Date().toLocaleDateString('en-US'); }
+    if (type === 'checkbox') { return field.value === 'X' ? '' : 'X'; }
+    var entered = window.prompt(field.label || 'Enter value', field.value || '');
+    return entered === null ? null : entered.trim();
+}
+function completeField(fieldId) {
+    for (var i = 0; i < preparedFields.length; i++) {
+        if (preparedFields[i].id === fieldId) {
+            var value = valueForField(preparedFields[i]);
+            if (value === null) { return false; }
+            preparedFields[i].value = value;
+            preparedFields[i].completed = !!value;
+            renderFieldLayer();
+            return false;
+        }
+    }
+    return false;
+}
+function renderFieldLayer() {
+    document.querySelectorAll('.prepared-field').forEach(function(el) { el.remove(); });
+    preparedFields.forEach(function(field) {
+        var layer = document.querySelector('.field-layer[data-page-number="' + field.pageNumber + '"]');
+        if (!layer) { return; }
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'prepared-field' + (field.required ? ' required' : '') + (field.value ? ' completed' : '');
+        button.style.left = ((field.xPercent || 0) * 100) + '%';
+        button.style.top = ((field.yPercent || 0) * 100) + '%';
+        button.style.width = ((field.widthPercent || 0.16) * 100) + '%';
+        button.style.height = ((field.heightPercent || 0.04) * 100) + '%';
+        button.onclick = function() { return completeField(field.id); };
+        var label = field.label || field.type || 'Field';
+        button.innerHTML = '<span class="field-label"></span><span class="field-value"></span>';
+        button.querySelector('.field-label').textContent = label + (field.required ? ' *' : '');
+        button.querySelector('.field-value').textContent = field.value || 'Click to fill';
+        layer.appendChild(button);
+    });
+}
+async function renderPdf() {
+    var container = document.getElementById('pdfContainer');
+    if (!window.pdfjsLib) {
+        container.innerHTML = '<div class="msg err">PDF viewer library did not load.</div>';
+        return;
+    }
+    container.innerHTML = '<div class="fineprint">Loading PDF...</div>';
+    pdfDocument = await pdfjsLib.getDocument(pdfUrl).promise;
+    container.innerHTML = '';
+    for (var pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
+        var page = await pdfDocument.getPage(pageNumber);
+        var viewport = page.getViewport({ scale: zoom });
+        var pageEl = document.createElement('div');
+        pageEl.className = 'pdf-page';
+        pageEl.style.width = viewport.width + 'px';
+        pageEl.style.height = viewport.height + 'px';
+        var label = document.createElement('div');
+        label.className = 'page-label';
+        label.textContent = 'Page ' + pageNumber;
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = viewport.width + 'px';
+        canvas.style.height = viewport.height + 'px';
+        var layer = document.createElement('div');
+        layer.className = 'field-layer';
+        layer.setAttribute('data-page-number', pageNumber);
+        pageEl.appendChild(canvas);
+        pageEl.appendChild(label);
+        pageEl.appendChild(layer);
+        container.appendChild(pageEl);
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+    }
+    document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+    renderFieldLayer();
+}
+function zoomIn() { zoom = Math.min(2.25, zoom + 0.1); renderPdf(); }
+function zoomOut() { zoom = Math.max(0.75, zoom - 0.1); renderPdf(); }
+function buildSignatureAndFields() {
+    var typed = getTypedName();
+    if (!typed) { alert('Type your full legal name before signing.'); return false; }
+    if (!getSignerTitle()) { alert('Enter your title before signing.'); return false; }
+    var missing = [];
+    preparedFields.forEach(function(field) {
+        if (!field.value) {
+            var autoValue = valueForField(field);
+            if (autoValue !== null) { field.value = autoValue; field.completed = !!autoValue; }
+        }
+        if (field.required && !field.value) { missing.push(field.label || field.type || 'Required field'); }
+    });
+    if (missing.length) { alert('Complete required fields before signing: ' + missing.join(', ')); renderFieldLayer(); return false; }
+    if (getSignatureMode() === 'draw') {
+        initSignaturePad();
+        if (!signaturePadHasInk) { alert('Draw your signature or choose typed signature.'); return false; }
+        document.querySelector('[id$="signatureImageDataUrl"]').value = signaturePadCanvas.toDataURL('image/png');
+    } else {
+        document.querySelector('[id$="signatureImageDataUrl"]').value = '';
+    }
+    document.querySelector('[id$="signerFieldsJson"]').value = JSON.stringify(preparedFields.map(function(field) { return { id: field.id, value: field.value || '' }; }));
+    return true;
+}
+window.addEventListener('load', function() { toggleSignatureMode(); renderPdf().catch(function(e) { document.getElementById('pdfContainer').innerHTML = '<div class="msg err">Unable to load PDF: ' + e.message + '</div>'; }); });
+</script>
+</body>
+</html>
+</apex:page>

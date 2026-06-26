@@ -1,0 +1,138 @@
+<template>
+    <lightning-card title="Prepare PDF for E-Signature" icon-name="doctype:pdf">
+        <div class="slds-p-around_medium">
+            <template if:true={loadError}>
+                <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small" role="alert">
+                    <span>{loadError}</span>
+                </div>
+            </template>
+
+            <template if:true={warningMessage}>
+                <div class="slds-notify slds-notify_alert slds-alert_warning slds-m-bottom_small" role="status">
+                    <span>{warningMessage}</span>
+                </div>
+            </template>
+
+            <template if:false={contentDocumentId}>
+                <lightning-combobox
+                    label="PDF File"
+                    value={selectedContentDocumentId}
+                    options={fileOptions}
+                    placeholder="Select a related PDF"
+                    onchange={handleFileChange}
+                    class="slds-m-bottom_small">
+                </lightning-combobox>
+            </template>
+
+            <template if:true={isLoading}>
+                <div class="loading-shell">
+                    <lightning-spinner alternative-text="Loading document" size="medium"></lightning-spinner>
+                    <div class="loading-message">{loadingMessage}</div>
+                </div>
+            </template>
+
+            <template if:false={isLoading}>
+                <template if:true={hasSelectedPdf}>
+                    <div class="toolbar slds-grid slds-wrap slds-gutters_small slds-m-bottom_small">
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12">
+                            <div class="palette" aria-label="Available fields">
+                                <template for:each={fieldTypes} for:item="fieldType">
+                                    <button
+                                        key={fieldType.value}
+                                        class="palette-button"
+                                        type="button"
+                                        draggable="true"
+                                        data-field-type={fieldType.value}
+                                        ondragstart={handlePaletteDragStart}
+                                        onclick={handlePaletteClick}>
+                                        {fieldType.label}
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12">
+                            <div class="zoom-controls">
+                                <lightning-button-icon icon-name="utility:dash" alternative-text="Zoom out" onclick={handleZoomOut}></lightning-button-icon>
+                                <span class="zoom-label">{zoomPercent}%</span>
+                                <lightning-button-icon icon-name="utility:add" alternative-text="Zoom in" onclick={handleZoomIn}></lightning-button-icon>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 actions">
+                            <lightning-button label="Delete Selected" onclick={handleDeleteSelected} disabled={noSelectedField}></lightning-button>
+                            <lightning-button class="slds-m-left_x-small" variant="brand" label="Save Draft Envelope" onclick={handleSave} disabled={isSaving}></lightning-button>
+                        </div>
+                    </div>
+
+                    <section class="field-editor slds-box slds-theme_default slds-m-bottom_small">
+                        <template if:true={selectedField}>
+                            <div class="slds-grid slds-wrap slds-gutters_small">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12">
+                                    <lightning-input label="Label" value={selectedField.label} onchange={handleSelectedLabelChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_2-of-12">
+                                    <lightning-input type="number" label="Signer" min="1" value={selectedField.signerNumber} onchange={handleSelectedSignerChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_2-of-12 required-editor">
+                                    <lightning-input type="checkbox" label="Required" checked={selectedField.required} onchange={handleSelectedRequiredChange}></lightning-input>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_5-of-12 selected-help">
+                                    <span>Drag to move. Use the lower-right handle to resize.</span>
+                                </div>
+                            </div>
+                        </template>
+                        <template if:false={selectedField}>
+                            <div class="no-field-selected">Select a field to edit it or delete it.</div>
+                        </template>
+                    </section>
+
+                    <template if:true={showClickToPlaceMessage}>
+                        <div class="slds-notify slds-notify_alert slds-alert_info slds-m-bottom_small" role="status">
+                            <span>Click the document page where you want to place the {pendingFieldTypeLabel} field.</span>
+                        </div>
+                    </template>
+
+                    <div class="document-shell" style={documentShellStyle}>
+                        <template for:each={pagesWithFields} for:item="page">
+                            <section
+                                key={page.pageNumber}
+                                class="page-shell"
+                                data-page-number={page.pageNumber}
+                                ondragover={handlePageDragOver}
+                                ondrop={handlePageDrop}
+                                onclick={handlePageClick}>
+                                <div class="page-label">Page {page.pageNumber}</div>
+                                <img
+                                    src={page.renditionUrl}
+                                    class="pdf-rendition"
+                                    alt={page.altText}
+                                    data-page-number={page.pageNumber}
+                                    onload={handleRenditionLoad}
+                                    onerror={handleRenditionError}
+                                />
+                                <div class="field-layer">
+                                    <template for:each={page.fields} for:item="field">
+                                        <div
+                                            key={field.clientId}
+                                            class={field.className}
+                                            style={field.style}
+                                            data-client-id={field.clientId}
+                                            onpointerdown={handleFieldPointerDown}
+                                            onclick={handleFieldClick}>
+                                            <span class="field-text">{field.displayLabel}</span>
+                                            <span class="resize-handle" data-client-id={field.clientId} onpointerdown={handleResizePointerDown}></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </section>
+                        </template>
+                    </div>
+                </template>
+                <template if:false={hasSelectedPdf}>
+                    <div class="empty-state">Select a related PDF file to prepare fields.</div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>

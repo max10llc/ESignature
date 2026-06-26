@@ -1,0 +1,7 @@
+.DS_Store
+node_modules
+.sfdx
+.sf
+.vscode
+**/jsconfig.json
+**/.eslintrc.json

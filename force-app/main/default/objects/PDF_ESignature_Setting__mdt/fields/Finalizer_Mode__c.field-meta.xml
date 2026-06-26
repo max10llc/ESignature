@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Finalizer_Mode__c</fullName>
+    <description>Controls how Salesforce handles the finalizer response. Use PowerAutomateAsync for the Power Automate finalizer flow or Synchronous for a finalizer that returns finalPdfBase64 immediately.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Finalizer Mode</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

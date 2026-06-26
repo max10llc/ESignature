@@ -1,0 +1,48 @@
+<template>
+    <lightning-card title="Send PDF for E-Signature" icon-name="utility:email">
+        <div class="slds-p-around_medium">
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading draft envelopes" size="small"></lightning-spinner>
+            </template>
+            <template if:false={isLoading}>
+                <template if:true={errorMessage}>
+                    <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small" role="alert">
+                        <span>{errorMessage}</span>
+                    </div>
+                </template>
+
+                <div class="slds-m-bottom_small refresh-row">
+                    <lightning-button label="Refresh Drafts" onclick={handleRefresh}></lightning-button>
+                </div>
+
+                <template if:true={hasDrafts}>
+                    <lightning-combobox
+                        label="Draft Envelope"
+                        value={selectedEnvelopeId}
+                        options={envelopeOptions}
+                        onchange={handleEnvelopeChange}
+                        required>
+                    </lightning-combobox>
+                    <lightning-input label="Signer Name" value={signerName} onchange={handleSignerNameChange} required></lightning-input>
+                    <lightning-input type="email" label="Signer Email" value={signerEmail} onchange={handleSignerEmailChange} required></lightning-input>
+                    <lightning-input label="Signer Title" value={signerTitle} onchange={handleSignerTitleChange}></lightning-input>
+                    <lightning-input type="number" label="Expiration Days" min="1" max="365" value={expirationDays} onchange={handleExpirationChange}></lightning-input>
+                    <div class="slds-m-top_medium">
+                        <lightning-button variant="brand" label="Send for E-Signature" onclick={handleSend} disabled={disableSend}></lightning-button>
+                    </div>
+                </template>
+
+                <template if:false={hasDrafts}>
+                    <div class="empty-state">No draft envelopes were found for this record. Prepare a PDF and save fields first.</div>
+                </template>
+
+                <template if:true={lastSigningUrl}>
+                    <div class="slds-box slds-theme_success slds-m-top_medium">
+                        <p>Envelope sent. Signing URL:</p>
+                        <a href={lastSigningUrl} target="_blank">{lastSigningUrl}</a>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>

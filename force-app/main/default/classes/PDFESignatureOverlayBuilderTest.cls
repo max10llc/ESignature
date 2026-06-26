@@ -1,0 +1,85 @@
+@IsTest
+private class PDFESignatureOverlayBuilderTest {
+    @IsTest
+    static void buildsOverlayForExplicitCompletedFields() {
+        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            Envelope_Status__c = 'Signed',
+            Signer_Name__c = 'Derek Hawley',
+            Signer_Title__c = 'President',
+            Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
+        );
+        insert env;
+
+        insert new List<PDF_ESignature_Field__c>{
+            field(env.Id, 'Signature', 'Derek Hawley', 1, 100, 300, 160, 30, 1),
+            field(env.Id, 'Name', 'Derek Hawley', 1, 100, 260, 160, 18, 2),
+            field(env.Id, 'Title', 'President', 1, 100, 240, 160, 18, 3),
+            field(env.Id, 'Date', '6/23/2026', 1, 100, 220, 160, 18, 4)
+        };
+
+        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        System.assertEquals(1, payloads.size(), 'All explicit fields were on page 1, so only one overlay should be built.');
+        System.assertEquals(1, Integer.valueOf(String.valueOf(payloads[0].get('pageNumber'))));
+        System.assertEquals(612, Integer.valueOf(String.valueOf(payloads[0].get('pageWidth'))));
+        System.assertNotEquals(null, payloads[0].get('overlayPdfBase64'));
+
+        String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
+        System.assert(pdfText.startsWith('%PDF-1.4'), 'Overlay output should be a PDF.');
+        System.assert(pdfText.contains('Derek Hawley'), 'Overlay should contain the signer name/signature text.');
+        System.assert(pdfText.contains('President'), 'Overlay should contain the title text.');
+        System.assert(pdfText.contains('6/23/2026'), 'Overlay should contain the date text.');
+
+        Map<String, Object> debugInfo = PDFESignatureOverlayBuilder.buildOverlayDebugInfo(payloads);
+        System.assertEquals(1, Integer.valueOf(String.valueOf(debugInfo.get('stampOverlayCount'))));
+        System.assertEquals('1', (String) debugInfo.get('stampOverlayPagesText'));
+    }
+
+    @IsTest
+    static void synthesizesMissingIdentityFieldsNearSignature() {
+        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            Envelope_Status__c = 'Signed',
+            Signer_Name__c = 'Derek Hawley',
+            Signer_Title__c = 'President',
+            Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
+        );
+        insert env;
+
+        insert field(env.Id, 'Signature', 'Derek Hawley', 1, 100, 300, 160, 30, 1);
+
+        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        System.assertEquals(1, payloads.size(), 'Synthetic identity values should be added to the same signature page.');
+
+        String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
+        System.assert(pdfText.contains('Derek Hawley'), 'Overlay should include signature/name text.');
+        System.assert(pdfText.contains('President'), 'Overlay should synthesize title when no explicit title field exists.');
+        System.assert(pdfText.contains('6/23/2026'), 'Overlay should synthesize signing date when no explicit date field exists.');
+    }
+
+    private static PDF_ESignature_Field__c field(
+        Id envelopeId,
+        String typeValue,
+        String value,
+        Integer pageNumber,
+        Decimal x,
+        Decimal y,
+        Decimal width,
+        Decimal height,
+        Decimal sequence
+    ) {
+        return new PDF_ESignature_Field__c(
+            Envelope__c = envelopeId,
+            Field_Type__c = typeValue,
+            Label__c = typeValue,
+            Completed__c = true,
+            Value__c = value,
+            Page_Number__c = pageNumber,
+            Pdf_X__c = x,
+            Pdf_Y__c = y,
+            Pdf_Width__c = width,
+            Pdf_Height__c = height,
+            Page_Width_Points__c = 612,
+            Page_Height_Points__c = 792,
+            Sequence__c = sequence
+        );
+    }
+}

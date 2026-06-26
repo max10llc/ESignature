@@ -1,0 +1,14 @@
+﻿# Salesforce local state
+.sfdx/
+.sf/
+.localdevserver/
+
+# Dependencies
+node_modules/
+
+# VS Code user-specific settings
+.vscode/settings.json
+
+# OS files
+.DS_Store
+Thumbs.db

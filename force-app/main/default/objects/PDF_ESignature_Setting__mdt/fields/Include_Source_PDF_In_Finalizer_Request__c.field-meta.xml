@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Include_Source_PDF_In_Finalizer_Request__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>If checked, Salesforce sends sourcePdfBase64 to Power Automate. If unchecked, Power Automate must retrieve the source PDF using sourceContentVersionId.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Include Source PDF In Finalizer Request</label>
+    <type>Checkbox</type>
+</CustomField>
