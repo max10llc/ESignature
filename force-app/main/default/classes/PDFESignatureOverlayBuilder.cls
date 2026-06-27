@@ -2,6 +2,21 @@ public without sharing class PDFESignatureOverlayBuilder {
     private static final Decimal DEFAULT_PAGE_WIDTH = 612;
     private static final Decimal DEFAULT_PAGE_HEIGHT = 792;
 
+    private class SignatureImageResource {
+        public String hexData;
+        public Integer width = 900;
+        public Integer height = 220;
+        public Integer objectNumber;
+        public String pdfName;
+
+        public SignatureImageResource(Blob body) {
+            this.hexData = EncodingUtil.convertToHex(body);
+            List<Integer> dimensions = getJpegDimensions(this.hexData);
+            this.width = dimensions[0];
+            this.height = dimensions[1];
+        }
+    }
+
     public class OverlayPage {
         @AuraEnabled public Integer pageNumber;
         @AuraEnabled public Decimal pageWidth;
@@ -67,7 +82,7 @@ public without sharing class PDFESignatureOverlayBuilder {
             overlay.pageNumber = pageNumber;
             overlay.pageWidth = pageWidth;
             overlay.pageHeight = pageHeight;
-            overlay.overlayPdfBase64 = EncodingUtil.base64Encode(buildSinglePageOverlayPdf(pageFields, pageWidth, pageHeight));
+            overlay.overlayPdfBase64 = EncodingUtil.base64Encode(buildSinglePageOverlayPdf(pageFields, pageWidth, pageHeight, env));
             overlays.add(overlay);
         }
         return overlays;
@@ -94,7 +109,7 @@ public without sharing class PDFESignatureOverlayBuilder {
 
     private static PDF_ESignature_Envelope__c loadEnvelope(Id envelopeId) {
         List<PDF_ESignature_Envelope__c> rows = [
-            SELECT Id, Signer_Name__c, Signer_Title__c, Signed_At__c
+            SELECT Id, Signer_Name__c, Signer_Title__c, Signed_At__c, Signature_Image_Data_Url__c
             FROM PDF_ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
@@ -118,7 +133,7 @@ public without sharing class PDFESignatureOverlayBuilder {
             if (!String.isBlank(typeValue)) {
                 explicitTypes.add(typeValue);
             }
-            if (anchorSignature == null && typeValue == 'Signature' && !String.isBlank(field.Value__c)) {
+            if (anchorSignature == null && isFieldType(typeValue, 'Signature') && !String.isBlank(field.Value__c)) {
                 anchorSignature = field;
             }
         }
@@ -127,15 +142,15 @@ public without sharing class PDFESignatureOverlayBuilder {
         }
 
         Integer syntheticIndex = 0;
-        if (!explicitTypes.contains('Name') && !String.isBlank(env.Signer_Name__c)) {
+        if (!containsFieldType(explicitTypes, 'Name') && !String.isBlank(env.Signer_Name__c)) {
             syntheticIndex++;
             output.add(syntheticField(anchorSignature, 'Name', env.Signer_Name__c, syntheticIndex));
         }
-        if (!explicitTypes.contains('Title') && !String.isBlank(env.Signer_Title__c)) {
+        if (!containsFieldType(explicitTypes, 'Title') && !String.isBlank(env.Signer_Title__c)) {
             syntheticIndex++;
             output.add(syntheticField(anchorSignature, 'Title', env.Signer_Title__c, syntheticIndex));
         }
-        if (!explicitTypes.contains('Date')) {
+        if (!containsFieldType(explicitTypes, 'Date')) {
             syntheticIndex++;
             output.add(syntheticField(anchorSignature, 'Date', signedDateText(env.Signed_At__c), syntheticIndex));
         }
@@ -179,13 +194,23 @@ public without sharing class PDFESignatureOverlayBuilder {
         return field;
     }
 
-    private static Blob buildSinglePageOverlayPdf(List<PDF_ESignature_Field__c> fields, Decimal pageWidth, Decimal pageHeight) {
-        String content = buildContentStream(fields);
-        String pdf = buildPdfDocument(content, pageWidth, pageHeight);
+    private static Blob buildSinglePageOverlayPdf(
+        List<PDF_ESignature_Field__c> fields,
+        Decimal pageWidth,
+        Decimal pageHeight,
+        PDF_ESignature_Envelope__c env
+    ) {
+        SignatureImageResource signatureImage = signatureImageFromDataUrl(env == null ? null : env.Signature_Image_Data_Url__c);
+        if (signatureImage != null) {
+            signatureImage.objectNumber = 6;
+            signatureImage.pdfName = 'Sig1';
+        }
+        String content = buildContentStream(fields, signatureImage);
+        String pdf = buildPdfDocument(content, pageWidth, pageHeight, signatureImage);
         return Blob.valueOf(pdf);
     }
 
-    private static String buildContentStream(List<PDF_ESignature_Field__c> fields) {
+    private static String buildContentStream(List<PDF_ESignature_Field__c> fields, SignatureImageResource signatureImage) {
         List<String> lines = new List<String>();
         for (PDF_ESignature_Field__c field : fields) {
             String value = normalizeText(field.Value__c);
@@ -199,13 +224,17 @@ public without sharing class PDFESignatureOverlayBuilder {
             Decimal height = firstNonNull(field.Pdf_Height__c, 24);
             String typeValue = normalizeType(field.Field_Type__c);
 
-            if (typeValue == 'Checkbox') {
+            if (isFieldType(typeValue, 'Checkbox')) {
                 if (isTruthy(value)) {
-                    Decimal boxSize = minDecimal(height, 12);
-                    Decimal centerY = y + ((height - boxSize) / 2);
-                    lines.add(rectangleStroke(x, centerY, boxSize, boxSize));
-                    lines.add(checkmarkStroke(x, centerY, boxSize));
+                    Decimal checkmarkSize = minDecimal(height, 12);
+                    Decimal centerY = y + ((height - checkmarkSize) / 2);
+                    lines.add(checkmarkStroke(x, centerY, checkmarkSize));
                 }
+                continue;
+            }
+
+            if (isFieldType(typeValue, 'Signature') && signatureImage != null) {
+                lines.add(imageDraw(signatureImage, x, y, width, height));
                 continue;
             }
 
@@ -215,20 +244,35 @@ public without sharing class PDFESignatureOverlayBuilder {
             if (textY < y + 1) {
                 textY = y + 1;
             }
-            String fontName = typeValue == 'Signature' ? 'F2' : 'F1';
+            String fontName = isFieldType(typeValue, 'Signature') ? 'F2' : 'F1';
             lines.add(textLine(fontName, fontSize, textX, textY, value));
         }
         return String.join(lines, '\n');
     }
 
-    private static String buildPdfDocument(String content, Decimal pageWidth, Decimal pageHeight) {
+    private static String buildPdfDocument(String content, Decimal pageWidth, Decimal pageHeight, SignatureImageResource signatureImage) {
+        List<SignatureImageResource> images = new List<SignatureImageResource>();
+        if (signatureImage != null) {
+            images.add(signatureImage);
+        }
+        Integer contentObjectNumber = images.isEmpty() ? 6 : 7;
+
         List<String> objects = new List<String>();
         objects.add('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
         objects.add('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
-        objects.add('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + fmt(pageWidth) + ' ' + fmt(pageHeight) + '] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>\nendobj\n');
+        objects.add('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + fmt(pageWidth) + ' ' + fmt(pageHeight) + '] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> ' + buildXObjectResourceDictionary(images) + ' >> /Contents ' + String.valueOf(contentObjectNumber) + ' 0 R >>\nendobj\n');
         objects.add('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
         objects.add('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>\nendobj\n');
-        objects.add('6 0 obj\n<< /Length ' + content.length() + ' >>\nstream\n' + content + '\nendstream\nendobj\n');
+        for (SignatureImageResource image : images) {
+            String imageStream = image.hexData + '>';
+            objects.add(
+                image.objectNumber + ' 0 obj\n'
+                + '<< /Type /XObject /Subtype /Image /Width ' + image.width + ' /Height ' + image.height
+                + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter [/ASCIIHexDecode /DCTDecode] /Length ' + imageStream.length() + ' >>\n'
+                + 'stream\n' + imageStream + '\nendstream\nendobj\n'
+            );
+        }
+        objects.add(contentObjectNumber + ' 0 obj\n<< /Length ' + content.length() + ' >>\nstream\n' + content + '\nendstream\nendobj\n');
 
         String pdf = '%PDF-1.4\n';
         List<Integer> offsets = new List<Integer>();
@@ -250,10 +294,6 @@ public without sharing class PDFESignatureOverlayBuilder {
         return 'BT /' + fontName + ' ' + fmt(fontSize) + ' Tf ' + fmt(x) + ' ' + fmt(y) + ' Td (' + pdfEscape(value) + ') Tj ET';
     }
 
-    private static String rectangleStroke(Decimal x, Decimal y, Decimal width, Decimal height) {
-        return 'q 0.8 w ' + fmt(x) + ' ' + fmt(y) + ' ' + fmt(width) + ' ' + fmt(height) + ' re S Q';
-    }
-
     private static String checkmarkStroke(Decimal x, Decimal y, Decimal sizeValue) {
         Decimal x1 = x + (sizeValue * 0.18);
         Decimal y1 = y + (sizeValue * 0.52);
@@ -264,11 +304,27 @@ public without sharing class PDFESignatureOverlayBuilder {
         return 'q 1.2 w ' + fmt(x1) + ' ' + fmt(y1) + ' m ' + fmt(x2) + ' ' + fmt(y2) + ' l ' + fmt(x3) + ' ' + fmt(y3) + ' l S Q';
     }
 
+    private static String imageDraw(SignatureImageResource image, Decimal x, Decimal y, Decimal width, Decimal height) {
+        Integer safeImageWidth = image.width == null || image.width < 1 ? 1 : image.width;
+        Integer safeImageHeight = image.height == null || image.height < 1 ? 1 : image.height;
+        Decimal imageWidth = Decimal.valueOf(String.valueOf(safeImageWidth));
+        Decimal imageHeight = Decimal.valueOf(String.valueOf(safeImageHeight));
+        Decimal imageRatio = imageWidth / imageHeight;
+        Decimal drawWidth = width;
+        Decimal drawHeight = width / imageRatio;
+        if (drawHeight > height) {
+            drawHeight = height;
+            drawWidth = height * imageRatio;
+        }
+        Decimal drawY = y + ((height - drawHeight) / 2);
+        return 'q ' + fmt(drawWidth) + ' 0 0 ' + fmt(drawHeight) + ' ' + fmt(x) + ' ' + fmt(drawY) + ' cm /' + image.pdfName + ' Do Q';
+    }
+
     private static Decimal fontSizeFor(String typeValue, Decimal width, Decimal height, String value) {
         Decimal baseSize;
-        if (typeValue == 'Signature') {
+        if (isFieldType(typeValue, 'Signature')) {
             baseSize = minDecimal(height * 0.72, 24);
-        } else if (typeValue == 'Initials') {
+        } else if (isFieldType(typeValue, 'Initials')) {
             baseSize = minDecimal(height * 0.70, 16);
         } else {
             baseSize = minDecimal(height * 0.62, 11);
@@ -296,6 +352,24 @@ public without sharing class PDFESignatureOverlayBuilder {
 
     private static String normalizeType(String value) {
         return String.isBlank(value) ? '' : value.trim();
+    }
+
+    private static Boolean isFieldType(String actual, String expected) {
+        return !String.isBlank(actual)
+            && !String.isBlank(expected)
+            && actual.trim().toLowerCase() == expected.trim().toLowerCase();
+    }
+
+    private static Boolean containsFieldType(Set<String> values, String expected) {
+        if (values == null || values.isEmpty()) {
+            return false;
+        }
+        for (String value : values) {
+            if (isFieldType(value, expected)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String signedDateText(Datetime signedAt) {
@@ -328,7 +402,113 @@ public without sharing class PDFESignatureOverlayBuilder {
             return false;
         }
         String v = value.trim().toLowerCase();
-        return v == 'true' || v == 'yes' || v == 'y' || v == '1' || v == 'checked' || v == 'x';
+        return v != 'false' && v != 'no' && v != 'n' && v != '0' && v != 'unchecked';
+    }
+
+    private static SignatureImageResource signatureImageFromDataUrl(String dataUrl) {
+        if (String.isBlank(dataUrl)) {
+            return null;
+        }
+        String prefix = 'data:image/jpeg;base64,';
+        String trimmed = dataUrl.trim();
+        if (!trimmed.toLowerCase().startsWith(prefix)) {
+            return null;
+        }
+        try {
+            return new SignatureImageResource(EncodingUtil.base64Decode(trimmed.substring(prefix.length())));
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static String buildXObjectResourceDictionary(List<SignatureImageResource> images) {
+        if (images == null || images.isEmpty()) {
+            return '';
+        }
+        String value = '/XObject << ';
+        for (SignatureImageResource image : images) {
+            value += '/' + image.pdfName + ' ' + image.objectNumber + ' 0 R ';
+        }
+        return value + '>>';
+    }
+
+    private static List<Integer> getJpegDimensions(String hexData) {
+        List<Integer> fallback = new List<Integer>{ 900, 220 };
+        if (String.isBlank(hexData) || !hexData.toLowerCase().startsWith('ffd8')) {
+            return fallback;
+        }
+        String hexValue = hexData.toLowerCase();
+        Integer index = 4;
+        while (index + 14 <= hexValue.length()) {
+            if (hexValue.substring(index, index + 2) != 'ff') {
+                index += 2;
+                continue;
+            }
+            String marker = hexValue.substring(index + 2, index + 4);
+            index += 4;
+            if (marker == 'd8' || marker == 'd9') {
+                continue;
+            }
+            if (index + 4 > hexValue.length()) {
+                break;
+            }
+            Integer segmentLength = hexToInteger(hexValue.substring(index, index + 4));
+            if (segmentLength == null || segmentLength <= 0) {
+                break;
+            }
+            if (isJpegStartOfFrame(marker) && index + 14 <= hexValue.length()) {
+                Integer height = hexToInteger(hexValue.substring(index + 6, index + 10));
+                Integer width = hexToInteger(hexValue.substring(index + 10, index + 14));
+                if (width != null && width > 0 && height != null && height > 0) {
+                    return new List<Integer>{ width, height };
+                }
+            }
+            index += segmentLength * 2;
+        }
+        return fallback;
+    }
+
+    private static Boolean isJpegStartOfFrame(String marker) {
+        return marker == 'c0' || marker == 'c1' || marker == 'c2' || marker == 'c3'
+            || marker == 'c5' || marker == 'c6' || marker == 'c7'
+            || marker == 'c9' || marker == 'ca' || marker == 'cb'
+            || marker == 'cd' || marker == 'ce' || marker == 'cf';
+    }
+
+    private static Integer hexToInteger(String hexValue) {
+        if (String.isBlank(hexValue)) {
+            return null;
+        }
+        Integer output = 0;
+        String lowerValue = hexValue.toLowerCase();
+        for (Integer i = 0; i < lowerValue.length(); i++) {
+            Integer nibble = hexNibble(lowerValue.substring(i, i + 1));
+            if (nibble == null) {
+                return null;
+            }
+            output = (output * 16) + nibble;
+        }
+        return output;
+    }
+
+    private static Integer hexNibble(String value) {
+        if (value == '0') { return 0; }
+        if (value == '1') { return 1; }
+        if (value == '2') { return 2; }
+        if (value == '3') { return 3; }
+        if (value == '4') { return 4; }
+        if (value == '5') { return 5; }
+        if (value == '6') { return 6; }
+        if (value == '7') { return 7; }
+        if (value == '8') { return 8; }
+        if (value == '9') { return 9; }
+        if (value == 'a') { return 10; }
+        if (value == 'b') { return 11; }
+        if (value == 'c') { return 12; }
+        if (value == 'd') { return 13; }
+        if (value == 'e') { return 14; }
+        if (value == 'f') { return 15; }
+        return null;
     }
 
     private static Decimal firstNonNull(Decimal value, Decimal fallback) {

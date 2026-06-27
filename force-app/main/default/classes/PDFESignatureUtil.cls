@@ -45,8 +45,10 @@ public without sharing class PDFESignatureUtil {
         }
         List<PDF_ESignature_Envelope__c> rows = [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
+                   Status__c,
                    Final_ContentDocument_Id__c, Final_ContentVersion_Id__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sender_User__c,
+                   Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c,
                    Sent_At__c, Viewed_At__c, Signed_At__c, Expires_At__c, Page_Count__c,
                    Public_Signing_URL__c, Signature_Method__c, Signature_Image_Data_Url__c,
                    Completed_Fields_JSON__c, Completion_Message__c, Decline_Reason__c, Error_Message__c
@@ -120,6 +122,10 @@ public without sharing class PDFESignatureUtil {
             return 'Document';
         }
         String fallback = String.isBlank(env.Name) ? 'Document' : env.Name;
+        String storedSourceTitle = getEnvelopeString(env, 'Source_File_Title__c');
+        if (!String.isBlank(storedSourceTitle)) {
+            return storedSourceTitle;
+        }
         ContentVersion latest = getLatestSourceVersion(env, false);
         if (latest != null && !String.isBlank(latest.Title)) {
             return latest.Title;
@@ -137,13 +143,32 @@ public without sharing class PDFESignatureUtil {
         // even though the signing envelope itself is visible.  The prepared field
         // rows store the exact ContentVersion Id, so try that first, then fall
         // back to the latest version by ContentDocumentId for internal/admin use.
-        ContentVersion sourceByVersionId = getContentVersionById(getEnvelopeSourceVersionId(env.Id), includeData);
+        ContentVersion sourceByVersionId = getContentVersionById(safeId(getEnvelopeString(env, 'Source_ContentVersion_Id__c')), includeData);
         if (sourceByVersionId != null) {
             return sourceByVersionId;
         }
 
-        Id documentId = getEnvelopeSourceDocumentId(env.Id);
+        sourceByVersionId = getContentVersionById(getEnvelopeSourceVersionId(env.Id), includeData);
+        if (sourceByVersionId != null) {
+            return sourceByVersionId;
+        }
+
+        Id documentId = safeId(getEnvelopeString(env, 'Source_ContentDocument_Id__c'));
+        if (documentId == null) {
+            documentId = getEnvelopeSourceDocumentId(env.Id);
+        }
         return getLatestContentVersion(documentId, includeData);
+    }
+
+    private static String getEnvelopeString(PDF_ESignature_Envelope__c env, String fieldName) {
+        if (env == null || String.isBlank(fieldName)) {
+            return null;
+        }
+        try {
+            return stringValue(env.get(fieldName));
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
     public static ContentVersion getContentVersionById(Id contentVersionId, Boolean includeData) {
@@ -502,16 +527,28 @@ public without sharing class PDFESignatureUtil {
             return '1';
         }
         String asHex = EncodingUtil.convertToHex(pdfBlob);
-        String needle = EncodingUtil.convertToHex(Blob.valueOf('/Type /Page'));
         Integer count = 0;
-        Integer idx = asHex.indexOf(needle);
-        while (idx >= 0) {
-            count++;
-            idx = asHex.indexOf(needle, idx + needle.length());
+        Set<Integer> pageMarkerIndexes = new Set<Integer>();
+        for (String needle : new List<String>{
+            EncodingUtil.convertToHex(Blob.valueOf('/Type/Page')),
+            EncodingUtil.convertToHex(Blob.valueOf('/Type /Page')),
+            EncodingUtil.convertToHex(Blob.valueOf('/Type  /Page')),
+            EncodingUtil.convertToHex(Blob.valueOf('/Type' + '\t' + '/Page')),
+            EncodingUtil.convertToHex(Blob.valueOf('/Type' + '\n' + '/Page')),
+            EncodingUtil.convertToHex(Blob.valueOf('/Type' + '\r' + '/Page'))
+        }) {
+            Integer idx = asHex.indexOf(needle);
+            while (idx >= 0) {
+                String nextByte = idx + needle.length() + 2 <= asHex.length()
+                    ? asHex.substring(idx + needle.length(), idx + needle.length() + 2)
+                    : null;
+                if (nextByte == null || nextByte.toLowerCase() != '73') {
+                    pageMarkerIndexes.add(idx);
+                }
+                idx = asHex.indexOf(needle, idx + needle.length());
+            }
         }
-        if (count > 1) {
-            count--;
-        }
+        count = pageMarkerIndexes.size();
         if (count <= 0) {
             count = 1;
         }

@@ -1,5 +1,7 @@
 import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { loadScript } from 'lightning/platformResourceLoader';
+import PDF_JS from '@salesforce/resourceUrl/PDFESign_PdfJs';
 
 import getRecordPdfFiles from '@salesforce/apex/PDFESignaturePrepareController.getRecordPdfFiles';
 import getPdfDocumentInfo from '@salesforce/apex/PDFESignaturePrepareController.getPdfDocumentInfo';
@@ -7,18 +9,24 @@ import getPlacements from '@salesforce/apex/PDFESignaturePrepareController.getPl
 import savePlacements from '@salesforce/apex/PDFESignaturePrepareController.savePlacements';
 
 const FIELD_TYPES = [
-    { label: 'Signature', value: 'Signature', width: 0.28, height: 0.055 },
-    { label: 'Initials', value: 'Initials', width: 0.12, height: 0.045 },
-    { label: 'Date', value: 'Date', width: 0.16, height: 0.04 },
-    { label: 'Name', value: 'Name', width: 0.22, height: 0.04 },
-    { label: 'Title', value: 'Title', width: 0.22, height: 0.04 },
-    { label: 'Text', value: 'Text', width: 0.24, height: 0.04 },
-    { label: 'Checkbox', value: 'Checkbox', width: 0.045, height: 0.04 }
+    { label: 'Signature', value: 'Signature', width: 0.28, height: 0.055, defaultRequired: true },
+    { label: 'Initials', value: 'Initials', width: 0.12, height: 0.045, defaultRequired: true },
+    { label: 'Date', value: 'Date', width: 0.16, height: 0.04, defaultRequired: true },
+    { label: 'Name', value: 'Name', width: 0.22, height: 0.04, defaultRequired: true },
+    { label: 'Title', value: 'Title', width: 0.22, height: 0.04, defaultRequired: true },
+    { label: 'Text', value: 'Text', width: 0.24, height: 0.04, defaultRequired: true },
+    { label: 'Checkbox', value: 'Checkbox', width: 0.045, height: 0.04, defaultRequired: false }
 ];
 
 const MIN_FIELD_WIDTH = 0.025;
 const MIN_FIELD_HEIGHT = 0.025;
 const DRAG_THRESHOLD_PIXELS = 6;
+const AUTO_FIT_FIELD_TYPES = new Set(['Signature', 'Initials', 'Date', 'Name', 'Title', 'Text']);
+const LINE_SCAN_Y_PERCENT = 0.025;
+const LINE_MIN_WIDTH_PERCENT = 0.05;
+const LINE_MAX_GAP_PERCENT = 0.01;
+const LINE_START_GAP_PERCENT = 0.018;
+const LINE_LUMA_THRESHOLD = 220;
 
 export default class PdfESignPrepareDocument extends LightningElement {
     @api recordId;
@@ -47,6 +55,8 @@ export default class PdfESignPrepareDocument extends LightningElement {
     pointerState;
     nextClientId = 1;
     hasInitialized = false;
+    pdfJsLoadPromise;
+    pageImageDataCache = new Map();
 
     connectedCallback() {
         this.boundHandlePointerMove = this.handlePointerMove.bind(this);
@@ -168,6 +178,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
         this.loadError = null;
         this.fields = [];
         this.pages = [];
+        this.pageImageDataCache = new Map();
         try {
             if (!this.activeContentDocumentId) {
                 return;
@@ -179,6 +190,8 @@ export default class PdfESignPrepareDocument extends LightningElement {
                 'Loading PDF information'
             );
             this.selectedContentVersionId = this.pdfInfo.contentVersionId;
+            this.loadingMessage = 'Counting PDF pages...';
+            await this.updatePageCountFromPdfJs();
             this.loadingMessage = 'Preparing page previews...';
             this.initializeRenditionPreview();
             this.loadingMessage = 'Loading saved field placements...';
@@ -202,6 +215,53 @@ export default class PdfESignPrepareDocument extends LightningElement {
             hasTriedFallback: false,
             altText: `PDF page ${index + 1}`
         }));
+    }
+
+    async updatePageCountFromPdfJs() {
+        try {
+            await this.withTimeout(this.detectPdfPageCountFromPdfJs(), 12000, 'Counting PDF pages');
+        } catch (error) {
+            if (!this.warningMessage) {
+                this.warningMessage = 'Using Salesforce page count estimate because the PDF page count could not be read directly.';
+            }
+        }
+    }
+
+    async detectPdfPageCountFromPdfJs() {
+        await this.ensurePdfJsLoaded();
+        if (!window.pdfjsLib || !this.pdfInfo?.contentVersionId) {
+            return;
+        }
+        const loadingTask = window.pdfjsLib.getDocument({
+            url: `/sfc/servlet.shepherd/version/download/${this.pdfInfo.contentVersionId}`,
+            withCredentials: true
+        });
+        const pdfDocument = await loadingTask.promise;
+        try {
+            const pageCount = Number(pdfDocument.numPages);
+            if (Number.isFinite(pageCount) && pageCount > 0) {
+                this.pdfInfo = { ...this.pdfInfo, pageCount };
+            }
+        } finally {
+            if (pdfDocument && typeof pdfDocument.destroy === 'function') {
+                pdfDocument.destroy();
+            }
+        }
+    }
+
+    async ensurePdfJsLoaded() {
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDF_JS}/pdf.worker.min.js`;
+            return;
+        }
+        if (!this.pdfJsLoadPromise) {
+            this.pdfJsLoadPromise = loadScript(this, `${PDF_JS}/pdf.min.js`).then(() => {
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDF_JS}/pdf.worker.min.js`;
+                }
+            });
+        }
+        await this.pdfJsLoadPromise;
     }
 
     buildRenditionUrl(rendition, pageIndex) {
@@ -259,6 +319,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
         const naturalHeight = image.naturalHeight || 792;
         const pdfWidth = 612;
         const pdfHeight = Math.round((pdfWidth * naturalHeight) / naturalWidth);
+        this.pageImageDataCache.delete(pageNumber);
         this.configureRenditionPage(pageNumber, pdfWidth, pdfHeight);
         this.pageDimensions.set(pageNumber, { width: pdfWidth, height: pdfHeight });
     }
@@ -319,12 +380,14 @@ export default class PdfESignPrepareDocument extends LightningElement {
         const config = FIELD_TYPES.find((item) => item.value === fieldType);
         const widthPercent = config ? config.width : 0.2;
         const heightPercent = config ? config.height : 0.04;
-        const xPercent = this.clamp((event.clientX - rect.left) / rect.width - widthPercent / 2, 0, 1 - widthPercent);
-        const yPercent = this.clamp((event.clientY - rect.top) / rect.height - heightPercent / 2, 0, 1 - heightPercent);
-        const field = {
+        const anchorXPercent = this.clamp((event.clientX - rect.left) / rect.width, 0, 1);
+        const anchorYPercent = this.clamp((event.clientY - rect.top) / rect.height, 0, 1);
+        const xPercent = this.clamp(anchorXPercent - widthPercent / 2, 0, 1 - widthPercent);
+        const yPercent = this.clamp(anchorYPercent - heightPercent / 2, 0, 1 - heightPercent);
+        const field = this.autoFitFieldToLine({
             clientId: this.newClientId(), fieldType, pageNumber, xPercent, yPercent,
-            widthPercent, heightPercent, signerNumber: 1, required: true, label: fieldType
-        };
+            widthPercent, heightPercent, signerNumber: 1, required: config ? config.defaultRequired !== false : true, label: fieldType
+        }, pageShell, anchorXPercent, anchorYPercent);
         this.fields = [...this.fields, field];
         this.selectedFieldId = field.clientId;
     }
@@ -389,11 +452,15 @@ export default class PdfESignPrepareDocument extends LightningElement {
     }
 
     handlePointerUp() {
+        const state = this.pointerState;
         if (this.pointerState && !this.pointerState.hasMoved) {
             this.selectedFieldId = this.pointerState.clientId;
         }
         this.pointerState = null;
         this.removePointerListeners();
+        if (state && state.action === 'move' && state.hasMoved) {
+            this.autoFitMovedFieldToLine(state.clientId);
+        }
     }
 
     addPointerListeners() {
@@ -435,6 +502,173 @@ export default class PdfESignPrepareDocument extends LightningElement {
             return;
         }
         this.fields = this.fields.map((field) => (field.clientId === this.selectedFieldId ? { ...field, ...changes } : field));
+    }
+
+    autoFitMovedFieldToLine(clientId) {
+        const field = this.fields.find((item) => item.clientId === clientId);
+        if (!field) {
+            return;
+        }
+        const pageShell = this.template.querySelector(`section[data-page-number="${field.pageNumber}"]`);
+        if (!pageShell) {
+            return;
+        }
+        this.fields = this.fields.map((item) => {
+            if (item.clientId !== clientId) {
+                return item;
+            }
+            return this.autoFitFieldToLine(
+                item,
+                pageShell,
+                item.xPercent + item.widthPercent / 2,
+                item.yPercent + item.heightPercent / 2
+            );
+        });
+    }
+
+    autoFitFieldToLine(field, pageShell, anchorXPercent, anchorYPercent) {
+        if (!AUTO_FIT_FIELD_TYPES.has(field.fieldType)) {
+            return field;
+        }
+        const line = this.detectHorizontalLine(pageShell, field.pageNumber, anchorXPercent, anchorYPercent);
+        if (!line) {
+            return field;
+        }
+        const fittedWidth = this.clamp(line.widthPercent, MIN_FIELD_WIDTH, 1);
+        return {
+            ...field,
+            xPercent: this.clamp(line.xPercent, 0, 1 - fittedWidth),
+            widthPercent: fittedWidth
+        };
+    }
+
+    detectHorizontalLine(pageShell, pageNumber, anchorXPercent, anchorYPercent) {
+        const pageImage = this.getPageImageData(pageShell, pageNumber);
+        if (!pageImage) {
+            return null;
+        }
+        const width = pageImage.width;
+        const height = pageImage.height;
+        const anchorX = this.clamp(Math.round(anchorXPercent * width), 0, width - 1);
+        const anchorY = this.clamp(Math.round(anchorYPercent * height), 0, height - 1);
+        const searchRadius = Math.max(6, Math.round(height * LINE_SCAN_Y_PERCENT));
+        let bestCandidate = null;
+        for (let y = Math.max(0, anchorY - searchRadius); y <= Math.min(height - 1, anchorY + searchRadius); y += 1) {
+            const candidate = this.findLineRunOnRow(pageImage, y, anchorX);
+            if (!candidate) {
+                continue;
+            }
+            const verticalDistance = Math.abs(y - anchorY);
+            const score = candidate.width - verticalDistance * 3 + candidate.darkPixels * 0.2;
+            if (!bestCandidate || score > bestCandidate.score) {
+                bestCandidate = { ...candidate, y, score };
+            }
+        }
+        if (!bestCandidate) {
+            return null;
+        }
+        return {
+            xPercent: bestCandidate.left / width,
+            widthPercent: (bestCandidate.right - bestCandidate.left + 1) / width
+        };
+    }
+
+    getPageImageData(pageShell, pageNumber) {
+        const image = pageShell.querySelector('img.pdf-rendition');
+        if (!image || !image.complete || !image.naturalWidth || !image.naturalHeight) {
+            return null;
+        }
+        const cached = this.pageImageDataCache.get(pageNumber);
+        const imageSrc = image.currentSrc || image.src;
+        if (cached && cached.src === imageSrc && cached.width === image.naturalWidth && cached.height === image.naturalHeight) {
+            return cached;
+        }
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = image.naturalWidth;
+            canvas.height = image.naturalHeight;
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            if (!context) {
+                return null;
+            }
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const pageImage = {
+                src: imageSrc,
+                width: canvas.width,
+                height: canvas.height,
+                data: imageData.data
+            };
+            this.pageImageDataCache.set(pageNumber, pageImage);
+            return pageImage;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    findLineRunOnRow(pageImage, y, anchorX) {
+        const width = pageImage.width;
+        const maxGap = Math.max(3, Math.round(width * LINE_MAX_GAP_PERCENT));
+        const startGap = Math.max(maxGap, Math.round(width * LINE_START_GAP_PERCENT));
+        const minWidth = Math.max(28, Math.round(width * LINE_MIN_WIDTH_PERCENT));
+        const nearLeft = Math.max(0, anchorX - startGap);
+        const nearRight = Math.min(width - 1, anchorX + startGap);
+        let nearestInkX = null;
+        for (let x = nearLeft; x <= nearRight; x += 1) {
+            if (this.isLinePixel(pageImage, x, y)) {
+                if (nearestInkX === null || Math.abs(x - anchorX) < Math.abs(nearestInkX - anchorX)) {
+                    nearestInkX = x;
+                }
+            }
+        }
+        if (nearestInkX === null) {
+            return null;
+        }
+
+        const leftResult = this.scanLineEdge(pageImage, y, nearestInkX, -1, maxGap);
+        const rightResult = this.scanLineEdge(pageImage, y, nearestInkX, 1, maxGap);
+        const left = leftResult.edge;
+        const right = rightResult.edge;
+        const runWidth = right - left + 1;
+        const darkPixels = leftResult.darkPixels + rightResult.darkPixels - 1;
+        const density = darkPixels / Math.max(1, runWidth);
+        if (runWidth < minWidth || density < 0.14) {
+            return null;
+        }
+        return { left, right, width: runWidth, darkPixels };
+    }
+
+    scanLineEdge(pageImage, y, startX, direction, maxGap) {
+        const width = pageImage.width;
+        let edge = startX;
+        let darkPixels = 0;
+        let gap = 0;
+        for (let x = startX; x >= 0 && x < width; x += direction) {
+            if (this.isLinePixel(pageImage, x, y)) {
+                edge = x;
+                darkPixels += 1;
+                gap = 0;
+            } else {
+                gap += 1;
+                if (gap > maxGap) {
+                    break;
+                }
+            }
+        }
+        return { edge, darkPixels };
+    }
+
+    isLinePixel(pageImage, x, y) {
+        const index = (y * pageImage.width + x) * 4;
+        const alpha = pageImage.data[index + 3];
+        if (alpha < 24) {
+            return false;
+        }
+        const red = pageImage.data[index];
+        const green = pageImage.data[index + 1];
+        const blue = pageImage.data[index + 2];
+        const luma = red * 0.299 + green * 0.587 + blue * 0.114;
+        return luma < LINE_LUMA_THRESHOLD;
     }
 
     async handleZoomOut() {

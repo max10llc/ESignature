@@ -92,6 +92,13 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
             payload.put('sourcePdfBase64', EncodingUtil.base64Encode(source.VersionData));
         }
         payload.put('finalFileName', source.Title + ' - signed.pdf');
+        String auditReportPdfBase64 = PDFESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, source.Title);
+        payload.put('appendAuditReport', true);
+        payload.put('auditReportPdfBase64', auditReportPdfBase64);
+        payload.put('certificatePdfBase64', auditReportPdfBase64);
+        payload.put('auditReportFileName', source.Title + ' - final audit report.pdf');
+        payload.put('auditReportPageWidth', 612);
+        payload.put('auditReportPageHeight', 792);
         payload.put('signerName', env.Signer_Name__c);
         payload.put('signerEmail', env.Signer_Email__c);
         payload.put('signerTitle', env.Signer_Title__c);
@@ -102,10 +109,13 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
 
         List<Map<String, Object>> stampOverlays = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
         Map<String, Object> overlayDebug = PDFESignatureOverlayBuilder.buildOverlayDebugInfo(stampOverlays);
+        overlayDebug.put('auditReportIncluded', true);
+        overlayDebug.put('auditReportBase64Length', auditReportPdfBase64 == null ? 0 : auditReportPdfBase64.length());
         String overlayDebugText = 'stampOverlays=' + String.valueOf(overlayDebug.get('stampOverlayCount'))
             + '; pages=' + PDFESignatureUtil.stringValue(overlayDebug.get('stampOverlayPagesText'))
             + '; sourceContentVersionId=' + String.valueOf(source.Id)
-            + '; sourceContentDocumentId=' + String.valueOf(source.ContentDocumentId);
+            + '; sourceContentDocumentId=' + String.valueOf(source.ContentDocumentId)
+            + '; auditReport=true';
         payload.put('stampOverlays', stampOverlays);
         payload.put('stampOverlayMode', 'AdobeWatermarkPageByPage');
         payload.put('stampOverlayCount', overlayDebug.get('stampOverlayCount'));

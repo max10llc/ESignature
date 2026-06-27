@@ -25,6 +25,7 @@ private class PDFESignatureOverlayBuilderTest {
 
         String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
         System.assert(pdfText.startsWith('%PDF-1.4'), 'Overlay output should be a PDF.');
+        System.assert(pdfText.contains('/Helvetica-Oblique'), 'Signature overlay should use an Adobe watermark-safe PDF font.');
         System.assert(pdfText.contains('Derek Hawley'), 'Overlay should contain the signer name/signature text.');
         System.assert(pdfText.contains('President'), 'Overlay should contain the title text.');
         System.assert(pdfText.contains('6/23/2026'), 'Overlay should contain the date text.');
@@ -55,6 +56,51 @@ private class PDFESignatureOverlayBuilderTest {
         System.assert(pdfText.contains('6/23/2026'), 'Overlay should synthesize signing date when no explicit date field exists.');
     }
 
+    @IsTest
+    static void embedsSignatureImageWhenAvailable() {
+        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            Envelope_Status__c = 'Signed',
+            Signer_Name__c = 'Derek Hawley',
+            Signer_Title__c = 'President',
+            Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0),
+            Signature_Image_Data_Url__c = 'data:image/jpeg;base64,' + tinyJpegBase64()
+        );
+        insert env;
+
+        insert new List<PDF_ESignature_Field__c>{
+            field(env.Id, 'Signature', 'Derek Hawley', 1, 100, 300, 180, 36, 1),
+            field(env.Id, 'Name', 'Derek Hawley', 1, 100, 260, 160, 18, 2),
+            field(env.Id, 'Title', 'President', 1, 100, 240, 160, 18, 3),
+            field(env.Id, 'Date', '6/23/2026', 1, 100, 220, 160, 18, 4)
+        };
+
+        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+
+        String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
+        System.assert(pdfText.contains('/Subtype /Image'), 'Overlay should embed the captured signature image.');
+        System.assert(pdfText.contains('/DCTDecode'), 'Captured signature image should be embedded as a JPEG XObject.');
+        System.assert(pdfText.contains('/Sig1 Do'), 'Signature field should draw the embedded signature image.');
+    }
+
+    @IsTest
+    static void rendersCheckedCheckboxAsCheckmarkOnly() {
+        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            Envelope_Status__c = 'Signed',
+            Signer_Name__c = 'Derek Hawley',
+            Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
+        );
+        insert env;
+
+        insert field(env.Id, 'Checkbox', 'true', 1, 100, 220, 18, 18, 1);
+
+        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        System.assertEquals(1, payloads.size(), 'Checked checkbox should create a one-page overlay.');
+
+        String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
+        System.assert(pdfText.contains(' m '), 'Checked checkbox should draw a checkmark path.');
+        System.assert(!pdfText.contains(' re S Q'), 'Checked checkbox should not draw a surrounding checkbox rectangle.');
+    }
+
     private static PDF_ESignature_Field__c field(
         Id envelopeId,
         String typeValue,
@@ -81,5 +127,14 @@ private class PDFESignatureOverlayBuilderTest {
             Page_Height_Points__c = 792,
             Sequence__c = sequence
         );
+    }
+
+    private static String tinyJpegBase64() {
+        return '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////'
+            + '2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAA'
+            + 'AAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAH/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/'
+            + 'xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAA'
+            + 'AAAAAAAA/9oACAEBAAY/Al//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAA'
+            + 'AAAAAAAAABD/2gAIAQMBAT8QH//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QH//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QH//Z';
     }
 }

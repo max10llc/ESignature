@@ -6,9 +6,11 @@
     <title>Electronic Signature</title>
     <script src="{!URLFOR($Resource.PDFESign_PdfJs, 'pdf.min.js')}"></script>
     <style>
-        body { margin:0; font-family:Arial, sans-serif; background:#f3f4f6; color:#111827; }
-        .wrap { max-width:1100px; margin:0 auto; padding:24px; }
-        .card { background:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.08); padding:24px; margin-bottom:18px; }
+        html { height:100%; overflow:hidden; }
+        body { height:100%; margin:0; overflow:hidden; font-family:Arial, sans-serif; background:#e8edf5; color:#111827; }
+        form { height:100%; margin:0; overflow:hidden; }
+        .wrap { width:100%; height:100vh; max-width:none; margin:0; padding:0; box-sizing:border-box; overflow:hidden; }
+        .card { background:#fff; border-radius:0; box-shadow:none; padding:16px; margin-bottom:0; }
         h1 { margin:0 0 8px; font-size:28px; }
         h2 { margin:0 0 12px; font-size:21px; }
         label { display:block; font-weight:700; margin:14px 0 6px; }
@@ -16,122 +18,800 @@
         .btn { background:#1e51a4; color:#fff; border:0; border-radius:8px; padding:11px 18px; font-weight:700; cursor:pointer; margin-top:14px; }
         .btn.secondary { background:#6b7280; }
         .btn.danger { background:#b91c1c; }
+        .btn.linkbtn { display:inline-block; text-decoration:none; margin:0; }
         .fineprint { color:#4b5563; font-size:13px; line-height:1.45; }
         .msg { border-radius:8px; padding:12px 14px; margin:12px 0; background:#ecfdf5; color:#065f46; }
         .msg.err { background:#fef2f2; color:#991b1b; }
+        .completion-overlay-backdrop { position:fixed; inset:0; z-index:1600; display:flex; align-items:center; justify-content:center; box-sizing:border-box; padding:22px; background:rgba(17,24,39,.46); }
+        .completion-overlay { width:min(460px, 100%); box-sizing:border-box; background:#fff; border-radius:6px; box-shadow:0 24px 60px rgba(15,23,42,.28); padding:30px 34px; color:#111827; text-align:center; }
+        .completion-overlay-title { margin:0 0 10px; color:#111827; font-size:22px; line-height:1.25; font-weight:700; }
+        .completion-overlay-message { margin:0; color:#374151; font-size:15px; line-height:1.45; }
         .required-marker { color:#c23934; font-weight:bold; }
-        .pdf-tools { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 10px 0 14px; }
-        .prepared-doc { border:1px solid #d1d5db; border-radius:8px; background:#e8edf5; padding:16px; max-height:780px; overflow:auto; }
+        .consent-pending .prepared-doc { filter:brightness(.62); }
+        .consent-pending .field-layer { pointer-events:none; }
+        .sender-consent-panel { display:none; width:274px; flex:0 0 274px; height:100vh; min-height:0; max-height:100vh; box-sizing:border-box; background:#fff; border-right:1px solid #e5e7eb; padding:clamp(12px, 2.6vh, 22px) 24px clamp(10px, 1.8vh, 12px); position:relative; z-index:40; flex-direction:column; overflow:hidden; gap:clamp(10px, 2vh, 16px); }
+        .sender-panel-main { flex:1 1 auto; min-height:0; overflow:hidden; }
+        .sender-panel-title { margin:0 0 clamp(5px, 1.3vh, 10px); color:#111827; font-size:clamp(18px, 2.7vh, 22px); line-height:1.18; font-weight:700; }
+        .sender-panel-from { margin:0 0 clamp(8px, 2vh, 16px); color:#111827; font-size:13px; line-height:1.35; }
+        .sender-panel-from strong { font-weight:700; }
+        .sender-panel-divider { height:1px; background:#d1d5db; margin:0 0 clamp(8px, 1.8vh, 14px); }
+        .sender-panel-message-title { margin:0 0 4px; color:#111827; font-size:clamp(14px, 2vh, 16px); line-height:1.2; font-weight:700; }
+        .sender-panel-message { margin:0; color:#374151; font-size:14px; line-height:1.35; max-height:8.1em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; }
+        .document-workspace { flex:1; min-width:0; height:100vh; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+        .document-card { height:100vh; min-height:0; box-sizing:border-box; overflow:hidden; display:flex; flex-direction:column; padding:0; background:#f5f5f5; }
+        .document-toolbar { flex:0 0 64px; height:64px; box-sizing:border-box; display:grid; grid-template-columns:minmax(180px, 1fr) minmax(180px, auto) minmax(260px, 1fr); align-items:center; gap:16px; padding:0 16px; background:#fff; border-bottom:1px solid #e5e7eb; color:#111827; }
+        .document-toolbar-brand { display:flex; align-items:center; min-width:0; }
+        .document-brand-logo { display:block; width:auto; max-width:190px; max-height:42px; object-fit:contain; }
+        .document-toolbar-title { display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; color:#111827; font-size:14px; font-weight:600; text-align:center; }
+        .document-toolbar-title-text { display:block; max-width:36vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .document-toolbar-actions { display:flex; align-items:center; justify-content:flex-end; gap:10px; min-width:0; }
+        .viewer-options { position:relative; }
+        .viewer-options-button { min-height:34px; border:0; background:#fff; color:#111827; cursor:pointer; font-size:14px; padding:0 8px; display:flex; align-items:center; gap:6px; }
+        .viewer-options-button-icon { display:block; width:18px; height:18px; object-fit:contain; }
+        .viewer-options-menu { display:none; position:absolute; right:0; top:42px; width:242px; box-sizing:border-box; background:#fff; border:1px solid #b8b8b8; border-radius:2px; box-shadow:0 8px 18px rgba(15,23,42,.22); padding:11px 12px 10px; z-index:45; color:#242424; }
+        .viewer-options-menu.open { display:block; }
+        .viewer-menu-header { margin-bottom:8px; }
+        .viewer-menu-from { font-size:11px; line-height:1.2; color:#2b2b2b; text-transform:uppercase; }
+        .viewer-menu-message { margin:11px 0 10px; color:#2b2b2b; font-size:14px; line-height:1.35; }
+        .viewer-menu-message strong { display:block; font-weight:400; }
+        .viewer-menu-message span { display:block; color:#3f3f3f; }
+        .viewer-menu-divider { height:1px; background:#cfcfcf; margin:8px 0; }
+        .viewer-menu-item { width:100%; min-height:32px; box-sizing:border-box; display:flex; align-items:center; gap:10px; border:0; background:#fff; color:#2b2b2b; font-size:14px; line-height:1.2; text-align:left; text-decoration:none; cursor:pointer; padding:6px 0; }
+        .viewer-menu-item:hover { background:#f5f5f5; }
+        .viewer-menu-icon { flex:0 0 18px; width:18px; height:18px; position:relative; color:#505050; display:inline-flex; align-items:center; justify-content:center; font-size:15px; line-height:1; }
+        .viewer-menu-icon-image { display:block; width:18px; height:18px; object-fit:contain; }
+        .viewer-icon-image { display:block; width:18px; height:18px; object-fit:contain; }
+        .viewer-toolbar-divider { width:1px; height:28px; background:#d1d5db; }
+        .viewer-icon-button { width:34px; height:34px; border:0; border-radius:4px; background:#fff; color:#111827; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; line-height:1; text-decoration:none; }
+        .viewer-icon-button:hover,
+        .viewer-options-button:hover { background:#f3f4f6; }
+        .right-rail-arrow-button { font-size:0; }
+        .right-rail-arrow-button:before { content:""; width:10px; height:10px; border-top:2px solid #374151; border-right:2px solid #374151; display:block; }
+        .right-rail-arrow-button.prev:before { transform:rotate(-45deg); }
+        .right-rail-arrow-button.next:before { transform:rotate(135deg); }
+        .viewer-zoom-label { min-width:42px; color:#374151; font-size:13px; text-align:center; }
+        .document-body { flex:1 1 auto; min-height:0; display:flex; background:#f3f4f6; }
+        .document-viewer { flex:1 1 auto; min-width:0; min-height:0; display:flex; }
+        .document-right-rail { flex:0 0 56px; width:56px; box-sizing:border-box; background:#f7f7f7; border-left:1px solid #e5e7eb; display:flex; flex-direction:column; align-items:center; padding:14px 8px; gap:10px; color:#374151; }
+        .document-right-rail .viewer-toolbar-divider { width:28px; height:1px; }
+        .right-rail-spacer { flex:1 1 auto; }
+        .right-rail-page { display:flex; flex-direction:column; align-items:center; gap:8px; color:#374151; font-size:13px; }
+        .right-rail-page-current { min-width:30px; height:30px; border:1px solid #d1d5db; border-radius:2px; background:#fff; display:flex; align-items:center; justify-content:center; color:#111827; }
+        .right-rail-page-total { min-width:30px; text-align:center; }
+        .consent-overlay { flex:0 0 auto; width:100%; box-sizing:border-box; background:#fff; border-radius:8px; box-shadow:0 10px 28px rgba(15,23,42,.16); padding:clamp(10px, 2vh, 16px); }
+        .consent-overlay-text { color:#111827; font-size:13px; line-height:1.35; margin:0 0 clamp(8px, 1.8vh, 14px); }
+        .consent-overlay-text a { color:#0b66da; font-weight:700; text-decoration:none; }
+        .consent-overlay-actions { position:relative; display:flex; align-items:center; gap:10px; }
+        .consent-options-button { flex:1; min-height:36px; border:1px solid #a3a3a3; border-radius:999px; background:#e5e5e5; color:#111827; cursor:pointer; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; }
+        .consent-continue-button { flex:1; min-height:36px; border:0; border-radius:999px; background:#0b66da; color:#fff; cursor:pointer; font-size:13px; font-weight:700; }
+        .consent-options-menu { display:none; position:absolute; left:0; bottom:46px; width:255px; background:#fff; border:1px solid #d1d5db; border-radius:4px; box-shadow:0 12px 30px rgba(15,23,42,.22); padding:7px 0; z-index:35; }
+        .consent-options-menu.open { display:block; }
+        .consent-menu-item { width:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; min-height:34px; padding:7px 13px; border:0; background:#fff; color:#111827; font-size:13px; line-height:1.2; text-align:left; text-decoration:none; cursor:pointer; }
+        .consent-menu-item:hover { background:#f3f4f6; }
+        .consent-menu-item.disabled { color:#6b7280; cursor:default; }
+        .consent-menu-icon { width:15px; color:#4b5563; text-align:center; font-weight:700; }
+        .consent-menu-icon-image { display:block; width:15px; height:15px; object-fit:contain; }
+        .consent-menu-divider { height:1px; background:#e5e7eb; margin:6px 12px; }
+        .signing-workspace { display:none; height:100vh; min-height:0; width:100%; overflow:hidden; }
+        .signing-workspace.consent-required .sender-consent-panel { display:flex; }
+        .hidden-consent { display:none; }
+        .pdf-tools { display:none; }
+        .prepared-doc-shell { position:relative; flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+        .prepared-doc { flex:1 1 auto; min-height:0; border:0; border-radius:0; background:#f3f4f6; padding:0 16px 86px; overflow:auto; }
         .pdf-page { position:relative; margin:0 auto 18px auto; background:#fff; box-shadow:0 3px 14px rgba(15,23,42,.18); width:fit-content; }
         .pdf-page canvas { display:block; }
-        .page-label { position:absolute; top:8px; left:8px; background:rgba(17,24,39,.72); color:#fff; font-size:12px; border-radius:999px; padding:3px 8px; z-index:3; }
+        .page-label { display:none; }
         .field-layer { position:absolute; inset:0; z-index:5; }
-        .prepared-field { position:absolute; box-sizing:border-box; border:2px solid #1e51a4; background:rgba(219,234,254,.90); color:#0f172a; border-radius:4px; padding:3px 6px; font-size:12px; font-weight:700; cursor:pointer; overflow:hidden; text-align:left; }
+        .prepared-field { position:absolute; box-sizing:border-box; border:2px solid #1e51a4; background:#e0f2ff; color:#0f172a; border-radius:4px; padding:3px 6px; font-size:12px; font-weight:700; cursor:pointer; overflow:hidden; text-align:left; }
         .prepared-field.required { border-color:#c23934; }
-        .prepared-field.completed { border-color:#188038; background:rgba(220,252,231,.92); }
+        .prepared-field.completed { border-color:transparent; background:transparent; box-shadow:none; }
+        .prepared-field.completed .field-label { display:none; }
+        .prepared-field.completed .field-value { width:100%; height:100%; display:flex; align-items:center; justify-content:center; line-height:1.2; text-align:center; }
         .prepared-field .field-label { opacity:.78; display:block; font-size:10px; line-height:11px; }
         .prepared-field .field-value { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .signature-methods { margin:14px 0; padding:14px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; }
-        .signature-methods label { display:inline-flex; align-items:center; gap:6px; margin-right:18px; font-weight:700; }
+        .prepared-field.direct-input { cursor:text; padding:2px 5px; }
+        .prepared-field-input[type=text] { width:100%; box-sizing:border-box; border:0; border-radius:0; padding:0; background:transparent; color:#0f172a; font-size:12px; font-weight:700; outline:none; }
+        .prepared-field.type-checkbox { display:flex; align-items:center; justify-content:center; padding:0; text-align:center; font-size:18px; line-height:1; }
+        .prepared-field.type-checkbox .field-label { display:none; }
+        .prepared-field.type-name,
+        .prepared-field.type-date { cursor:default; }
+        .prepared-field.type-signature,
+        .prepared-field.type-name,
+        .prepared-field.type-title,
+        .prepared-field.type-date { display:flex; align-items:center; justify-content:center; text-align:center; padding:0 6px; }
+        .prepared-field.type-name .field-label,
+        .prepared-field.type-title .field-label,
+        .prepared-field.type-date .field-label { display:none; }
+        .prepared-field.type-signature .field-value,
+        .prepared-field.type-name .field-value,
+        .prepared-field.type-title .field-value,
+        .prepared-field.type-date .field-value { width:100%; display:flex; align-items:center; justify-content:center; line-height:1.2; text-align:center; }
+        .prepared-field.type-title .field-value { height:100%; }
+        .prepared-field.type-title .prepared-field-input[type=text] { height:100%; text-align:center; }
+        .prepared-field.type-signature .field-value { height:100%; }
+        .prepared-field.type-signature .signature-preview-image { display:block; max-width:100%; max-height:100%; object-fit:contain; }
+        .prepared-field.type-signature .field-label { position:absolute; top:2px; left:5px; color:#c23934; opacity:1; font-size:13px; line-height:12px; }
+        .prepared-field.type-signature.completed .field-value { font-family:"Brush Script MT","Segoe Script",cursive; font-size:18px; font-weight:500; }
+        .prepared-field.required.required-nav-highlight { border-color:#0b66da; background:#e0f2ff; box-shadow:0 0 0 4px rgba(11,102,218,.24); }
+        .required-field-nav { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:20; width:min(452px, calc(100% - 24px)); min-height:54px; border-radius:999px; background:#0b66da; color:#fff; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:0 6px; box-shadow:0 8px 22px rgba(15,23,42,.22); }
+        .required-field-nav[hidden] { display:none; }
+        .required-field-nav-text { flex:1; text-align:center; font-size:14px; font-weight:700; line-height:1.2; }
+        .required-field-nav-button { width:46px; height:46px; border:0; border-radius:50%; background:#f8fafc; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+        .required-field-nav-button:disabled { opacity:.55; cursor:default; }
+        .required-field-nav-button:before { content:""; width:11px; height:11px; border-top:3px solid #0b66da; border-right:3px solid #0b66da; display:block; }
+        .required-field-nav-button.prev:before { transform:translateX(2px) rotate(-135deg); }
+        .required-field-nav-button.next:before { transform:translateX(-2px) rotate(45deg); }
+        .required-field-complete-text,
+        .required-field-submit-button { display:none; }
+        .required-field-nav.complete { left:0; right:0; bottom:0; transform:none; width:auto; min-height:56px; border-radius:0 0 8px 8px; justify-content:center; gap:24px; padding:0 18px; }
+        .required-field-nav.complete .required-field-nav-button,
+        .required-field-nav.complete .required-field-nav-text { display:none; }
+        .required-field-nav.complete .required-field-complete-text { display:inline-block; font-size:13px; font-weight:700; line-height:1.2; }
+        .required-field-nav.complete .required-field-submit-button { display:inline-block; border:0; border-radius:999px; background:#f8fafc; color:#0b66da; cursor:pointer; font-size:13px; font-weight:700; line-height:1; padding:12px 20px; animation:submitPulse 1.55s ease-in-out infinite; }
+        @keyframes submitPulse {
+            0% { box-shadow:0 0 0 0 rgba(248,250,252,.75), 0 0 0 7px rgba(248,250,252,.36); }
+            70% { box-shadow:0 0 0 9px rgba(248,250,252,0), 0 0 0 14px rgba(248,250,252,0); }
+            100% { box-shadow:0 0 0 0 rgba(248,250,252,0), 0 0 0 7px rgba(248,250,252,0); }
+        }
+        .signature-dialog-backdrop { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:1000; align-items:center; justify-content:center; padding:18px; }
+        .signature-dialog { width:min(640px, 100%); background:#fff; border-radius:8px; box-shadow:0 22px 60px rgba(0,0,0,.28); padding:20px; }
+        .signature-dialog-actions, .signature-mode-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+        .signature-preview { min-height:54px; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; font-family:"Brush Script MT","Segoe Script",cursive; font-size:32px; line-height:1.1; color:#111827; background:#fff; }
         .signature-pad-wrap { border:1px solid #cbd5e1; border-radius:8px; background:#fff; padding:10px; }
-        #signaturePad { width:100%; height:180px; border:1px dashed #94a3b8; border-radius:6px; background:#fff; touch-action:none; display:block; }
+        #signatureDialogPad { width:100%; height:180px; border:1px dashed #94a3b8; border-radius:6px; background:#fff; touch-action:none; display:block; }
+        .decline-dialog-backdrop { display:none; position:fixed; inset:0; background:rgba(17,24,39,.58); z-index:1200; align-items:center; justify-content:center; padding:18px; }
+        .decline-dialog { width:min(640px, 100%); background:#fff; border-radius:4px; box-shadow:0 22px 60px rgba(0,0,0,.30); padding:40px; box-sizing:border-box; }
+        .decline-dialog h2 { margin:0; font-size:18px; }
+        .decline-dialog-rule { height:1px; background:#d1d5db; margin:14px 0 28px; }
+        .decline-dialog-label { display:block; margin:0 0 10px; font-size:12px; font-weight:400; color:#374151; }
+        .decline-modal-reason { width:100%; min-height:56px; box-sizing:border-box; border:1px solid #9ca3af; border-radius:0; padding:8px; font-size:14px; resize:vertical; }
+        .decline-terms-row { display:flex; align-items:flex-start; gap:10px; margin-top:10px; font-size:14px; line-height:1.4; }
+        .decline-terms-row input { margin-top:2px; }
+        .decline-terms-row a { color:#0b66da; text-decoration:none; }
+        .decline-dialog-actions { display:flex; justify-content:flex-end; align-items:center; gap:16px; margin-top:50px; }
+        .decline-cancel-button { min-width:72px; min-height:34px; border:1px solid #d1d5db; border-radius:999px; background:#fff; color:#111827; cursor:pointer; font-size:13px; font-weight:700; }
+        .decline-modal-submit { min-width:78px; min-height:34px; border:0; border-radius:999px; background:#0b66da; color:#fff; cursor:pointer; font-size:13px; font-weight:700; }
+        .decline-modal-submit:disabled { background:#e5e7eb; color:#9ca3af; cursor:default; }
+        .delegate-dialog-backdrop { display:none; position:fixed; inset:0; background:rgba(17,24,39,.58); z-index:1200; align-items:center; justify-content:center; padding:18px; }
+        .delegate-dialog { width:min(640px, 100%); background:#fff; border-radius:4px; box-shadow:0 22px 60px rgba(0,0,0,.30); padding:40px; box-sizing:border-box; }
+        .delegate-dialog h2 { margin:0; font-size:18px; }
+        .delegate-dialog-rule { height:1px; background:#d1d5db; margin:14px 0 18px; }
+        .delegate-dialog-copy { margin:0 0 16px; color:#111827; font-size:14px; line-height:1.55; }
+        .delegate-dialog-label { display:block; margin:12px 0 8px; font-size:12px; font-weight:400; color:#374151; }
+        .delegate-modal-input[type=text],
+        .delegate-modal-message { width:100%; box-sizing:border-box; border:1px solid #9ca3af; border-radius:0; padding:8px; font-size:14px; }
+        .delegate-modal-message { min-height:56px; resize:vertical; }
+        .delegate-terms-row { display:flex; align-items:flex-start; gap:10px; margin-top:10px; font-size:14px; line-height:1.4; }
+        .delegate-terms-row input { margin-top:2px; }
+        .delegate-terms-row a { color:#0b66da; text-decoration:none; }
+        .delegate-dialog-actions { display:flex; justify-content:flex-end; align-items:center; gap:16px; margin-top:50px; }
+        .delegate-cancel-button { min-width:72px; min-height:34px; border:1px solid #d1d5db; border-radius:999px; background:#fff; color:#111827; cursor:pointer; font-size:13px; font-weight:700; }
+        .delegate-modal-submit { min-width:86px; min-height:34px; border:0; border-radius:999px; background:#0b66da; color:#fff; cursor:pointer; font-size:13px; font-weight:700; }
+        .delegate-modal-submit:disabled { background:#e5e7eb; color:#9ca3af; cursor:default; }
         .errors { color:#991b1b; background:#fef2f2; border-radius:8px; padding:8px 12px; margin: 12px 0; }
+        @media (max-height: 700px) {
+            .sender-consent-panel { padding-top:12px; padding-bottom:10px; gap:8px; }
+            .sender-panel-title { font-size:19px; margin-bottom:5px; }
+            .sender-panel-from { margin-bottom:8px; line-height:1.25; }
+            .sender-panel-divider { margin-bottom:8px; }
+            .sender-panel-message-title { font-size:14px; }
+            .sender-panel-message { font-size:13px; line-height:1.3; max-height:5.2em; -webkit-line-clamp:4; }
+            .consent-overlay { padding:10px; }
+            .consent-overlay-text { font-size:12px; line-height:1.3; margin-bottom:8px; }
+            .consent-options-button,
+            .consent-continue-button { min-height:32px; }
+        }
+        @media (max-height: 560px) {
+            .sender-panel-message { max-height:2.6em; -webkit-line-clamp:2; }
+            .sender-panel-divider { margin-bottom:6px; }
+            .consent-overlay-text { margin-bottom:6px; }
+        }
+        @media (max-width: 760px) {
+            .signing-workspace { flex-direction:column; }
+            .sender-consent-panel { width:100%; flex-basis:auto; height:auto; max-height:none; min-height:auto; border-right:0; border-bottom:1px solid #e5e7eb; padding:16px; overflow:visible; }
+            .sender-panel-main { margin-bottom:18px; }
+            .document-workspace { height:auto; flex:1 1 auto; min-height:0; }
+            .document-card { height:100%; min-height:0; }
+            .document-toolbar { flex-basis:auto; height:auto; min-height:64px; grid-template-columns:1fr; gap:8px; padding:10px 12px; }
+            .document-toolbar-title { justify-content:flex-start; }
+            .document-toolbar-title-text { max-width:100%; }
+            .document-toolbar-actions { justify-content:flex-start; flex-wrap:wrap; }
+            .document-right-rail { display:none; }
+        }
     </style>
 </head>
 <body>
 <apex:form id="form">
     <apex:inputHidden value="{!signatureImageDataUrl}" id="signatureImageDataUrl" />
     <apex:inputHidden value="{!signerFieldsJson}" id="signerFieldsJson" />
+    <apex:inputHidden value="{!typedName}" id="typedName" />
+    <apex:inputHidden value="{!signerTitle}" id="signerTitle" />
     <div class="wrap">
-        <div class="card">
-            <h1>Electronic Signature</h1>
-            <h2>{!documentTitle}</h2>
-            <apex:outputPanel rendered="{!envelope != null}">
-                <p>Signer: <strong>{!envelope.Signer_Name__c}</strong> ({!envelope.Signer_Email__c})</p>
-            </apex:outputPanel>
+        <div id="terminalMessageHost">
             <apex:outputPanel rendered="{!hasError}">
-                <div class="msg err">{!pageMessage}</div>
+                <div class="card"><div class="msg err">{!pageMessage}</div></div>
             </apex:outputPanel>
-            <apex:outputPanel rendered="{!submitted}">
-                <div class="msg">{!pageMessage}</div>
+            <apex:outputPanel rendered="{!submitted}" layout="none">
+                <div class="completion-overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="completionOverlayTitle">
+                    <div class="completion-overlay">
+                        <h2 id="completionOverlayTitle" class="completion-overlay-title">{!terminalTitle}</h2>
+                        <p class="completion-overlay-message">{!pageMessage}</p>
+                    </div>
+                </div>
             </apex:outputPanel>
         </div>
 
         <apex:pageMessages />
 
         <apex:outputPanel rendered="{!canSign}">
-            <div class="card">
-                <h2>Step 1: Complete the Required Fields</h2>
-                <p class="fineprint">Review the document and click each highlighted field to fill it. Required fields are marked with an asterisk.</p>
-                <div class="pdf-tools">
-                    <button type="button" class="btn secondary" onclick="zoomOut();">Zoom Out</button>
-                    <span class="fineprint" id="zoomLabel">125%</span>
-                    <button type="button" class="btn secondary" onclick="zoomIn();">Zoom In</button>
-                </div>
-                <div class="prepared-doc" id="pdfContainer">
-                    <div class="fineprint">Loading document...</div>
-                </div>
-            </div>
+            <apex:inputCheckbox value="{!consent}" id="electronicConsent" styleClass="hidden-consent" />
+            <apex:inputCheckbox value="{!disclosureAccepted}" id="electronicDisclosureAccepted" styleClass="hidden-consent" />
 
-            <div class="card">
-                <h2>Step 2: Sign Electronically</h2>
-                <p class="fineprint">Your field entries, signature, IP address, browser user agent, and timestamp will be recorded.</p>
-
-                <label>Type Your Full Legal Name <span class="required-marker">*</span></label>
-                <apex:inputText value="{!typedName}" id="typedName" />
-
-                <div class="signature-methods">
-                    <p class="fineprint">Choose how you want to provide your signature image.</p>
-                    <label><input checked="checked" name="signatureMode" onclick="toggleSignatureMode();" type="radio" value="typed" /> Use Typed Name</label>
-                    <label><input name="signatureMode" onclick="toggleSignatureMode();" type="radio" value="draw" /> Draw Signature</label>
-                    <div id="typedSignaturePanel"><p class="fineprint">Your typed name will be used for signature fields.</p></div>
-                    <div id="drawSignaturePanel" style="display:none;">
-                        <label>Draw Your Signature</label>
-                        <div class="signature-pad-wrap"><canvas id="signaturePad"></canvas></div>
-                        <button type="button" class="btn secondary" onclick="clearSignaturePad();">Clear Signature</button>
+            <div id="signingWorkspace" class="signing-workspace">
+                <aside class="sender-consent-panel" id="senderConsentPanel">
+                    <div class="sender-panel-main">
+                        <h1 class="sender-panel-title">Your turn to sign.</h1>
+                        <p class="sender-panel-from">{!signerIntroText}</p>
+                        <div class="sender-panel-divider"></div>
+                        <h2 class="sender-panel-message-title">Message from {!senderDisplayName}:</h2>
+                        <p class="sender-panel-message">{!envelopeMessage}</p>
+                    </div>
+                    <div class="consent-overlay" id="consentOverlay">
+                        <p class="consent-overlay-text">
+                            By selecting <strong>Continue</strong>, I agree to the
+                            <a href="https://kaizonsolutions.com/wp-content/uploads/2026/05/Consumer-Disclosure.pdf" target="_blank">Consumer Disclosure</a>
+                            and to use electronic signatures.
+                        </p>
+                        <div class="consent-overlay-actions">
+                            <button type="button" class="consent-options-button" onclick="return toggleConsentOptions();">
+                                <span>Options</span>
+                            </button>
+                            <button type="button" class="consent-continue-button" onclick="return acceptDisclosureOverlay();">Continue</button>
+                            <div class="consent-options-menu" id="consentOptionsMenu">
+                                <button type="button" class="consent-menu-item" onclick="return openDeclineDialog();">
+                                    <span class="consent-menu-icon">
+                                        <img class="consent-menu-icon-image" src="{!URLFOR($Resource.Decline_To_Sign_Button)}" alt="" />
+                                    </span>
+                                    <span>Decline to sign</span>
+                                </button>
+                                <button type="button" class="consent-menu-item" onclick="return openDelegateDialog();">
+                                    <span class="consent-menu-icon">
+                                        <img class="consent-menu-icon-image" src="{!URLFOR($Resource.Delegate_Signing_Button)}" alt="" />
+                                    </span>
+                                    <span>Delegate signing to another</span>
+                                </button>
+                                <div class="consent-menu-divider"></div>
+                                <a id="consentDownloadPdfLink" class="consent-menu-item" href="#" target="_blank" download="download">
+                                    <span class="consent-menu-icon">
+                                        <img class="consent-menu-icon-image" src="{!URLFOR($Resource.Download_Document_Button)}" alt="" />
+                                    </span>
+                                    <span>Download PDF</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+                <div class="document-workspace">
+                <div class="card document-card">
+                    <div class="document-toolbar">
+                        <div class="document-toolbar-brand">
+                            <img class="document-brand-logo" src="{!URLFOR($Resource.Kaizon_Solutions_Logo)}" alt="Kaizon Solutions" />
+                        </div>
+                        <div class="document-toolbar-title">
+                            <span class="document-toolbar-title-text">{!documentTitle}</span>
+                        </div>
+                        <div class="document-toolbar-actions">
+                            <div class="viewer-options" id="viewerOptions">
+                                <button type="button" class="viewer-options-button" onclick="return toggleViewerOptions();">
+                                    <img class="viewer-options-button-icon" src="{!URLFOR($Resource.Options_Button)}" alt="" />
+                                    <span>Options</span>
+                                </button>
+                                <div class="viewer-options-menu" id="viewerOptionsMenu">
+                                    <div class="viewer-menu-header">
+                                        <div class="viewer-menu-from">From {!senderDisplayName}</div>
+                                    </div>
+                                    <div class="viewer-menu-message">
+                                        <strong>Message from {!senderDisplayName}:</strong>
+                                        <span>{!envelopeMessage}</span>
+                                    </div>
+                                    <div class="viewer-menu-divider"></div>
+                                    <button type="button" class="viewer-menu-item" onclick="return openDeclineDialog();">
+                                        <span class="viewer-menu-icon">
+                                            <img class="viewer-menu-icon-image" src="{!URLFOR($Resource.Decline_To_Sign_Button)}" alt="" />
+                                        </span>
+                                        <span>Decline to sign</span>
+                                    </button>
+                                    <button type="button" class="viewer-menu-item" onclick="return openDelegateDialog();">
+                                        <span class="viewer-menu-icon">
+                                            <img class="viewer-menu-icon-image" src="{!URLFOR($Resource.Delegate_Signing_Button)}" alt="" />
+                                        </span>
+                                        <span>Delegate signing to another</span>
+                                    </button>
+                                    <div class="viewer-menu-divider"></div>
+                                    <button type="button" class="viewer-menu-item" onclick="return clearDocumentData();">
+                                        <span class="viewer-menu-icon">
+                                            <img class="viewer-menu-icon-image" src="{!URLFOR($Resource.Clear_Document_Buton)}" alt="" />
+                                        </span>
+                                        <span>Clear document data</span>
+                                    </button>
+                                    <div class="viewer-menu-divider"></div>
+                                    <a id="viewerOptionsDownloadPdfLink" class="viewer-menu-item" href="#" target="_blank" download="download">
+                                        <span class="viewer-menu-icon">
+                                            <img class="viewer-menu-icon-image" src="{!URLFOR($Resource.Download_Document_Button)}" alt="" />
+                                        </span>
+                                        <span>Download PDF</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <span class="viewer-toolbar-divider"></span>
+                            <button type="button" class="viewer-icon-button" aria-label="Zoom out" onclick="zoomOut();">-</button>
+                            <span class="viewer-zoom-label" id="zoomLabel">150%</span>
+                            <button type="button" class="viewer-icon-button" aria-label="Zoom in" onclick="zoomIn();">+</button>
+                            <a id="downloadPdfLink" class="viewer-icon-button" href="#" target="_blank" download="download" aria-label="Download PDF">
+                                <img class="viewer-icon-image" src="{!URLFOR($Resource.Download_Document_Button)}" alt="" />
+                            </a>
+                        </div>
+                    </div>
+                    <div class="document-body">
+                        <div class="document-viewer">
+                            <div class="prepared-doc-shell consent-pending" id="preparedDocShell">
+                                <div class="prepared-doc" id="pdfContainer">
+                                    <div class="fineprint">Loading document...</div>
+                                </div>
+                                <div class="required-field-nav" id="requiredFieldNav" aria-live="polite" hidden="hidden">
+                                    <button type="button" class="required-field-nav-button prev" aria-label="Previous required field" onclick="return navigateRequiredField(-1);"></button>
+                                    <span class="required-field-nav-text" id="requiredFieldNavText">0 required fields remaining</span>
+                                    <button type="button" class="required-field-nav-button next" aria-label="Next required field" onclick="return navigateRequiredField(1);"></button>
+                                    <span class="required-field-complete-text">Click submit to sign.</span>
+                                    <apex:commandButton value="Submit" action="{!sign}" onclick="return buildSignatureAndFields();" styleClass="required-field-submit-button" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="document-right-rail" aria-label="Document tools">
+                            <div class="right-rail-spacer"></div>
+                            <div class="right-rail-page">
+                                <span class="right-rail-page-current" id="currentPageIndicator">1</span>
+                                <span class="right-rail-page-total" id="pageCountIndicator">1</span>
+                            </div>
+                            <button type="button" class="viewer-icon-button right-rail-arrow-button prev" aria-label="Previous page" title="Previous page" onclick="return scrollDocumentPage(-1);"></button>
+                            <button type="button" class="viewer-icon-button right-rail-arrow-button next" aria-label="Next page" title="Next page" onclick="return scrollDocumentPage(1);"></button>
+                            <span class="viewer-toolbar-divider"></span>
+                            <a id="rightRailDownloadPdfLink" class="viewer-icon-button" href="#" target="_blank" download="download" aria-label="Download PDF" title="Download PDF">
+                                <img class="viewer-icon-image" src="{!URLFOR($Resource.Download_Document_Button)}" alt="" />
+                            </a>
+                            <button type="button" class="viewer-icon-button" aria-label="Zoom in" title="Zoom in" onclick="zoomIn();">+</button>
+                            <button type="button" class="viewer-icon-button" aria-label="Zoom out" title="Zoom out" onclick="zoomOut();">-</button>
+                        </div>
                     </div>
                 </div>
-
-                <label>Title <span class="required-marker">*</span></label>
-                <apex:inputText value="{!signerTitle}" id="signerTitle" />
-
-                <label><apex:inputCheckbox value="{!consent}" /> I agree to sign this document electronically.</label>
-                <apex:commandButton value="Sign Document" action="{!sign}" onclick="return buildSignatureAndFields();" styleClass="btn" />
-
-                <hr />
-                <h2>Decline Instead</h2>
-                <label>Reason for Declining</label>
-                <apex:inputTextarea value="{!declineReason}" rows="3" />
-                <apex:commandButton value="Decline Request" action="{!decline}" styleClass="btn danger" />
+                </div>
             </div>
         </apex:outputPanel>
     </div>
+    <apex:outputPanel rendered="{!canSign}" layout="none">
+        <div id="declineDialogBackdrop" class="decline-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="declineDialogTitle">
+            <div class="decline-dialog">
+                <h2 id="declineDialogTitle">Decline agreement</h2>
+                <div class="decline-dialog-rule"></div>
+                <label class="decline-dialog-label" for="declineReasonInput">Please provide reason for declining this agreement <span class="required-marker">*</span></label>
+                <apex:inputTextarea value="{!declineReason}" id="declineReasonInput" styleClass="decline-modal-reason" onkeyup="updateDeclineSubmitState();" onchange="updateDeclineSubmitState();" />
+                <label class="decline-terms-row">
+                    <apex:inputCheckbox value="{!declineTermsAccepted}" id="declineTermsAccepted" onclick="updateDeclineSubmitState();" />
+                    <span>I have read and agree to the <a href="https://kaizonsolutions.com/wp-content/uploads/2026/05/Consumer-Disclosure.pdf" target="_blank">Consumer Disclosure</a>.</span>
+                </label>
+                <div class="decline-dialog-actions">
+                    <button type="button" class="decline-cancel-button" onclick="return closeDeclineDialog();">Cancel</button>
+                    <apex:commandButton value="Decline" action="{!decline}" onclick="return validateDeclineDialog();" styleClass="decline-modal-submit" />
+                </div>
+            </div>
+        </div>
+        <div id="delegateDialogBackdrop" class="delegate-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="delegateDialogTitle">
+            <div class="delegate-dialog">
+                <h2 id="delegateDialogTitle">Delegate agreement</h2>
+                <div class="delegate-dialog-rule"></div>
+                <p class="delegate-dialog-copy">To send this agreement to another individual for signature, enter their email address and a message below.</p>
+                <label class="delegate-dialog-label" for="delegateEmailInput">Email <span class="required-marker">*</span></label>
+                <apex:inputText value="{!delegateEmail}" id="delegateEmailInput" styleClass="delegate-modal-input" onkeyup="updateDelegateSubmitState();" onchange="updateDelegateSubmitState();" />
+                <label class="delegate-dialog-label" for="delegateNameInput">Name <span class="required-marker">*</span></label>
+                <apex:inputText value="{!delegateName}" id="delegateNameInput" styleClass="delegate-modal-input" onkeyup="updateDelegateSubmitState();" onchange="updateDelegateSubmitState();" />
+                <label class="delegate-dialog-label" for="delegateMessageInput">Message <span class="required-marker">*</span></label>
+                <apex:inputTextarea value="{!delegateMessage}" id="delegateMessageInput" styleClass="delegate-modal-message" onkeyup="updateDelegateSubmitState();" onchange="updateDelegateSubmitState();" />
+                <label class="delegate-terms-row">
+                    <apex:inputCheckbox value="{!delegateTermsAccepted}" id="delegateTermsAccepted" onclick="updateDelegateSubmitState();" />
+                    <span>I have read and agree to the <a href="https://kaizonsolutions.com/wp-content/uploads/2026/05/Consumer-Disclosure.pdf" target="_blank">Consumer Disclosure</a>.</span>
+                </label>
+                <div class="delegate-dialog-actions">
+                    <button type="button" class="delegate-cancel-button" onclick="return closeDelegateDialog();">Cancel</button>
+                    <apex:commandButton value="Delegate" action="{!delegateAgreement}" onclick="return validateDelegateDialog();" styleClass="delegate-modal-submit" />
+                </div>
+            </div>
+        </div>
+    </apex:outputPanel>
 </apex:form>
+<div id="signatureDialogBackdrop" class="signature-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="signatureDialogTitle">
+    <div class="signature-dialog">
+        <h2 id="signatureDialogTitle">Add Signature</h2>
+        <div class="signature-mode-actions">
+            <button type="button" id="signatureModeTypedButton" class="btn" onclick="setSignatureDialogMode('typed');">Type Name</button>
+            <button type="button" id="signatureModeDrawButton" class="btn secondary" onclick="setSignatureDialogMode('draw');">Draw Signature</button>
+        </div>
+        <div id="signatureTypedPanel">
+            <label>Typed Signature</label>
+            <input type="hidden" id="signatureTypedName" />
+            <div id="signatureTypedPreview" class="signature-preview"></div>
+        </div>
+        <div id="signatureDrawPanel" style="display:none;">
+            <label>Draw Signature</label>
+            <div class="signature-pad-wrap"><canvas id="signatureDialogPad"></canvas></div>
+            <button type="button" class="btn secondary" onclick="clearSignaturePad();">Clear Signature</button>
+        </div>
+        <div class="signature-dialog-actions">
+            <button type="button" class="btn" onclick="applySignatureDialog();">Apply Signature</button>
+            <button type="button" class="btn secondary" onclick="closeSignatureDialog();">Cancel</button>
+        </div>
+    </div>
+</div>
 <script>
 var sitePrefix = '{!JSENCODE($Site.Prefix)}';
 if (!sitePrefix || sitePrefix === '/') { sitePrefix = ''; }
 var pdfToken = '{!JSENCODE(token)}';
 var pdfUrl = sitePrefix + '/services/apexrest/PDFESign/v1/pdf?t=' + encodeURIComponent(pdfToken);
+var CHECKMARK_VALUE = '\u2713';
+var downloadFileName = '{!JSENCODE(documentDownloadFileName)}';
+if (!downloadFileName) { downloadFileName = 'document'; }
+if (!/\.pdf$/i.test(downloadFileName)) { downloadFileName += '.pdf'; }
 var preparedFields = JSON.parse('{!JSENCODE(fieldsJson)}');
-var zoom = 1.25;
+var zoom = 1.5;
 var pdfDocument = null;
+var pdfPageCount = 0;
+var signingExperienceStarted = false;
 var signaturePadInitialized = false;
 var signaturePadIsDrawing = false;
 var signaturePadHasInk = false;
 var signaturePadCanvas;
 var signaturePadCtx;
+var activeSignatureFieldId = null;
+var signatureDialogMode = 'typed';
+var activeRequiredFieldId = null;
 
 if (window.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = '{!URLFOR($Resource.PDFESign_PdfJs, 'pdf.worker.min.js')}';
+}
+
+function setDownloadLinks() {
+    ['downloadPdfLink', 'consentDownloadPdfLink', 'viewerOptionsDownloadPdfLink', 'rightRailDownloadPdfLink'].forEach(function(id) {
+        var link = document.getElementById(id);
+        if (!link) { return; }
+        link.href = pdfUrl;
+        link.setAttribute('download', downloadFileName);
+    });
+}
+function toggleConsentOptions() {
+    var menu = document.getElementById('consentOptionsMenu');
+    if (menu) { menu.classList.toggle('open'); }
+    return false;
+}
+function closeConsentOptions() {
+    var menu = document.getElementById('consentOptionsMenu');
+    if (menu) { menu.classList.remove('open'); }
+}
+function toggleViewerOptions() {
+    var menu = document.getElementById('viewerOptionsMenu');
+    if (menu) { menu.classList.toggle('open'); }
+    return false;
+}
+function closeViewerOptions() {
+    var menu = document.getElementById('viewerOptionsMenu');
+    if (menu) { menu.classList.remove('open'); }
+}
+function consentInput() {
+    return document.querySelector('[id$="electronicConsent"]');
+}
+function disclosureAcceptedInput() {
+    return document.querySelector('[id$="electronicDisclosureAccepted"]');
+}
+function setConsentAccepted(accepted) {
+    var consent = consentInput();
+    var disclosure = disclosureAcceptedInput();
+    if (consent) { consent.checked = accepted === true; }
+    if (disclosure) { disclosure.checked = accepted === true; }
+}
+function isConsentAccepted() {
+    var consent = consentInput();
+    var disclosure = disclosureAcceptedInput();
+    return !!(consent && consent.checked && disclosure && disclosure.checked);
+}
+function isConsentOverlayActive() {
+    var overlay = document.getElementById('consentOverlay');
+    return !!(overlay && overlay.style.display !== 'none');
+}
+function requireDisclosureOverlay() {
+    setConsentAccepted(false);
+    var workspace = document.getElementById('signingWorkspace');
+    if (workspace) { workspace.classList.add('consent-required'); }
+    var shell = document.getElementById('preparedDocShell');
+    if (shell) { shell.classList.add('consent-pending'); }
+    var panel = document.getElementById('senderConsentPanel');
+    if (panel) { panel.style.display = 'flex'; }
+    var overlay = document.getElementById('consentOverlay');
+    if (overlay) { overlay.style.display = 'block'; }
+    closeConsentOptions();
+    closeViewerOptions();
+    updateRequiredFieldNav();
+}
+function acceptDisclosureOverlay() {
+    setConsentAccepted(true);
+    closeConsentOptions();
+    closeViewerOptions();
+    var workspace = document.getElementById('signingWorkspace');
+    if (workspace) { workspace.classList.remove('consent-required'); }
+    var shell = document.getElementById('preparedDocShell');
+    if (shell) { shell.classList.remove('consent-pending'); }
+    var panel = document.getElementById('senderConsentPanel');
+    if (panel) { panel.style.display = 'none'; }
+    var overlay = document.getElementById('consentOverlay');
+    if (overlay) { overlay.style.display = 'none'; }
+    updateRequiredFieldNav();
+    return false;
+}
+function declineReasonInput() {
+    return document.querySelector('[id$="declineReasonInput"]');
+}
+function declineTermsInput() {
+    return document.querySelector('[id$="declineTermsAccepted"]');
+}
+function declineReasonValue() {
+    var input = declineReasonInput();
+    return input && input.value ? input.value.trim() : '';
+}
+function declineTermsChecked() {
+    var input = declineTermsInput();
+    return input ? input.checked === true : false;
+}
+function updateDeclineSubmitState() {
+    var submitButton = document.querySelector('.decline-modal-submit');
+    if (submitButton) {
+        submitButton.disabled = !(declineReasonValue() && declineTermsChecked());
+    }
+}
+function openDeclineDialog() {
+    closeConsentOptions();
+    closeViewerOptions();
+    var backdrop = document.getElementById('declineDialogBackdrop');
+    if (backdrop) {
+        backdrop.style.display = 'flex';
+        updateDeclineSubmitState();
+        window.setTimeout(function() {
+            var input = declineReasonInput();
+            if (input) { input.focus(); }
+        }, 0);
+    }
+    return false;
+}
+function closeDeclineDialog() {
+    var backdrop = document.getElementById('declineDialogBackdrop');
+    if (backdrop) { backdrop.style.display = 'none'; }
+    return false;
+}
+function validateDeclineDialog() {
+    if (!declineReasonValue()) {
+        alert('Please provide a reason for declining this agreement.');
+        var input = declineReasonInput();
+        if (input) { input.focus(); }
+        updateDeclineSubmitState();
+        return false;
+    }
+    if (!declineTermsChecked()) {
+        alert('Confirm the disclosure before declining.');
+        updateDeclineSubmitState();
+        return false;
+    }
+    return true;
+}
+function delegateEmailInput() {
+    return document.querySelector('[id$="delegateEmailInput"]');
+}
+function delegateNameInput() {
+    return document.querySelector('[id$="delegateNameInput"]');
+}
+function delegateMessageInput() {
+    return document.querySelector('[id$="delegateMessageInput"]');
+}
+function delegateTermsInput() {
+    return document.querySelector('[id$="delegateTermsAccepted"]');
+}
+function delegateEmailValue() {
+    var input = delegateEmailInput();
+    return input && input.value ? input.value.trim() : '';
+}
+function delegateNameValue() {
+    var input = delegateNameInput();
+    return input && input.value ? input.value.trim() : '';
+}
+function delegateMessageValue() {
+    var input = delegateMessageInput();
+    return input && input.value ? input.value.trim() : '';
+}
+function delegateTermsChecked() {
+    var input = delegateTermsInput();
+    return input ? input.checked === true : false;
+}
+function delegateEmailIsValid() {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(delegateEmailValue());
+}
+function updateDelegateSubmitState() {
+    var submitButton = document.querySelector('.delegate-modal-submit');
+    if (submitButton) {
+        submitButton.disabled = !(delegateEmailIsValid() && delegateNameValue() && delegateMessageValue() && delegateTermsChecked());
+    }
+}
+function openDelegateDialog() {
+    closeConsentOptions();
+    closeViewerOptions();
+    var backdrop = document.getElementById('delegateDialogBackdrop');
+    if (backdrop) {
+        backdrop.style.display = 'flex';
+        updateDelegateSubmitState();
+        window.setTimeout(function() {
+            var input = delegateEmailInput();
+            if (input) { input.focus(); }
+        }, 0);
+    }
+    return false;
+}
+function closeDelegateDialog() {
+    var backdrop = document.getElementById('delegateDialogBackdrop');
+    if (backdrop) { backdrop.style.display = 'none'; }
+    return false;
+}
+function validateDelegateDialog() {
+    if (!delegateEmailValue()) {
+        alert('Enter the delegate email address.');
+        var emailInput = delegateEmailInput();
+        if (emailInput) { emailInput.focus(); }
+        updateDelegateSubmitState();
+        return false;
+    }
+    if (!delegateEmailIsValid()) {
+        alert('Enter a valid delegate email address.');
+        var invalidEmailInput = delegateEmailInput();
+        if (invalidEmailInput) { invalidEmailInput.focus(); }
+        updateDelegateSubmitState();
+        return false;
+    }
+    if (!delegateNameValue()) {
+        alert('Enter the delegate name.');
+        var nameInput = delegateNameInput();
+        if (nameInput) { nameInput.focus(); }
+        updateDelegateSubmitState();
+        return false;
+    }
+    if (!delegateMessageValue()) {
+        alert('Enter a message for the delegate.');
+        var messageInput = delegateMessageInput();
+        if (messageInput) { messageInput.focus(); }
+        updateDelegateSubmitState();
+        return false;
+    }
+    if (!delegateTermsChecked()) {
+        alert('Confirm the disclosure before delegating.');
+        updateDelegateSubmitState();
+        return false;
+    }
+    return true;
+}
+function showSigningWorkspace() {
+    var signingWorkspace = document.getElementById('signingWorkspace');
+    if (signingWorkspace) { signingWorkspace.style.display = 'flex'; }
+}
+function initializeSigningExperience() {
+    if (signingExperienceStarted) { return; }
+    signingExperienceStarted = true;
+    setDownloadLinks();
+    renderPdf().catch(function(e) {
+        var container = document.getElementById('pdfContainer');
+        if (container) {
+            container.innerHTML = '<div class="msg err">Unable to load PDF: ' + e.message + '</div>';
+        }
+    });
+}
+function initializeConsentGate() {
+    setDownloadLinks();
+    if (document.getElementById('signingWorkspace')) {
+        requireDisclosureOverlay();
+        showSigningWorkspace();
+        initializeSigningExperience();
+    }
+}
+function showTerminalDocumentMessage(message) {
+    var signingWorkspace = document.getElementById('signingWorkspace');
+    if (signingWorkspace) { signingWorkspace.style.display = 'none'; }
+    var host = document.getElementById('terminalMessageHost') || document.querySelector('.wrap');
+    if (!host) { return; }
+    var terminalMessage = document.getElementById('terminalDocumentMessage');
+    if (!terminalMessage) {
+        terminalMessage = document.createElement('div');
+        terminalMessage.id = 'terminalDocumentMessage';
+        terminalMessage.className = 'card';
+        var messageBody = document.createElement('div');
+        messageBody.className = 'msg';
+        terminalMessage.appendChild(messageBody);
+        host.appendChild(terminalMessage);
+    }
+    var messageTarget = terminalMessage.querySelector('.msg') || terminalMessage;
+    messageTarget.textContent = message || 'This document is no longer available for signing.';
 }
 
 function getTypedName() {
     var input = document.querySelector('[id$="typedName"]');
     return input && input.value ? input.value.trim() : '';
 }
+function setTypedName(value) {
+    var input = document.querySelector('[id$="typedName"]');
+    if (input) { input.value = value || ''; }
+}
 function getSignerTitle() {
     var input = document.querySelector('[id$="signerTitle"]');
     return input && input.value ? input.value.trim() : '';
+}
+function setSignerTitle(value) {
+    var input = document.querySelector('[id$="signerTitle"]');
+    if (input) { input.value = value || ''; }
+}
+function todayText() {
+    return new Date().toLocaleDateString('en-US');
+}
+function clearDocumentData() {
+    closeViewerOptions();
+    preparedFields.forEach(function(field) {
+        field.value = '';
+        field.completed = false;
+        delete field.signatureImageDataUrl;
+        delete field.signaturePreviewDataUrl;
+    });
+    setSignerTitle('');
+    var signatureInput = document.querySelector('[id$="signatureImageDataUrl"]');
+    if (signatureInput) { signatureInput.value = ''; }
+    if (signaturePadInitialized && signaturePadCtx && signaturePadCanvas) {
+        signaturePadCtx.clearRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+        signaturePadHasInk = false;
+    }
+    activeSignatureFieldId = null;
+    activeRequiredFieldId = null;
+    applyPreparedFieldDefaults();
+    renderFieldLayer();
+    updateRequiredFieldNav();
+    return false;
+}
+function applyPreparedFieldDefaults() {
+    var signerName = getTypedName();
+    preparedFields.forEach(function(field) {
+        var type = fieldTypeName(field);
+        if (type === 'name') {
+            field.value = signerName;
+            field.completed = !!field.value;
+        } else if (type === 'date') {
+            field.value = todayText();
+            field.completed = true;
+        }
+    });
+}
+function syncSignerTitleFromFields() {
+    var hasTitleField = false;
+    for (var i = 0; i < preparedFields.length; i++) {
+        if (fieldTypeName(preparedFields[i]) === 'title') {
+            hasTitleField = true;
+            if (preparedFields[i].value) {
+                setSignerTitle(preparedFields[i].value);
+                return preparedFields[i].value;
+            }
+        }
+    }
+    if (hasTitleField) {
+        setSignerTitle('');
+        return '';
+    }
+    return getSignerTitle();
 }
 function getSignatureMode() {
     var selected = document.querySelector('input[name="signatureMode"]:checked');
@@ -139,8 +819,11 @@ function getSignatureMode() {
 }
 function toggleSignatureMode() {
     var mode = getSignatureMode();
-    document.getElementById('typedSignaturePanel').style.display = mode === 'typed' ? 'block' : 'none';
-    document.getElementById('drawSignaturePanel').style.display = mode === 'draw' ? 'block' : 'none';
+    var typedPanel = document.getElementById('typedSignaturePanel');
+    var drawPanel = document.getElementById('drawSignaturePanel');
+    if (!typedPanel || !drawPanel) { return; }
+    typedPanel.style.display = mode === 'typed' ? 'block' : 'none';
+    drawPanel.style.display = mode === 'draw' ? 'block' : 'none';
     if (mode === 'draw') { initSignaturePad(); }
 }
 function signaturePadPoint(evt) {
@@ -153,7 +836,7 @@ function signaturePadMove(evt) { if (!signaturePadIsDrawing) { return; } evt.pre
 function signaturePadEnd(evt) { if (evt) { evt.preventDefault(); } signaturePadIsDrawing = false; }
 function initSignaturePad() {
     if (signaturePadInitialized) { return; }
-    signaturePadCanvas = document.getElementById('signaturePad');
+    signaturePadCanvas = document.getElementById('signatureDialogPad');
     if (!signaturePadCanvas) { return; }
     signaturePadCanvas.width = 700;
     signaturePadCanvas.height = 180;
@@ -173,30 +856,251 @@ function initSignaturePad() {
 }
 function clearSignaturePad() { initSignaturePad(); signaturePadCtx.clearRect(0,0,signaturePadCanvas.width,signaturePadCanvas.height); signaturePadHasInk = false; }
 
+function canvasToSignatureJpeg(sourceCanvas) {
+    var canvas = document.createElement('canvas');
+    canvas.width = sourceCanvas.width;
+    canvas.height = sourceCanvas.height;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(sourceCanvas, 0, 0);
+    return canvas.toDataURL('image/jpeg', 0.92);
+}
+function canvasToTransparentPng(sourceCanvas) {
+    var canvas = document.createElement('canvas');
+    canvas.width = sourceCanvas.width;
+    canvas.height = sourceCanvas.height;
+    canvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
+    return canvas.toDataURL('image/png');
+}
+function typedSignatureToJpeg(value) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 900;
+    canvas.height = 220;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#111111';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    var fontSize = 96;
+    do {
+        ctx.font = fontSize + 'px "Brush Script MT", "Segoe Script", cursive';
+        fontSize -= 4;
+    } while (ctx.measureText(value).width > canvas.width - 80 && fontSize > 38);
+    ctx.fillText(value, 40, canvas.height / 2);
+    return canvas.toDataURL('image/jpeg', 0.92);
+}
+function syncSignatureImageFromFields() {
+    for (var i = 0; i < preparedFields.length; i++) {
+        if (fieldTypeName(preparedFields[i]) === 'signature' && preparedFields[i].signatureImageDataUrl) {
+            document.querySelector('[id$="signatureImageDataUrl"]').value = preparedFields[i].signatureImageDataUrl;
+            return preparedFields[i].signatureImageDataUrl;
+        }
+    }
+    return document.querySelector('[id$="signatureImageDataUrl"]').value || '';
+}
+function requiredFields() {
+    return preparedFields.filter(function(field) { return field.required; });
+}
+function requiredRemainingFields() {
+    return requiredFields().filter(function(field) { return !field.value; });
+}
+function requiredNavigationFields() {
+    var remaining = requiredRemainingFields();
+    return remaining.length ? remaining : requiredFields();
+}
+function updateRequiredFieldNav() {
+    var nav = document.getElementById('requiredFieldNav');
+    if (!nav) { return; }
+    if (isConsentOverlayActive()) {
+        nav.hidden = true;
+        nav.classList.remove('complete');
+        return;
+    }
+    var allRequired = requiredFields();
+    if (!allRequired.length) {
+        nav.hidden = true;
+        return;
+    }
+    nav.hidden = false;
+    var remainingCount = requiredRemainingFields().length;
+    if (remainingCount === 0) {
+        nav.classList.add('complete');
+    } else {
+        nav.classList.remove('complete');
+    }
+    var text = document.getElementById('requiredFieldNavText');
+    if (text) {
+        text.textContent = remainingCount === 0 ? 'All required fields complete' :
+            remainingCount + ' required field' + (remainingCount === 1 ? '' : 's') + ' remaining';
+    }
+    document.querySelectorAll('.required-field-nav-button').forEach(function(button) {
+        button.disabled = allRequired.length === 0;
+    });
+}
+function preparedFieldOrder(fieldId) {
+    for (var i = 0; i < preparedFields.length; i++) {
+        if (preparedFields[i].id === fieldId) { return i; }
+    }
+    return -1;
+}
+function elementForPreparedField(fieldId) {
+    var fields = document.querySelectorAll('.prepared-field');
+    for (var i = 0; i < fields.length; i++) {
+        if (fields[i].getAttribute('data-field-id') === fieldId) { return fields[i]; }
+    }
+    return null;
+}
+function nextRequiredField(direction) {
+    var fields = requiredNavigationFields();
+    if (!fields.length) { return null; }
+    for (var i = 0; i < fields.length; i++) {
+        if (fields[i].id === activeRequiredFieldId) {
+            return fields[(i + direction + fields.length) % fields.length];
+        }
+    }
+    var currentOrder = preparedFieldOrder(activeRequiredFieldId);
+    if (currentOrder < 0) {
+        return direction > 0 ? fields[0] : fields[fields.length - 1];
+    }
+    var candidate = null;
+    var candidateOrder;
+    fields.forEach(function(field) {
+        var order = preparedFieldOrder(field.id);
+        if (direction > 0 && order > currentOrder && (candidate === null || order < candidateOrder)) {
+            candidate = field;
+            candidateOrder = order;
+        } else if (direction < 0 && order < currentOrder && (candidate === null || order > candidateOrder)) {
+            candidate = field;
+            candidateOrder = order;
+        }
+    });
+    return candidate || (direction > 0 ? fields[0] : fields[fields.length - 1]);
+}
+function focusRequiredField(field) {
+    if (!field) { return; }
+    activeRequiredFieldId = field.id;
+    var target = elementForPreparedField(field.id);
+    var container = document.getElementById('pdfContainer');
+    if (!target || !container) { return; }
+    var containerRect = container.getBoundingClientRect();
+    var targetRect = target.getBoundingClientRect();
+    var scrollTop = targetRect.top - containerRect.top + container.scrollTop - (container.clientHeight / 2) + (targetRect.height / 2);
+    container.scrollTo({ top: Math.max(0, scrollTop), behavior:'smooth' });
+    target.classList.add('required-nav-highlight');
+    window.setTimeout(function() { target.classList.remove('required-nav-highlight'); }, 1600);
+    window.setTimeout(function() {
+        var input = target.querySelector('input');
+        if (input) {
+            input.focus({ preventScroll:true });
+        } else if (target.focus) {
+            target.focus({ preventScroll:true });
+        }
+    }, 350);
+}
+function navigateRequiredField(direction) {
+    focusRequiredField(nextRequiredField(direction));
+    return false;
+}
+
+function findPreparedField(fieldId) {
+    for (var i = 0; i < preparedFields.length; i++) {
+        if (preparedFields[i].id === fieldId) { return preparedFields[i]; }
+    }
+    return null;
+}
+function setSignatureDialogMode(mode) {
+    signatureDialogMode = mode === 'draw' ? 'draw' : 'typed';
+    document.getElementById('signatureTypedPanel').style.display = signatureDialogMode === 'typed' ? 'block' : 'none';
+    document.getElementById('signatureDrawPanel').style.display = signatureDialogMode === 'draw' ? 'block' : 'none';
+    document.getElementById('signatureModeTypedButton').className = signatureDialogMode === 'typed' ? 'btn' : 'btn secondary';
+    document.getElementById('signatureModeDrawButton').className = signatureDialogMode === 'draw' ? 'btn' : 'btn secondary';
+    if (signatureDialogMode === 'draw') { initSignaturePad(); }
+}
+function updateSignaturePreview() {
+    var preview = document.getElementById('signatureTypedPreview');
+    if (preview) { preview.textContent = getTypedName(); }
+}
+function openSignatureDialog(field) {
+    activeSignatureFieldId = field.id;
+    var input = document.getElementById('signatureTypedName');
+    if (input) {
+        input.value = getTypedName();
+    }
+    updateSignaturePreview();
+    setSignatureDialogMode('typed');
+    var backdrop = document.getElementById('signatureDialogBackdrop');
+    if (backdrop) { backdrop.style.display = 'flex'; }
+}
+function closeSignatureDialog() {
+    var backdrop = document.getElementById('signatureDialogBackdrop');
+    if (backdrop) { backdrop.style.display = 'none'; }
+    activeSignatureFieldId = null;
+}
+function applySignatureDialog() {
+    var field = findPreparedField(activeSignatureFieldId);
+    if (!field) { closeSignatureDialog(); return false; }
+
+    if (signatureDialogMode === 'draw') {
+        initSignaturePad();
+        if (!signaturePadHasInk) { alert('Draw your signature before applying it.'); return false; }
+        var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas);
+        var drawnPreviewDataUrl = canvasToTransparentPng(signaturePadCanvas);
+        var signerName = getTypedName();
+        if (!signerName) { alert('The signer name is missing from this request.'); return false; }
+        field.value = signerName;
+        field.signatureImageDataUrl = drawnDataUrl;
+        field.signaturePreviewDataUrl = drawnPreviewDataUrl;
+        document.querySelector('[id$="signatureImageDataUrl"]').value = drawnDataUrl;
+    } else {
+        var typedValue = getTypedName();
+        if (!typedValue) { alert('The signer name is missing from this request.'); return false; }
+        var typedDataUrl = typedSignatureToJpeg(typedValue);
+        field.value = typedValue;
+        field.signatureImageDataUrl = typedDataUrl;
+        field.signaturePreviewDataUrl = typedDataUrl;
+        document.querySelector('[id$="signatureImageDataUrl"]').value = typedDataUrl;
+    }
+    field.completed = !!field.value;
+    closeSignatureDialog();
+    renderFieldLayer();
+    return false;
+}
+
+function fieldTypeName(field) {
+    return (field.type || '').toLowerCase();
+}
 function valueForField(field) {
-    var type = (field.type || '').toLowerCase();
+    var type = fieldTypeName(field);
     var name = getTypedName();
-    var title = getSignerTitle();
-    if (type === 'signature' || type === 'name') {
-        if (!name) { alert('Type your full legal name first.'); return null; }
+    if (type === 'signature') {
+        openSignatureDialog(field);
+        return null;
+    }
+    if (type === 'name') {
+        if (!name) { alert('The signer name is missing from this request.'); return null; }
         return name;
     }
     if (type === 'initials') {
-        if (!name) { alert('Type your full legal name first.'); return null; }
+        if (!name) { alert('The signer name is missing from this request.'); return null; }
         return name.split(/\s+/).filter(Boolean).map(function(p) { return p.charAt(0).toUpperCase(); }).join('');
     }
     if (type === 'title') {
-        if (!title) { alert('Enter your title first.'); return null; }
-        return title;
+        return null;
     }
     if (type === 'date') { return new Date().toLocaleDateString('en-US'); }
-    if (type === 'checkbox') { return field.value === 'X' ? '' : 'X'; }
+    if (type === 'checkbox') { return field.value ? '' : CHECKMARK_VALUE; }
     var entered = window.prompt(field.label || 'Enter value', field.value || '');
     return entered === null ? null : entered.trim();
 }
 function completeField(fieldId) {
     for (var i = 0; i < preparedFields.length; i++) {
         if (preparedFields[i].id === fieldId) {
+            if (fieldTypeName(preparedFields[i]) === 'signature') {
+                openSignatureDialog(preparedFields[i]);
+                return false;
+            }
             var value = valueForField(preparedFields[i]);
             if (value === null) { return false; }
             preparedFields[i].value = value;
@@ -208,24 +1112,122 @@ function completeField(fieldId) {
     return false;
 }
 function renderFieldLayer() {
+    applyPreparedFieldDefaults();
     document.querySelectorAll('.prepared-field').forEach(function(el) { el.remove(); });
     preparedFields.forEach(function(field) {
         var layer = document.querySelector('.field-layer[data-page-number="' + field.pageNumber + '"]');
         if (!layer) { return; }
-        var button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'prepared-field' + (field.required ? ' required' : '') + (field.value ? ' completed' : '');
+        var type = fieldTypeName(field);
+        var usesButton = type !== 'title' && type !== 'name' && type !== 'date';
+        var button = document.createElement(usesButton ? 'button' : 'div');
+        if (usesButton) { button.type = 'button'; }
+        button.className = 'prepared-field type-' + type + (type === 'title' ? ' direct-input' : '') + (field.required ? ' required' : '') + (field.value ? ' completed' : '');
         button.style.left = ((field.xPercent || 0) * 100) + '%';
         button.style.top = ((field.yPercent || 0) * 100) + '%';
         button.style.width = ((field.widthPercent || 0.16) * 100) + '%';
         button.style.height = ((field.heightPercent || 0.04) * 100) + '%';
-        button.onclick = function() { return completeField(field.id); };
         var label = field.label || field.type || 'Field';
         button.innerHTML = '<span class="field-label"></span><span class="field-value"></span>';
-        button.querySelector('.field-label').textContent = label + (field.required ? ' *' : '');
-        button.querySelector('.field-value').textContent = field.value || 'Click to fill';
+        if (type === 'signature') {
+            button.querySelector('.field-label').textContent = field.required ? '*' : '';
+            button.onclick = function() { return completeField(field.id); };
+            var signatureValue = button.querySelector('.field-value');
+            var signaturePreviewUrl = field.signaturePreviewDataUrl || field.signatureImageDataUrl;
+            if (signaturePreviewUrl) {
+                var signatureImage = document.createElement('img');
+                signatureImage.className = 'signature-preview-image';
+                signatureImage.alt = 'Signature';
+                signatureImage.src = signaturePreviewUrl;
+                signatureValue.appendChild(signatureImage);
+            } else {
+                signatureValue.textContent = field.value || 'Click to Sign';
+            }
+        } else if (type === 'name') {
+            button.querySelector('.field-label').textContent = '';
+            button.querySelector('.field-value').textContent = field.value || '';
+        } else if (type === 'date') {
+            button.querySelector('.field-label').textContent = '';
+            button.querySelector('.field-value').textContent = field.value || '';
+        } else if (type === 'title') {
+            button.querySelector('.field-label').textContent = '';
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'prepared-field-input';
+            input.value = field.value || '';
+            input.placeholder = 'Enter your job title';
+            input.oninput = function() {
+                field.value = this.value.trim();
+                field.completed = !!field.value;
+                setSignerTitle(field.value);
+                button.className = 'prepared-field type-' + type + ' direct-input' + (field.required ? ' required' : '') + (field.value ? ' completed' : '');
+                updateRequiredFieldNav();
+            };
+            input.onblur = function() {
+                this.value = this.value.trim();
+                field.value = this.value;
+                field.completed = !!field.value;
+                setSignerTitle(field.value);
+                updateRequiredFieldNav();
+            };
+            button.querySelector('.field-value').appendChild(input);
+        } else if (type === 'checkbox') {
+            button.querySelector('.field-label').textContent = label + (field.required ? ' *' : '');
+            button.onclick = function() { return completeField(field.id); };
+            button.querySelector('.field-value').textContent = field.value ? CHECKMARK_VALUE : '';
+        } else {
+            button.querySelector('.field-label').textContent = label + (field.required ? ' *' : '');
+            button.onclick = function() { return completeField(field.id); };
+            button.querySelector('.field-value').textContent = field.value || 'Click to fill';
+        }
+        button.setAttribute('aria-label', label + (field.required ? ' required' : ''));
+        button.setAttribute('data-field-id', field.id);
         layer.appendChild(button);
     });
+    updateRequiredFieldNav();
+}
+function updateDocumentPageIndicators() {
+    var current = document.getElementById('currentPageIndicator');
+    var total = document.getElementById('pageCountIndicator');
+    if (total) { total.textContent = pdfPageCount ? String(pdfPageCount) : '1'; }
+    if (!current) { return; }
+    var container = document.getElementById('pdfContainer');
+    if (!container) {
+        current.textContent = '1';
+        return;
+    }
+    var pages = container.querySelectorAll('.pdf-page');
+    if (!pages.length) {
+        current.textContent = '1';
+        return;
+    }
+    var activePage = 1;
+    var containerRect = container.getBoundingClientRect();
+    var bestDistance = Number.MAX_VALUE;
+    for (var i = 0; i < pages.length; i++) {
+        var rect = pages[i].getBoundingClientRect();
+        var distance = Math.abs(rect.top - containerRect.top);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            activePage = parseInt(pages[i].getAttribute('data-page-number'), 10) || (i + 1);
+        }
+    }
+    current.textContent = String(activePage);
+}
+function scrollDocumentPage(direction) {
+    var container = document.getElementById('pdfContainer');
+    if (!container) { return false; }
+    var pages = Array.prototype.slice.call(container.querySelectorAll('.pdf-page'));
+    if (!pages.length) { return false; }
+    updateDocumentPageIndicators();
+    var currentIndicator = document.getElementById('currentPageIndicator');
+    var current = currentIndicator ? parseInt(currentIndicator.textContent, 10) : 1;
+    if (!current || current < 1) { current = 1; }
+    var target = Math.max(1, Math.min(pages.length, current + direction));
+    var targetPage = pages[target - 1];
+    if (targetPage) {
+        container.scrollTo({ top: Math.max(0, targetPage.offsetTop - 8), behavior:'smooth' });
+    }
+    return false;
 }
 async function renderPdf() {
     var container = document.getElementById('pdfContainer');
@@ -234,13 +1236,25 @@ async function renderPdf() {
         return;
     }
     container.innerHTML = '<div class="fineprint">Loading PDF...</div>';
-    pdfDocument = await pdfjsLib.getDocument(pdfUrl).promise;
+    var pdfResponse = await fetch(pdfUrl, { cache:'no-store' });
+    if (pdfResponse.status === 410) {
+        var terminalText = await pdfResponse.text();
+        showTerminalDocumentMessage(terminalText);
+        return;
+    }
+    if (!pdfResponse.ok) {
+        throw new Error('Unexpected server response (' + pdfResponse.status + ') while retrieving PDF.');
+    }
+    var pdfBytes = await pdfResponse.arrayBuffer();
+    pdfDocument = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise;
+    pdfPageCount = pdfDocument.numPages;
     container.innerHTML = '';
     for (var pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
         var page = await pdfDocument.getPage(pageNumber);
         var viewport = page.getViewport({ scale: zoom });
         var pageEl = document.createElement('div');
         pageEl.className = 'pdf-page';
+        pageEl.setAttribute('data-page-number', pageNumber);
         pageEl.style.width = viewport.width + 'px';
         pageEl.style.height = viewport.height + 'px';
         var label = document.createElement('div');
@@ -261,34 +1275,43 @@ async function renderPdf() {
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
     }
     document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+    container.onscroll = updateDocumentPageIndicators;
     renderFieldLayer();
+    updateDocumentPageIndicators();
 }
-function zoomIn() { zoom = Math.min(2.25, zoom + 0.1); renderPdf(); }
+function zoomIn() { zoom = Math.min(3.25, zoom + 0.1); renderPdf(); }
 function zoomOut() { zoom = Math.max(0.75, zoom - 0.1); renderPdf(); }
 function buildSignatureAndFields() {
+    if (!isConsentAccepted()) {
+        alert('Select Continue to agree to use electronic signatures before signing.');
+        requireDisclosureOverlay();
+        return false;
+    }
     var typed = getTypedName();
-    if (!typed) { alert('Type your full legal name before signing.'); return false; }
-    if (!getSignerTitle()) { alert('Enter your title before signing.'); return false; }
+    if (!typed) { alert('The signer name is missing from this request.'); return false; }
+    applyPreparedFieldDefaults();
+    syncSignerTitleFromFields();
+    syncSignatureImageFromFields();
     var missing = [];
     preparedFields.forEach(function(field) {
-        if (!field.value) {
-            var autoValue = valueForField(field);
-            if (autoValue !== null) { field.value = autoValue; field.completed = !!autoValue; }
-        }
         if (field.required && !field.value) { missing.push(field.label || field.type || 'Required field'); }
     });
     if (missing.length) { alert('Complete required fields before signing: ' + missing.join(', ')); renderFieldLayer(); return false; }
-    if (getSignatureMode() === 'draw') {
-        initSignaturePad();
-        if (!signaturePadHasInk) { alert('Draw your signature or choose typed signature.'); return false; }
-        document.querySelector('[id$="signatureImageDataUrl"]').value = signaturePadCanvas.toDataURL('image/png');
-    } else {
-        document.querySelector('[id$="signatureImageDataUrl"]').value = '';
-    }
     document.querySelector('[id$="signerFieldsJson"]').value = JSON.stringify(preparedFields.map(function(field) { return { id: field.id, value: field.value || '' }; }));
     return true;
 }
-window.addEventListener('load', function() { toggleSignatureMode(); renderPdf().catch(function(e) { document.getElementById('pdfContainer').innerHTML = '<div class="msg err">Unable to load PDF: ' + e.message + '</div>'; }); });
+window.addEventListener('click', function(evt) {
+    var overlay = document.getElementById('consentOverlay');
+    if (overlay && !overlay.contains(evt.target)) { closeConsentOptions(); }
+    var viewerOptions = document.getElementById('viewerOptions');
+    if (viewerOptions && !viewerOptions.contains(evt.target)) { closeViewerOptions(); }
+});
+window.addEventListener('load', initializeConsentGate);
+window.addEventListener('pageshow', function(evt) {
+    if (evt.persisted && document.getElementById('signingWorkspace')) {
+        requireDisclosureOverlay();
+    }
+});
 </script>
 </body>
 </html>

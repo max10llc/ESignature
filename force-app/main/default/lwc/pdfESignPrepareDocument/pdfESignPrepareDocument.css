@@ -16,7 +16,7 @@
 .page-label { background: rgba(32, 32, 32, 0.72); border-radius: 999px; color: #ffffff; font-size: 0.7rem; left: 0.5rem; padding: 0.18rem 0.5rem; position: absolute; top: 0.5rem; z-index: 3; }
 .pdf-rendition { display: block; height: 100%; object-fit: contain; pointer-events: none; width: 100%; }
 .field-layer { inset: 0; position: absolute; z-index: 4; }
-.placed-field { align-items: center; background: rgba(30, 81, 164, 0.12); border: 2px solid rgba(30, 81, 164, 0.72); border-radius: 0.18rem; box-sizing: border-box; color: #12366d; cursor: move; display: flex; font-size: 0.72rem; font-weight: 700; justify-content: center; min-height: 16px; min-width: 18px; overflow: hidden; position: absolute; text-align: center; user-select: none; }
-.placed-field.selected { background: rgba(255, 184, 76, 0.22); border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18); }
+.placed-field { align-items: center; background: #e0f2ff; border: 2px solid rgba(30, 81, 164, 0.72); border-radius: 0.18rem; box-sizing: border-box; color: #12366d; cursor: move; display: flex; font-size: 0.72rem; font-weight: 700; justify-content: center; min-height: 16px; min-width: 18px; overflow: hidden; position: absolute; text-align: center; user-select: none; }
+.placed-field.selected { background: #e0f2ff; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18); }
 .field-text { overflow: hidden; padding: 0 0.2rem; text-overflow: ellipsis; white-space: nowrap; }
 .resize-handle { background: #1e51a4; border: 1px solid #ffffff; bottom: -5px; cursor: nwse-resize; height: 10px; position: absolute; right: -5px; width: 10px; }

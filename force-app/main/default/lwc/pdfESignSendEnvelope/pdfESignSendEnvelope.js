@@ -18,6 +18,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
     isSending = false;
     lastSigningUrl;
     errorMessage;
+    draftRefreshKey = 'initial';
 
     connectedCallback() {
         this.loadDrafts();
@@ -42,13 +43,21 @@ export default class PdfESignSendEnvelope extends LightningElement {
         return this.isSending || !this.selectedEnvelopeId || !this.signerName || !this.signerEmail;
     }
 
-    async loadDrafts() {
+    async loadDrafts(forceRefresh = false) {
         this.isLoading = true;
         this.errorMessage = null;
         try {
-            this.envelopes = await getDraftEnvelopes({ parentRecordId: this.effectiveParentRecordId });
+            if (forceRefresh) {
+                this.draftRefreshKey = String(Date.now());
+            }
+            this.envelopes = await getDraftEnvelopes({
+                parentRecordId: this.effectiveParentRecordId,
+                refreshKey: this.draftRefreshKey
+            });
             if (this.envelopes.length === 1) {
                 this.selectedEnvelopeId = this.envelopes[0].id;
+            } else if (!this.envelopes.some((env) => env.id === this.selectedEnvelopeId)) {
+                this.selectedEnvelopeId = null;
             }
         } catch (error) {
             this.errorMessage = this.normalizeError(error);
@@ -58,7 +67,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
     }
 
     handleRefresh() {
-        this.loadDrafts();
+        this.loadDrafts(true);
     }
 
     handleEnvelopeChange(event) {
@@ -95,7 +104,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
             });
             this.lastSigningUrl = result.signingUrl;
             this.dispatchEvent(new ShowToastEvent({ title: 'Envelope sent', message: result.message, variant: 'success' }));
-            await this.loadDrafts();
+            await this.loadDrafts(true);
         } catch (error) {
             this.errorMessage = this.normalizeError(error);
             this.dispatchEvent(new ShowToastEvent({ title: 'Unable to send envelope', message: this.errorMessage, variant: 'error', mode: 'sticky' }));

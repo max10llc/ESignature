@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <classAccesses>
+        <apexClass>PDFESignatureAuditReportBuilder</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>PDFESignatureCommandProcessor</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -180,6 +184,21 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>PDF_ESignature_Envelope__c.Signer_Title__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>PDF_ESignature_Envelope__c.Source_ContentDocument_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>PDF_ESignature_Envelope__c.Source_ContentVersion_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>PDF_ESignature_Envelope__c.Source_File_Title__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

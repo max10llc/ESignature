@@ -5,6 +5,17 @@ private class PDFESignatureFinalizeQueueableTest {
             System.assertEquals('POST', req.getMethod(), 'Finalizer should POST to Power Automate.');
             System.assert(req.getBody().contains('stampOverlays'), 'Payload should include stampOverlays.');
             System.assert(req.getBody().contains('finalizerDebugText'), 'Payload should include finalizer debug text.');
+            System.assert(req.getBody().contains('auditReportPdfBase64'), 'Payload should include the final audit report PDF.');
+
+            Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(req.getBody());
+            System.assertEquals(true, (Boolean) payload.get('appendAuditReport'), 'Payload should ask the finalizer to append the audit report.');
+            System.assertEquals(payload.get('auditReportPdfBase64'), payload.get('certificatePdfBase64'), 'Certificate alias should match the audit report PDF for finalizer compatibility.');
+            String auditReportPdfBase64 = (String) payload.get('auditReportPdfBase64');
+            System.assert(String.isNotBlank(auditReportPdfBase64), 'Audit report base64 should be populated.');
+            String auditReportText = EncodingUtil.base64Decode(auditReportPdfBase64).toString();
+            System.assert(auditReportText.startsWith('%PDF-1.4'), 'Audit report should be a PDF.');
+            System.assert(auditReportText.contains('Final Audit Report'), 'Audit report should include the report heading.');
+            System.assert(auditReportText.contains('Queueable Source Test'), 'Audit report should use the source file title.');
 
             String finalPdfBase64 = EncodingUtil.base64Encode(Blob.valueOf('%PDF-1.4\n%final\n%%EOF'));
             HttpResponse res = new HttpResponse();
@@ -114,6 +125,15 @@ private class PDFESignatureFinalizeQueueableTest {
             Completed_At__c = System.now(),
             Required__c = true,
             Sequence__c = 1
+        );
+        insert new PDF_ESignature_Audit_Event__c(
+            Envelope__c = env.Id,
+            Event_Type__c = 'Sent',
+            Occurred_At__c = System.now().addMinutes(-10),
+            Actor_Email__c = UserInfo.getUserEmail(),
+            Details__c = 'Envelope sent to derek.hawley@example.com.',
+            IP_Address__c = '203.0.113.10',
+            User_Agent__c = 'Unit Test'
         );
         return env.Id;
     }

@@ -31,6 +31,11 @@
                 <label>Viewed</label>
             </value>
             <value>
+                <fullName>Delegated</fullName>
+                <default>false</default>
+                <label>Delegated</label>
+            </value>
+            <value>
                 <fullName>Field Completed</fullName>
                 <default>false</default>
                 <label>Field Completed</label>

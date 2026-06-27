@@ -1,18 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
+        <members>PDFESignatureAuditReportBuilder</members>
+        <members>PDFESignatureAuditReportBuilderTest</members>
         <members>PDFESignatureFinalizeQueueable</members>
         <members>PDFESignatureFinalizeQueueableTest</members>
         <members>PDFESignatureFinalizerCallbackResource</members>
         <members>PDFESignatureFinalizerService</members>
         <members>PDFESignatureCommandProcessor</members>
+        <members>PDFESignatureCommandTriggerTest</members>
         <members>PDFESignatureOverlayBuilder</members>
         <members>PDFESignatureOverlayBuilderTest</members>
         <members>PDFESignaturePageController</members>
+        <members>PDFESignaturePageControllerTest</members>
         <members>PDFESignaturePdfResource</members>
+        <members>PDFESignaturePdfResourceTest</members>
         <members>PDFESignaturePrepareController</members>
         <members>PDFESignatureSendController</members>
+        <members>PDFESignatureSendControllerTest</members>
         <members>PDFESignatureUtil</members>
+        <members>PDFESignatureUtilTest</members>
         <name>ApexClass</name>
     </types>
     <types>
@@ -66,6 +73,9 @@
         <members>PDF_ESignature_Envelope__c.Signer_Email__c</members>
         <members>PDF_ESignature_Envelope__c.Signer_Name__c</members>
         <members>PDF_ESignature_Envelope__c.Signer_Title__c</members>
+        <members>PDF_ESignature_Envelope__c.Source_ContentDocument_Id__c</members>
+        <members>PDF_ESignature_Envelope__c.Source_ContentVersion_Id__c</members>
+        <members>PDF_ESignature_Envelope__c.Source_File_Title__c</members>
         <members>PDF_ESignature_Envelope__c.Envelope_Status__c</members>
         <members>PDF_ESignature_Envelope__c.Viewed_At__c</members>
         <members>PDF_ESignature_Field__c.Completed_At__c</members>
@@ -125,6 +135,17 @@
         <name>PermissionSet</name>
     </types>
     <types>
+        <members>Clear_Document_Buton</members>
+        <members>Decline_To_Sign_Button</members>
+        <members>Delegate_Signing_Button</members>
+        <members>Download_Document_Button</members>
+        <members>Document_Icon</members>
+        <members>Document_Sent_Icon</members>
+        <members>Document_Signed_Icon</members>
+        <members>Document_Completed_Icon</members>
+        <members>Document_Locked_Icon</members>
+        <members>Kaizon_Solutions_Logo</members>
+        <members>Options_Button</members>
         <members>PDFESign_PdfJs</members>
         <name>StaticResource</name>
     </types>

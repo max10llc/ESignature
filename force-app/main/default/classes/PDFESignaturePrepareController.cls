@@ -193,6 +193,9 @@ public with sharing class PDFESignaturePrepareController {
             envelope = envelopes[0];
         }
         envelope.Page_Count__c = pageCount;
+        envelope.Source_ContentVersion_Id__c = String.valueOf(version.Id);
+        envelope.Source_ContentDocument_Id__c = String.valueOf(version.ContentDocumentId);
+        envelope.Source_File_Title__c = version.Title;
         upsert envelope;
 
         delete [SELECT Id FROM PDF_ESignature_Field__c WHERE Envelope__c = :envelope.Id];

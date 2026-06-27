@@ -16,7 +16,7 @@ public with sharing class PDFESignatureSendController {
     }
 
     @AuraEnabled(cacheable=true)
-    public static List<EnvelopeDTO> getDraftEnvelopes(String parentRecordId) {
+    public static List<EnvelopeDTO> getDraftEnvelopes(String parentRecordId, String refreshKey) {
         List<EnvelopeDTO> output = new List<EnvelopeDTO>();
         List<PDF_ESignature_Envelope__c> envelopes = [
             SELECT Id, Name, Envelope_Status__c, LastModifiedDate,
@@ -66,7 +66,8 @@ public with sharing class PDFESignatureSendController {
         PDF_ESignature_Envelope__c env = [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sent_At__c,
-                   Expires_At__c, Public_Signing_URL__c, Sender_User__c
+                   Expires_At__c, Public_Signing_URL__c, Sender_User__c,
+                   Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM PDF_ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
@@ -96,6 +97,7 @@ public with sharing class PDFESignatureSendController {
         env.Expires_At__c = System.now().addDays(days);
         env.Public_Signing_URL__c = signingUrl;
         env.Sender_User__c = UserInfo.getUserId();
+        stampSourceFields(env);
         update env;
 
         try {
@@ -116,6 +118,16 @@ public with sharing class PDFESignatureSendController {
         result.status = env.Envelope_Status__c;
         result.message = 'Envelope sent to ' + env.Signer_Email__c + '.';
         return result;
+    }
+
+    private static void stampSourceFields(PDF_ESignature_Envelope__c env) {
+        ContentVersion source = PDFESignatureUtil.getLatestSourceVersion(env, false);
+        if (source == null) {
+            return;
+        }
+        env.Source_ContentVersion_Id__c = String.valueOf(source.Id);
+        env.Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId);
+        env.Source_File_Title__c = source.Title;
     }
 
     private static void sendEmail(PDF_ESignature_Envelope__c env, String signingUrl) {
