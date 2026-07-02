@@ -307,6 +307,34 @@ public without sharing class PDFESignatureUtil {
         return output;
     }
 
+    public static void updateSourceFileESignatureStatus(PDF_ESignature_Envelope__c env, String status) {
+        if (env == null || String.isBlank(status)) {
+            return;
+        }
+        Id contentVersionId = safeId(getEnvelopeString(env, 'Source_ContentVersion_Id__c'));
+        if (contentVersionId == null) {
+            contentVersionId = getEnvelopeSourceVersionId(env.Id);
+        }
+        if (contentVersionId == null) {
+            Id documentId = safeId(getEnvelopeString(env, 'Source_ContentDocument_Id__c'));
+            ContentVersion latest = getLatestContentVersion(documentId, false);
+            contentVersionId = latest == null ? null : latest.Id;
+        }
+        updateContentVersionESignatureStatus(contentVersionId, status);
+    }
+
+    public static void updateContentVersionESignatureStatus(Id contentVersionId, String status) {
+        if (contentVersionId == null || String.isBlank(status)) {
+            return;
+        }
+        try {
+            update new ContentVersion(
+                Id = contentVersionId,
+                E_Signature_Status__c = status
+            );
+        } catch (Exception ignore) {}
+    }
+
     public static String titleFromEnvelope(PDF_ESignature_Envelope__c env, Map<Id, String> titleByDocumentId, Map<Id, Id> documentIdByEnvelopeId) {
         if (env == null) {
             return 'Document';

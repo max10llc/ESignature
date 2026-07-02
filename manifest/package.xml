@@ -16,6 +16,7 @@
         <members>PDFESignaturePdfResource</members>
         <members>PDFESignaturePdfResourceTest</members>
         <members>PDFESignaturePrepareController</members>
+        <members>PDFESignaturePrepareControllerTest</members>
         <members>PDFESignatureSendController</members>
         <members>PDFESignatureSendControllerTest</members>
         <members>PDFESignatureUtil</members>
@@ -40,6 +41,8 @@
         <name>CustomObject</name>
     </types>
     <types>
+        <members>ContentVersion.E_Signature_File__c</members>
+        <members>ContentVersion.E_Signature_Status__c</members>
         <members>PDF_ESignature_Command__e.Action__c</members>
         <members>PDF_ESignature_Command__e.Actor_Email__c</members>
         <members>PDF_ESignature_Command__e.Envelope_Id__c</members>

@@ -94,10 +94,13 @@ private class PDFESignatureCommandTriggerTest {
     static void declinedCommandUpdatesEnvelopeThroughTrigger() {
         String token = 'declined-token';
         String tokenHash = PDFESignatureUtil.hashToken(token);
+        ContentVersion source = createSourceFile('Declined Source');
         PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
-            Signer_Email__c = 'signer@example.com'
+            Signer_Email__c = 'signer@example.com',
+            Source_ContentVersion_Id__c = String.valueOf(source.Id),
+            Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
         );
         insert env;
 
@@ -118,12 +121,15 @@ private class PDFESignatureCommandTriggerTest {
         ];
         System.assertEquals('Declined', env.Envelope_Status__c);
         System.assertEquals('No longer needed', env.Decline_Reason__c);
+        source = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :source.Id];
+        System.assertEquals('Canceled', source.E_Signature_Status__c, 'Declining should stamp the source file status.');
     }
 
     @IsTest
     static void delegatedCommandTransfersSignerAndRotatesToken() {
         String token = 'delegated-token';
         String tokenHash = PDFESignatureUtil.hashToken(token);
+        ContentVersion source = createSourceFile('Delegated Source');
         PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
@@ -132,7 +138,9 @@ private class PDFESignatureCommandTriggerTest {
             Signer_Title__c = 'Owner',
             Viewed_At__c = System.now(),
             Public_Signing_URL__c = 'https://example.com/old-link',
-            Source_File_Title__c = 'Delegated Agreement'
+            Source_File_Title__c = 'Delegated Agreement',
+            Source_ContentVersion_Id__c = String.valueOf(source.Id),
+            Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
         );
         insert env;
 
@@ -166,6 +174,8 @@ private class PDFESignatureCommandTriggerTest {
         System.assertNotEquals(null, env.Sent_At__c);
         System.assertEquals(null, env.Viewed_At__c, 'The delegate should get their own viewed event.');
         System.assert(env.Public_Signing_URL__c.contains('/PDFESignaturePage?t='), 'Delegate should receive a fresh signing URL.');
+        source = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :source.Id];
+        System.assertEquals('Sent', source.E_Signature_Status__c, 'Delegating should keep the source file in sent status.');
 
         PDF_ESignature_Audit_Event__c audit = [
             SELECT Actor_Email__c, Details__c
@@ -206,5 +216,16 @@ private class PDFESignatureCommandTriggerTest {
         ];
         System.assertEquals('Error', env.Envelope_Status__c);
         System.assert(env.Error_Message__c.contains('Type your full legal name.'), 'Error should explain the missing signer name.');
+    }
+
+    private static ContentVersion createSourceFile(String title) {
+        ContentVersion source = new ContentVersion(
+            Title = title,
+            PathOnClient = title + '.pdf',
+            VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF'),
+            E_Signature_File__c = true
+        );
+        insert source;
+        return [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];
     }
 }

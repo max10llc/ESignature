@@ -57,11 +57,12 @@ public with sharing class PDFESignaturePrepareController {
         }
         List<RecordFileDTO> output = new List<RecordFileDTO>();
         for (ContentVersion version : [
-            SELECT Id, ContentDocumentId, Title, FileExtension, ContentSize, CreatedDate
+            SELECT Id, ContentDocumentId, Title, FileExtension, ContentSize, CreatedDate, E_Signature_File__c
             FROM ContentVersion
             WHERE ContentDocumentId IN :documentIds
             AND IsLatest = true
             AND FileExtension = 'pdf'
+            AND E_Signature_File__c = true
             ORDER BY CreatedDate DESC
         ]) {
             RecordFileDTO row = new RecordFileDTO();
@@ -82,7 +83,7 @@ public with sharing class PDFESignaturePrepareController {
             throw new AuraHandledException('Content Document Id is required.');
         }
         List<ContentVersion> versions = [
-            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData
+            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData, E_Signature_File__c
             FROM ContentVersion
             WHERE ContentDocumentId = :contentDocumentId
             AND IsLatest = true
@@ -94,6 +95,9 @@ public with sharing class PDFESignaturePrepareController {
         ContentVersion version = versions[0];
         if (String.valueOf(version.FileExtension).toLowerCase() != 'pdf') {
             throw new AuraHandledException('Only PDF files can be prepared for signature.');
+        }
+        if (version.E_Signature_File__c != true) {
+            throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
         }
         PdfInfoDTO info = new PdfInfoDTO();
         info.contentDocumentId = version.ContentDocumentId;
@@ -160,11 +164,21 @@ public with sharing class PDFESignaturePrepareController {
             throw new AuraHandledException('Content Document Id is required.');
         }
         ContentVersion version = [
-            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData
+            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData, E_Signature_File__c
             FROM ContentVersion
             WHERE Id = :contentVersionId
             LIMIT 1
         ];
+        Id requestedDocumentId = PDFESignatureUtil.safeId(contentDocumentId);
+        if (requestedDocumentId == null || version.ContentDocumentId != requestedDocumentId) {
+            throw new AuraHandledException('Selected ContentVersion does not belong to the selected ContentDocument.');
+        }
+        if (String.valueOf(version.FileExtension).toLowerCase() != 'pdf') {
+            throw new AuraHandledException('Only PDF files can be prepared for signature.');
+        }
+        if (version.E_Signature_File__c != true) {
+            throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
+        }
         Integer pageCount = Integer.valueOf(PDFESignatureUtil.estimatePageCount(version.VersionData));
         List<PDF_ESignature_Envelope__c> envelopes = [
             SELECT Id, Envelope_Status__c

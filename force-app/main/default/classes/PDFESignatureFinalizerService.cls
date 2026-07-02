@@ -3,7 +3,8 @@ public without sharing class PDFESignatureFinalizerService {
         return [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c,
                    Signer_Email__c, Final_ContentDocument_Id__c, Final_ContentVersion_Id__c,
-                   Completion_Message__c, Error_Message__c, Finalizer_Request_Id__c
+                   Completion_Message__c, Error_Message__c, Finalizer_Request_Id__c,
+                   Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM PDF_ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
@@ -33,6 +34,7 @@ public without sharing class PDFESignatureFinalizerService {
         finalVersion.Title = titleFromFileName(resolvedFileName);
         finalVersion.PathOnClient = resolvedFileName;
         finalVersion.VersionData = EncodingUtil.base64Decode(finalPdfBase64);
+        finalVersion.E_Signature_Status__c = 'Completed';
         Id parentId = PDFESignatureUtil.safeId(env.Parent_Record_Id__c);
         if (parentId != null) {
             finalVersion.FirstPublishLocationId = parentId;
@@ -76,6 +78,8 @@ public without sharing class PDFESignatureFinalizerService {
         env.Error_Message__c = null;
         env.Completion_Message__c = String.isBlank(message) ? 'Final signed PDF was created.' : message;
         update env;
+        PDFESignatureUtil.updateSourceFileESignatureStatus(env, 'Completed');
+        PDFESignatureUtil.updateContentVersionESignatureStatus(finalContentVersionId, 'Completed');
         PDFESignatureUtil.audit(env.Id, 'Finalized', env.Signer_Email__c, env.Completion_Message__c);
     }
 

@@ -437,7 +437,7 @@
         </div>
         <div id="signatureTypedPanel">
             <label>Typed Signature</label>
-            <input type="hidden" id="signatureTypedName" />
+            <input type="text" id="signatureTypedName" autocomplete="name" oninput="updateSignaturePreview();" />
             <div id="signatureTypedPreview" class="signature-preview"></div>
         </div>
         <div id="signatureDrawPanel" style="display:none;">
@@ -882,13 +882,13 @@ function typedSignatureToJpeg(value) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#111111';
     ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
+    ctx.textAlign = 'center';
     var fontSize = 96;
     do {
         ctx.font = fontSize + 'px "Brush Script MT", "Segoe Script", cursive';
         fontSize -= 4;
     } while (ctx.measureText(value).width > canvas.width - 80 && fontSize > 38);
-    ctx.fillText(value, 40, canvas.height / 2);
+    ctx.fillText(value, canvas.width / 2, canvas.height / 2);
     return canvas.toDataURL('image/jpeg', 0.92);
 }
 function syncSignatureImageFromFields() {
@@ -1018,16 +1018,21 @@ function setSignatureDialogMode(mode) {
     document.getElementById('signatureModeDrawButton').className = signatureDialogMode === 'draw' ? 'btn' : 'btn secondary';
     if (signatureDialogMode === 'draw') { initSignaturePad(); }
 }
+function getSignatureDialogTypedName() {
+    var input = document.getElementById('signatureTypedName');
+    return input && input.value ? input.value.trim() : '';
+}
+function setSignatureDialogTypedName(value) {
+    var input = document.getElementById('signatureTypedName');
+    if (input) { input.value = value || ''; }
+}
 function updateSignaturePreview() {
     var preview = document.getElementById('signatureTypedPreview');
-    if (preview) { preview.textContent = getTypedName(); }
+    if (preview) { preview.textContent = getSignatureDialogTypedName(); }
 }
 function openSignatureDialog(field) {
     activeSignatureFieldId = field.id;
-    var input = document.getElementById('signatureTypedName');
-    if (input) {
-        input.value = getTypedName();
-    }
+    setSignatureDialogTypedName(field.value || getTypedName());
     updateSignaturePreview();
     setSignatureDialogMode('typed');
     var backdrop = document.getElementById('signatureDialogBackdrop');
@@ -1047,15 +1052,17 @@ function applySignatureDialog() {
         if (!signaturePadHasInk) { alert('Draw your signature before applying it.'); return false; }
         var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas);
         var drawnPreviewDataUrl = canvasToTransparentPng(signaturePadCanvas);
-        var signerName = getTypedName();
+        var signerName = getSignatureDialogTypedName();
         if (!signerName) { alert('The signer name is missing from this request.'); return false; }
+        setTypedName(signerName);
         field.value = signerName;
         field.signatureImageDataUrl = drawnDataUrl;
         field.signaturePreviewDataUrl = drawnPreviewDataUrl;
         document.querySelector('[id$="signatureImageDataUrl"]').value = drawnDataUrl;
     } else {
-        var typedValue = getTypedName();
+        var typedValue = getSignatureDialogTypedName();
         if (!typedValue) { alert('The signer name is missing from this request.'); return false; }
+        setTypedName(typedValue);
         var typedDataUrl = typedSignatureToJpeg(typedValue);
         field.value = typedValue;
         field.signatureImageDataUrl = typedDataUrl;
@@ -1063,6 +1070,7 @@ function applySignatureDialog() {
         document.querySelector('[id$="signatureImageDataUrl"]').value = typedDataUrl;
     }
     field.completed = !!field.value;
+    applyPreparedFieldDefaults();
     closeSignatureDialog();
     renderFieldLayer();
     return false;

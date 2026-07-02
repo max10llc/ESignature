@@ -43,6 +43,16 @@
     <description>Internal user access for PDF-first e-signature.</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>ContentVersion.E_Signature_File__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>ContentVersion.E_Signature_Status__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>PDF_ESignature_Audit_Event__c.Actor_Email__c</field>
         <readable>true</readable>
     </fieldPermissions>

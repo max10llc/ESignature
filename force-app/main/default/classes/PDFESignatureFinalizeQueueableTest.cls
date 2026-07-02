@@ -63,6 +63,26 @@ private class PDFESignatureFinalizeQueueableTest {
         System.assertEquals(null, env.Error_Message__c, 'Successful finalization should clear error message.');
         System.assert(env.Completion_Message__c.contains('Finalizer debug:'), 'Completion message should include finalizer debug summary.');
         System.assert(env.Completion_Message__c.contains('stampOverlays='), 'Debug summary should include overlay count.');
+        PDF_ESignature_Field__c sourceField = [
+            SELECT Content_Version_Id__c
+            FROM PDF_ESignature_Field__c
+            WHERE Envelope__c = :envelopeId
+            LIMIT 1
+        ];
+        Id sourceVersionId = PDFESignatureUtil.safeId(sourceField.Content_Version_Id__c);
+        ContentVersion sourceVersion = [
+            SELECT E_Signature_Status__c
+            FROM ContentVersion
+            WHERE Id = :sourceVersionId
+        ];
+        Id finalVersionId = PDFESignatureUtil.safeId(env.Final_ContentVersion_Id__c);
+        ContentVersion finalVersion = [
+            SELECT E_Signature_Status__c
+            FROM ContentVersion
+            WHERE Id = :finalVersionId
+        ];
+        System.assertEquals('Completed', sourceVersion.E_Signature_Status__c, 'Finalization should mark the source file completed.');
+        System.assertEquals('Completed', finalVersion.E_Signature_Status__c, 'Finalization should mark the final signed file completed.');
     }
 
     @IsTest
@@ -86,6 +106,69 @@ private class PDFESignatureFinalizeQueueableTest {
         System.assert(env.Error_Message__c.contains('Finalizer debug:'), 'Error should include finalizer debug summary.');
     }
 
+    @IsTest
+    static void finalizerServiceCompletesExistingFileAndMarksErrors() {
+        Account parent = new Account(Name = 'Finalizer Service Parent');
+        insert parent;
+        ContentVersion source = new ContentVersion(
+            Title = 'Finalizer Service Source',
+            PathOnClient = 'Finalizer Service Source.pdf',
+            VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF'),
+            FirstPublishLocationId = parent.Id,
+            E_Signature_File__c = true
+        );
+        insert source;
+        source = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];
+
+        ContentVersion finalFile = new ContentVersion(
+            Title = 'Existing Final Signed File',
+            PathOnClient = 'Existing Final Signed File.pdf',
+            VersionData = Blob.valueOf('%PDF-1.4\n%final\n%%EOF'),
+            FirstPublishLocationId = parent.Id
+        );
+        insert finalFile;
+        finalFile = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :finalFile.Id];
+
+        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            Envelope_Status__c = 'Sent',
+            Parent_Record_Id__c = String.valueOf(parent.Id),
+            Signer_Email__c = 'signer@example.com',
+            Source_ContentVersion_Id__c = String.valueOf(source.Id),
+            Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
+        );
+        insert env;
+
+        PDFESignatureFinalizerService.markAccepted(env.Id, 'request-123', 'Accepted for finalization.');
+        env = [SELECT Envelope_Status__c, Finalizer_Request_Id__c, Completion_Message__c FROM PDF_ESignature_Envelope__c WHERE Id = :env.Id];
+        System.assertEquals('Finalizing', env.Envelope_Status__c);
+        System.assertEquals('request-123', env.Finalizer_Request_Id__c);
+        System.assertEquals('Accepted for finalization.', env.Completion_Message__c);
+
+        PDFESignatureFinalizerService.completeWithExistingFile(env.Id, finalFile.Id, null, 'Final file attached.');
+        env = [
+            SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c, Error_Message__c
+            FROM PDF_ESignature_Envelope__c
+            WHERE Id = :env.Id
+        ];
+        System.assertEquals('Signed', env.Envelope_Status__c);
+        System.assertEquals(String.valueOf(finalFile.Id), env.Final_ContentVersion_Id__c);
+        System.assertEquals(String.valueOf(finalFile.ContentDocumentId), env.Final_ContentDocument_Id__c);
+        System.assertEquals('Final file attached.', env.Completion_Message__c);
+        System.assertEquals(null, env.Error_Message__c);
+
+        source = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :source.Id];
+        finalFile = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :finalFile.Id];
+        System.assertEquals('Completed', source.E_Signature_Status__c);
+        System.assertEquals('Completed', finalFile.E_Signature_Status__c);
+        System.assertEquals('Signed Document', PDFESignatureFinalizerService.titleFromFileName('Signed Document.pdf'));
+        System.assertEquals('Signed Document.pdf', PDFESignatureFinalizerService.resolveFileName(env, 'Signed Document'));
+
+        PDFESignatureFinalizerService.markError(env.Id, 'Something went wrong.');
+        env = [SELECT Envelope_Status__c, Error_Message__c FROM PDF_ESignature_Envelope__c WHERE Id = :env.Id];
+        System.assertEquals('Error', env.Envelope_Status__c);
+        System.assertEquals('Something went wrong.', env.Error_Message__c);
+    }
+
     private static Id createEnvelopeWithSourceAndSignatureField() {
         PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
@@ -102,7 +185,8 @@ private class PDFESignatureFinalizeQueueableTest {
         ContentVersion source = new ContentVersion(
             Title = 'Queueable Source Test',
             PathOnClient = 'Queueable Source Test.pdf',
-            VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF')
+            VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF'),
+            E_Signature_File__c = true
         );
         insert source;
         source = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];

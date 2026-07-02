@@ -110,6 +110,7 @@ public with sharing class PDFESignatureSendController {
         }
 
         sendEmail(env, signingUrl);
+        PDFESignatureUtil.updateSourceFileESignatureStatus(env, 'Sent');
         PDFESignatureUtil.audit(env.Id, 'Sent', UserInfo.getUserEmail(), 'Envelope sent to ' + env.Signer_Email__c + '.');
 
         SendResultDTO result = new SendResultDTO();
@@ -145,10 +146,12 @@ public with sharing class PDFESignatureSendController {
         String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : PDFESignatureUtil.escapeHtml(env.Signer_Name__c);
         String safeDocumentTitle = String.isBlank(documentTitle) ? 'Document' : PDFESignatureUtil.escapeHtml(documentTitle);
         String safeSigningUrl = PDFESignatureUtil.escapeHtml(signingUrl);
+        String safeLogoUrl = PDFESignatureUtil.escapeHtml(emailLogoUrl(signingUrl));
         String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : PDFESignatureUtil.escapeHtml(UserInfo.getName());
         String safeExpirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
 
         return emailShell(
+            safeLogoUrl,
             emailParagraphRow('Hi ' + safeSignerName + ',')
             + emailParagraphRow(senderName + ' has sent you a document that requires your signature:')
             + emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
@@ -159,11 +162,19 @@ public with sharing class PDFESignatureSendController {
         );
     }
 
-    private static String emailLogoUrl() {
-        return URL.getOrgDomainUrl().toExternalForm() + '/resource/Kaizon_Solutions_Logo';
+    private static String emailLogoUrl(String signingUrl) {
+        String baseUrl = signingUrl;
+        if (String.isNotBlank(baseUrl) && baseUrl.contains('?')) {
+            baseUrl = baseUrl.left(baseUrl.indexOf('?'));
+        }
+        String siteRoot = PDFESignatureUtil.siteRootUrl(baseUrl);
+        if (String.isBlank(siteRoot)) {
+            siteRoot = URL.getOrgDomainUrl().toExternalForm();
+        }
+        return siteRoot + '/resource/Kaizon_Solutions_Logo';
     }
 
-    private static String emailShell(String contentHtml) {
+    private static String emailShell(String safeLogoUrl, String contentHtml) {
         return ''
             + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#ffffff;margin:0;padding:0;border-collapse:collapse;">'
             + '  <tr>'
@@ -174,7 +185,7 @@ public with sharing class PDFESignatureSendController {
             + '        </tr>'
             + '        <tr>'
             + '          <td align="left" style="padding:18px 24px 14px 24px;border-bottom:1px solid #e5e7eb;">'
-            + '            <img src="' + emailLogoUrl() + '" width="300" alt="Kaizon Solutions" style="display:block;width:300px;max-width:300px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />'
+            + '            <img src="' + nullToBlank(safeLogoUrl) + '" width="300" alt="Kaizon Solutions" style="display:block;width:300px;max-width:300px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />'
             + '          </td>'
             + '        </tr>'
             +          nullToBlank(contentHtml)

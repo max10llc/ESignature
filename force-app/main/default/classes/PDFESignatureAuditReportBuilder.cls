@@ -1,6 +1,8 @@
 public without sharing class PDFESignatureAuditReportBuilder {
     private static final Decimal PAGE_WIDTH = 612;
     private static final Decimal PAGE_HEIGHT = 792;
+    private static final String AUDIT_DATE_FORMAT = 'MM-dd-yyyy';
+    private static final String AUDIT_DATE_TIME_FORMAT = 'MM-dd-yyyy - h:mm:ss a z';
 
     private class PdfSegment {
         public String text;
@@ -82,7 +84,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
             SELECT Id, Name, CreatedDate, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sender_User__c, Sender_User__r.Email,
-                   Sent_At__c, Viewed_At__c, Signed_At__c, Signature_Method__c
+                   Sender_User__r.TimeZoneSidKey, Sent_At__c, Viewed_At__c, Signed_At__c, Signature_Method__c
             FROM PDF_ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
@@ -109,7 +111,8 @@ public without sharing class PDFESignatureAuditReportBuilder {
     ) {
         List<PdfRow> rows = new List<PdfRow>();
         String documentTitle = firstNonBlank(new List<String>{ sourceTitle, env.Source_File_Title__c, env.Name, 'Document' });
-        String createdDate = env.CreatedDate == null ? '' : env.CreatedDate.formatGmt('yyyy-MM-dd');
+        String auditTimeZoneSid = auditTimeZoneSid(env);
+        String createdDate = formatDate(env.CreatedDate, auditTimeZoneSid);
         String senderEmail = env.Sender_User__r == null ? UserInfo.getUserEmail() : env.Sender_User__r.Email;
         String signerName = nullToBlank(env.Signer_Name__c);
         String signerEmail = nullToBlank(env.Signer_Email__c);
@@ -141,7 +144,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
             'Document_Icon',
             'Document created',
             'Created by ' + nullToBlank(senderEmail),
-            formatDateTime(env.CreatedDate),
+            formatDateTime(env.CreatedDate, auditTimeZoneSid),
             'Source: Salesforce PDF E-Signature'
         );
         addEventRows(
@@ -150,7 +153,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
             'Document emailed',
             'Sent to ' + signerName + ' (' + signerEmail + ') for signature',
             firstNonBlank(new List<String>{
-                formatDateTime(sentEvent == null ? env.Sent_At__c : sentEvent.Occurred_At__c),
+                formatDateTime(sentEvent == null ? env.Sent_At__c : sentEvent.Occurred_At__c, auditTimeZoneSid),
                 'E-Signature request sent from Salesforce'
             }),
             ''
@@ -161,7 +164,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
             'Signer accessed secure link',
             signerName + ' (' + signerEmail + ') accessed the secure signing link',
             firstNonBlank(new List<String>{
-                formatDateTime(viewedEvent == null ? env.Viewed_At__c : viewedEvent.Occurred_At__c),
+                formatDateTime(viewedEvent == null ? env.Viewed_At__c : viewedEvent.Occurred_At__c, auditTimeZoneSid),
                 'Verification code not required by sender configuration'
             }),
             ''
@@ -172,7 +175,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
                 'Document_Signed_Icon',
                 'Document e-signed',
                 signerName + ' (' + signerEmail + ') electronically signed the document',
-                'Signature Date: ' + formatDateTime(env.Signed_At__c),
+                'Signature Date: ' + formatDateTime(env.Signed_At__c, auditTimeZoneSid),
                 'IP address: ' + nullToBlank(signedEvent == null ? null : signedEvent.IP_Address__c)
             );
             addEventRows(
@@ -180,7 +183,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
                 'Document_Completed_Icon',
                 'Agreement completed',
                 'All required signer actions are complete',
-                formatDateTime(env.Signed_At__c),
+                formatDateTime(env.Signed_At__c, auditTimeZoneSid),
                 'Signature Appearance Selected: ELECTRONIC'
             );
         }
@@ -510,8 +513,21 @@ public without sharing class PDFESignatureAuditReportBuilder {
         return '';
     }
 
-    private static String formatDateTime(Datetime value) {
-        return value == null ? '' : value.formatGmt('yyyy-MM-dd - h:mm:ss a') + ' GMT';
+    private static String auditTimeZoneSid(PDF_ESignature_Envelope__c env) {
+        String senderTimeZone = env == null || env.Sender_User__r == null ? null : env.Sender_User__r.TimeZoneSidKey;
+        if (String.isNotBlank(senderTimeZone)) {
+            return senderTimeZone;
+        }
+        TimeZone runningUserTimeZone = UserInfo.getTimeZone();
+        return runningUserTimeZone == null ? 'GMT' : runningUserTimeZone.getID();
+    }
+
+    private static String formatDate(Datetime value, String timeZoneSid) {
+        return value == null ? '' : value.format(AUDIT_DATE_FORMAT, timeZoneSid);
+    }
+
+    private static String formatDateTime(Datetime value, String timeZoneSid) {
+        return value == null ? '' : value.format(AUDIT_DATE_TIME_FORMAT, timeZoneSid);
     }
 
     private static String leftPadNumber(Integer value, Integer size) {

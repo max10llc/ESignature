@@ -55,6 +55,13 @@ private class PDFESignatureSendControllerTest {
         System.assertEquals('Send Controller Source', env.Source_File_Title__c);
         System.assertEquals(fixture.field.Content_Version_Id__c, env.Source_ContentVersion_Id__c);
         System.assertEquals(fixture.field.Content_Document_Id__c, env.Source_ContentDocument_Id__c);
+        Id sourceVersionId = PDFESignatureUtil.safeId(fixture.field.Content_Version_Id__c);
+        ContentVersion sourceStatus = [
+            SELECT E_Signature_Status__c
+            FROM ContentVersion
+            WHERE Id = :sourceVersionId
+        ];
+        System.assertEquals('Sent', sourceStatus.E_Signature_Status__c, 'Sending should stamp the source file status.');
 
         System.assertEquals(1, [
             SELECT COUNT()
@@ -97,17 +104,20 @@ private class PDFESignatureSendControllerTest {
 
         String html = PDFESignatureSendController.buildSignatureRequestEmailHtml(
             env,
-            'https://example.com/sign?t=abc123',
+            'https://example.com/signatures/apex/PDFESignaturePage?t=abc123',
             'Special Services Agreement'
         );
 
         System.assert(html.contains('<table role="presentation" width="100%"'), 'Email should use the original table-based shell.');
-        System.assert(html.contains('/resource/Kaizon_Solutions_Logo'), 'Email should include the Kaizon logo static resource.');
+        System.assert(
+            html.contains('src="https://example.com/signatures/resource/Kaizon_Solutions_Logo"'),
+            'Email logo should load from the public signing Site URL.'
+        );
         System.assert(html.contains('has sent you a document that requires your signature'), 'Email should include the original request language.');
         System.assert(html.contains('Special Services Agreement'), 'Email should include the document title block.');
         System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');
         System.assert(html.contains('This link is unique to you and will expire on'), 'Email should include the expiration notice.');
-        System.assert(html.contains('https://example.com/sign?t=abc123'), 'Email should include the fallback signing URL.');
+        System.assert(html.contains('https://example.com/signatures/apex/PDFESignaturePage?t=abc123'), 'Email should include the fallback signing URL.');
     }
 
     private static DraftFixture createDraftFixture() {
@@ -124,7 +134,8 @@ private class PDFESignatureSendControllerTest {
         ContentVersion source = new ContentVersion(
             Title = 'Send Controller Source',
             PathOnClient = 'Send Controller Source.pdf',
-            VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF')
+            VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF'),
+            E_Signature_File__c = true
         );
         insert source;
         source = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];
