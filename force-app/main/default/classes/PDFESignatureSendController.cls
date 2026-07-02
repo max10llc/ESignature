@@ -135,16 +135,108 @@ public with sharing class PDFESignatureSendController {
         message.setToAddresses(new List<String>{ env.Signer_Email__c });
         String documentTitle = PDFESignatureUtil.getEnvelopeTitle(env);
         message.setSubject('Signature requested: ' + documentTitle);
-        String body = ''
-            + '<div style="font-family:Arial,sans-serif;font-size:15px;color:#111827;line-height:1.45">'
-            + '<p>Hello ' + PDFESignatureUtil.escapeHtml(env.Signer_Name__c) + ',</p>'
-            + '<p>Please review and sign <strong>' + PDFESignatureUtil.escapeHtml(documentTitle) + '</strong>.</p>'
-            + '<p><a href="' + PDFESignatureUtil.escapeHtml(signingUrl) + '" style="display:inline-block;background:#1e51a4;color:#ffffff;padding:12px 18px;text-decoration:none;border-radius:6px;font-weight:bold">Review and Sign</a></p>'
-            + '<p>If the button does not work, copy and paste this link into your browser:<br/>'
-            + PDFESignatureUtil.escapeHtml(signingUrl) + '</p>'
-            + '</div>';
-        message.setHtmlBody(body);
+        message.setHtmlBody(buildSignatureRequestEmailHtml(env, signingUrl, documentTitle));
         message.setSaveAsActivity(false);
         Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
+    }
+
+    @TestVisible
+    private static String buildSignatureRequestEmailHtml(PDF_ESignature_Envelope__c env, String signingUrl, String documentTitle) {
+        String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : PDFESignatureUtil.escapeHtml(env.Signer_Name__c);
+        String safeDocumentTitle = String.isBlank(documentTitle) ? 'Document' : PDFESignatureUtil.escapeHtml(documentTitle);
+        String safeSigningUrl = PDFESignatureUtil.escapeHtml(signingUrl);
+        String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : PDFESignatureUtil.escapeHtml(UserInfo.getName());
+        String safeExpirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
+
+        return emailShell(
+            emailParagraphRow('Hi ' + safeSignerName + ',')
+            + emailParagraphRow(senderName + ' has sent you a document that requires your signature:')
+            + emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
+            + emailParagraphRow('Please review and sign the agreement.')
+            + emailButtonRow('Review &amp; Sign Document', safeSigningUrl, '#0176d3')
+            + emailSubtleRow('This link is unique to you and will expire on ' + safeExpirationDate + '.')
+            + emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
+        );
+    }
+
+    private static String emailLogoUrl() {
+        return URL.getOrgDomainUrl().toExternalForm() + '/resource/Kaizon_Solutions_Logo';
+    }
+
+    private static String emailShell(String contentHtml) {
+        return ''
+            + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#ffffff;margin:0;padding:0;border-collapse:collapse;">'
+            + '  <tr>'
+            + '    <td align="center" style="padding:24px 10px 24px 10px;">'
+            + '      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;background-color:#ffffff;border:1px solid #e5e7eb;border-collapse:collapse;">'
+            + '        <tr>'
+            + '          <td bgcolor="#0176d3" height="44" style="height:44px;background-color:#0176d3;font-size:0;line-height:44px;mso-line-height-rule:exactly;">&nbsp;</td>'
+            + '        </tr>'
+            + '        <tr>'
+            + '          <td align="left" style="padding:18px 24px 14px 24px;border-bottom:1px solid #e5e7eb;">'
+            + '            <img src="' + emailLogoUrl() + '" width="300" alt="Kaizon Solutions" style="display:block;width:300px;max-width:300px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />'
+            + '          </td>'
+            + '        </tr>'
+            +          nullToBlank(contentHtml)
+            + '      </table>'
+            + '    </td>'
+            + '  </tr>'
+            + '</table>';
+    }
+
+    private static String emailRow(String innerHtml) {
+        return '<tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;">' + nullToBlank(innerHtml) + '</td></tr>';
+    }
+
+    private static String emailParagraphRow(String safeHtml) {
+        return emailRow('<p style="Margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;">' + nullToBlank(safeHtml) + '</p>');
+    }
+
+    private static String emailSubtleRow(String safeHtml) {
+        return emailRow('<p style="Margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;">' + nullToBlank(safeHtml) + '</p>');
+    }
+
+    private static String emailDocumentBlockRow(String label, String safeTitle, String accentColor) {
+        String color = String.isBlank(accentColor) ? '#0176d3' : accentColor;
+        return ''
+            + '<tr>'
+            + '  <td style="padding:0 24px 18px 24px;">'
+            + '    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;background-color:#f7f8fa;border-left:4px solid ' + color + ';">'
+            + '      <tr>'
+            + '        <td style="padding:13px 16px;font-family:Arial,Helvetica,sans-serif;">'
+            + '          <div style="font-size:12px;line-height:16px;color:#64748b;Margin:0 0 6px 0;">' + PDFESignatureUtil.escapeHtml(label) + '</div>'
+            + '          <div style="font-size:15px;line-height:20px;font-weight:bold;color:#111827;Margin:0;">' + nullToBlank(safeTitle) + '</div>'
+            + '        </td>'
+            + '      </tr>'
+            + '    </table>'
+            + '  </td>'
+            + '</tr>';
+    }
+
+    private static String emailButtonRow(String safeLabel, String safeUrl, String backgroundColor) {
+        String color = String.isBlank(backgroundColor) ? '#0176d3' : backgroundColor;
+        return ''
+            + '<tr>'
+            + '  <td align="center" style="padding:8px 24px 22px 24px;">'
+            + '    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">'
+            + '      <tr>'
+            + '        <td bgcolor="' + color + '" style="background-color:' + color + ';padding:12px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:18px;font-weight:bold;text-align:center;">'
+            + '          <a href="' + nullToBlank(safeUrl) + '" target="_blank" style="color:#ffffff;text-decoration:none;display:block;">' + nullToBlank(safeLabel) + '</a>'
+            + '        </td>'
+            + '      </tr>'
+            + '    </table>'
+            + '  </td>'
+            + '</tr>';
+    }
+
+    private static String formatDateForEmail(Datetime expirationDate) {
+        if (expirationDate == null) {
+            return '';
+        }
+        return expirationDate.format('MMMM d, yyyy');
+    }
+
+    private static String nullToBlank(String value) {
+        return value == null ? '' : value;
     }
 }

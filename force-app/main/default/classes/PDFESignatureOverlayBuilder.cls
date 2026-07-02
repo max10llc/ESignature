@@ -226,9 +226,10 @@ public without sharing class PDFESignatureOverlayBuilder {
 
             if (isFieldType(typeValue, 'Checkbox')) {
                 if (isTruthy(value)) {
-                    Decimal checkmarkSize = minDecimal(height, 12);
-                    Decimal centerY = y + ((height - checkmarkSize) / 2);
-                    lines.add(checkmarkStroke(x, centerY, checkmarkSize));
+                    Decimal checkmarkSize = minDecimal(minDecimal(width, height), 12);
+                    Decimal checkX = x + ((width - checkmarkSize) / 2);
+                    Decimal checkY = y + ((height - checkmarkSize) / 2);
+                    lines.add(checkmarkStroke(checkX, checkY, checkmarkSize));
                 }
                 continue;
             }
@@ -239,7 +240,7 @@ public without sharing class PDFESignatureOverlayBuilder {
             }
 
             Decimal fontSize = fontSizeFor(typeValue, width, height, value);
-            Decimal textX = x + 1;
+            Decimal textX = centeredTextX(x, width, fontSize, value);
             Decimal textY = y + ((height - fontSize) / 2) + 1;
             if (textY < y + 1) {
                 textY = y + 1;
@@ -316,8 +317,9 @@ public without sharing class PDFESignatureOverlayBuilder {
             drawHeight = height;
             drawWidth = height * imageRatio;
         }
+        Decimal drawX = x + ((width - drawWidth) / 2);
         Decimal drawY = y + ((height - drawHeight) / 2);
-        return 'q ' + fmt(drawWidth) + ' 0 0 ' + fmt(drawHeight) + ' ' + fmt(x) + ' ' + fmt(drawY) + ' cm /' + image.pdfName + ' Do Q';
+        return 'q ' + fmt(drawWidth) + ' 0 0 ' + fmt(drawHeight) + ' ' + fmt(drawX) + ' ' + fmt(drawY) + ' cm /' + image.pdfName + ' Do Q';
     }
 
     private static Decimal fontSizeFor(String typeValue, Decimal width, Decimal height, String value) {
@@ -341,6 +343,23 @@ public without sharing class PDFESignatureOverlayBuilder {
             baseSize = 6;
         }
         return baseSize.setScale(2);
+    }
+
+    private static Decimal centeredTextX(Decimal x, Decimal width, Decimal fontSize, String value) {
+        Decimal textWidth = estimatedTextWidth(fontSize, value);
+        if (textWidth >= width - 2) {
+            return x + 1;
+        }
+        Decimal centeredX = x + ((width - textWidth) / 2);
+        Decimal minX = x + 1;
+        return centeredX < minX ? minX : centeredX;
+    }
+
+    private static Decimal estimatedTextWidth(Decimal fontSize, String value) {
+        if (String.isBlank(value) || fontSize == null) {
+            return 0;
+        }
+        return Decimal.valueOf(String.valueOf(value.length())) * fontSize * Decimal.valueOf('0.52');
     }
 
     private static String normalizeText(String value) {

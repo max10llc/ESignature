@@ -29,6 +29,10 @@ private class PDFESignatureOverlayBuilderTest {
         System.assert(pdfText.contains('Derek Hawley'), 'Overlay should contain the signer name/signature text.');
         System.assert(pdfText.contains('President'), 'Overlay should contain the title text.');
         System.assert(pdfText.contains('6/23/2026'), 'Overlay should contain the date text.');
+        System.assert(
+            pdfText.contains('145.68 264.5 Td (Derek Hawley)'),
+            'Name overlay text should be centered within its saved field bounds.'
+        );
 
         Map<String, Object> debugInfo = PDFESignatureOverlayBuilder.buildOverlayDebugInfo(payloads);
         System.assertEquals(1, Integer.valueOf(String.valueOf(debugInfo.get('stampOverlayCount'))));
@@ -98,6 +102,7 @@ private class PDFESignatureOverlayBuilderTest {
 
         String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
         System.assert(pdfText.contains(' m '), 'Checked checkbox should draw a checkmark path.');
+        System.assert(pdfText.contains('105.16 229.24 m'), 'Checked checkbox mark should be centered in the field.');
         System.assert(!pdfText.contains(' re S Q'), 'Checked checkbox should not draw a surrounding checkbox rectangle.');
     }
 

@@ -88,6 +88,28 @@ private class PDFESignatureSendControllerTest {
         }
     }
 
+    @IsTest
+    static void signatureRequestEmailUsesOriginalPackageFormat() {
+        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            Signer_Name__c = 'Derek Hawley',
+            Expires_At__c = Datetime.newInstance(2026, 7, 27, 12, 0, 0)
+        );
+
+        String html = PDFESignatureSendController.buildSignatureRequestEmailHtml(
+            env,
+            'https://example.com/sign?t=abc123',
+            'Special Services Agreement'
+        );
+
+        System.assert(html.contains('<table role="presentation" width="100%"'), 'Email should use the original table-based shell.');
+        System.assert(html.contains('/resource/Kaizon_Solutions_Logo'), 'Email should include the Kaizon logo static resource.');
+        System.assert(html.contains('has sent you a document that requires your signature'), 'Email should include the original request language.');
+        System.assert(html.contains('Special Services Agreement'), 'Email should include the document title block.');
+        System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');
+        System.assert(html.contains('This link is unique to you and will expire on'), 'Email should include the expiration notice.');
+        System.assert(html.contains('https://example.com/sign?t=abc123'), 'Email should include the fallback signing URL.');
+    }
+
     private static DraftFixture createDraftFixture() {
         Account parent = new Account(Name = 'Send Controller Parent');
         insert parent;
