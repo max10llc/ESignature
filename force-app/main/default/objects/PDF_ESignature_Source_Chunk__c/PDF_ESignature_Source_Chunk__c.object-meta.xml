@@ -154,13 +154,13 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>ControlledByParent</externalSharingModel>
-    <label>PDF E-Signature Source Chunk</label>
+    <label>E-Signature Source Chunk</label>
     <nameField>
         <displayFormat>PESSC-{000000}</displayFormat>
-        <label>PDF E-Signature Source Chunk Number</label>
+        <label>E-Signature Source Chunk Number</label>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>PDF E-Signature Source Chunks</pluralLabel>
+    <pluralLabel>E-Signature Source Chunks</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ControlledByParent</sharingModel>
     <visibility>Public</visibility>

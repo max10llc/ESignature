@@ -3,7 +3,7 @@
     <fullName>Envelope__c</fullName>
     <label>Envelope</label>
     <referenceTo>PDF_ESignature_Envelope__c</referenceTo>
-    <relationshipLabel>PDF E-Signature Source Chunks</relationshipLabel>
+    <relationshipLabel>E-Signature Source Chunks</relationshipLabel>
     <relationshipName>PDF_ESignature_Source_Chunks</relationshipName>
     <relationshipOrder>0</relationshipOrder>
     <reparentableMasterDetail>false</reparentableMasterDetail>

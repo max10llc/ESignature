@@ -154,14 +154,14 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>PDF E-Signature Audit Event</label>
+    <label>E-Signature Audit Event</label>
     <nameField>
         <displayFormat>PESAUD-{000000}</displayFormat>
-        <label>PDF E-Signature Audit Event Number</label>
+        <label>E-Signature Audit Event Number</label>
         <trackHistory>false</trackHistory>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>PDF E-Signature Audit Events</pluralLabel>
+    <pluralLabel>E-Signature Audit Events</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>

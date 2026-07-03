@@ -154,14 +154,14 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>PDF E-Signature Field</label>
+    <label>E-Signature Field</label>
     <nameField>
         <displayFormat>PESFLD-{000000}</displayFormat>
-        <label>PDF E-Signature Field Number</label>
+        <label>E-Signature Field Number</label>
         <trackHistory>false</trackHistory>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>PDF E-Signature Fields</pluralLabel>
+    <pluralLabel>E-Signature Fields</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>

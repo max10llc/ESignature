@@ -154,14 +154,14 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>PDF E-Signature Envelope</label>
+    <label>E-Signature Envelope</label>
     <nameField>
         <displayFormat>PESENV-{000000}</displayFormat>
-        <label>PDF E-Signature Envelope Number</label>
+        <label>E-Signature Envelope Number</label>
         <trackHistory>false</trackHistory>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>PDF E-Signature Envelopes</pluralLabel>
+    <pluralLabel>E-Signature Envelopes</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>

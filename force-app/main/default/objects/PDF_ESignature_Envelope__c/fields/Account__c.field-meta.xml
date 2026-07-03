@@ -4,7 +4,7 @@
     <deleteConstraint>SetNull</deleteConstraint>
     <label>Account</label>
     <referenceTo>Account</referenceTo>
-    <relationshipLabel>PDF E-Signature Envelopes</relationshipLabel>
+    <relationshipLabel>E-Signature Envelopes</relationshipLabel>
     <relationshipName>PDF_ESignature_Account_Envelopes</relationshipName>
     <required>false</required>
     <trackHistory>false</trackHistory>

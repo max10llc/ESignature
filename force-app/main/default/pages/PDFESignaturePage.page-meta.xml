@@ -3,5 +3,5 @@
     <apiVersion>67.0</apiVersion>
     <availableInTouch>false</availableInTouch>
     <confirmationTokenRequired>false</confirmationTokenRequired>
-    <label>PDF E-Signature Page</label>
+    <label>E-Signature Page</label>
 </ApexPage>

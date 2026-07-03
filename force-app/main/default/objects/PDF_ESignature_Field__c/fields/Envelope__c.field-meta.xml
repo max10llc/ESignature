@@ -4,7 +4,7 @@
     <deleteConstraint>Cascade</deleteConstraint>
     <label>Envelope</label>
     <referenceTo>PDF_ESignature_Envelope__c</referenceTo>
-    <relationshipLabel>PDF E-Signature Fields</relationshipLabel>
+    <relationshipLabel>E-Signature Fields</relationshipLabel>
     <relationshipName>PDF_ESignature_Fields</relationshipName>
     <required>false</required>
     <trackHistory>false</trackHistory>

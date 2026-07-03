@@ -3,7 +3,7 @@
     <deploymentStatus>Deployed</deploymentStatus>
     <description>Platform event used by the public signing page to request envelope updates without requiring the Site Guest User to edit records.</description>
     <eventType>HighVolume</eventType>
-    <label>PDF E-Signature Command</label>
-    <pluralLabel>PDF E-Signature Commands</pluralLabel>
+    <label>E-Signature Command</label>
+    <pluralLabel>E-Signature Commands</pluralLabel>
     <publishBehavior>PublishAfterCommit</publishBehavior>
 </CustomObject>
