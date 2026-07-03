@@ -206,18 +206,16 @@ private class PDFESignaturePageControllerTest {
     }
 
     @IsTest
-    static void legacyDeclinedStatusShowsDeclinedMessage() {
-        String token = 'page-legacy-declined-token';
-        ESignature_Envelope__c env = createEnvelope(token, null);
-        env.Status__c = 'Declined';
-        update env;
+    static void declinedEnvelopeStatusShowsDeclinedMessage() {
+        String token = 'page-declined-token';
+        createEnvelope(token, 'Declined');
         setSigningPageToken(token);
 
         PDFESignaturePageController controller = new PDFESignaturePageController();
 
-        System.assertEquals(true, controller.submitted, 'Legacy declined envelopes should render as submitted.');
+        System.assertEquals(true, controller.submitted, 'Declined envelopes should render as submitted.');
         System.assertEquals('This document has already been declined.', controller.pageMessage);
-        System.assertEquals(false, controller.getCanSign(), 'Legacy declined envelopes should not be signable.');
+        System.assertEquals(false, controller.getCanSign(), 'Declined envelopes should not be signable.');
     }
 
     @IsTest

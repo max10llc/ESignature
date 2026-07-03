@@ -45,10 +45,16 @@ global without sharing class PDFESignatureFinalizerCallbackResource {
                 'message' => 'Envelope finalized.'
             });
         } catch (Exception e) {
-            Integer statusCode = e.getMessage() != null && e.getMessage().contains('Unauthorized') ? 401 : 400;
+            String errorMessage = e.getMessage();
+            Integer statusCode = 400;
+            if (errorMessage != null && errorMessage.contains('Unauthorized')) {
+                statusCode = 401;
+            } else if (errorMessage != null && errorMessage.contains('callback secret is not configured')) {
+                statusCode = 500;
+            }
             writeJson(statusCode, new Map<String, Object>{
                 'success' => false,
-                'message' => e.getMessage()
+                'message' => errorMessage
             });
         }
     }
@@ -70,7 +76,7 @@ global without sharing class PDFESignatureFinalizerCallbackResource {
         ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
         String expected = settings.Finalizer_Callback_Secret__c;
         if (String.isBlank(expected)) {
-            return;
+            throw new PDFESignatureUtil.AppException('Finalizer callback secret is not configured.');
         }
         String provided = RestContext.request.headers.get('X-PDF-ESignature-Secret');
         if (String.isBlank(provided)) {
@@ -79,9 +85,24 @@ global without sharing class PDFESignatureFinalizerCallbackResource {
         if (String.isBlank(provided)) {
             provided = PDFESignatureUtil.stringValue(body.get('secret'));
         }
-        if (provided != expected) {
+        if (String.isBlank(provided) || !secretsMatch(provided, expected)) {
             throw new PDFESignatureUtil.AppException('Unauthorized finalizer callback.');
         }
+    }
+
+    private static Boolean secretsMatch(String provided, String expected) {
+        if (provided == null || expected == null) {
+            return false;
+        }
+        String providedDigest = EncodingUtil.convertToHex(Crypto.generateDigest('SHA-256', Blob.valueOf(provided)));
+        String expectedDigest = EncodingUtil.convertToHex(Crypto.generateDigest('SHA-256', Blob.valueOf(expected)));
+        Integer mismatchCount = 0;
+        for (Integer index = 0; index < expectedDigest.length(); index++) {
+            if (providedDigest.substring(index, index + 1) != expectedDigest.substring(index, index + 1)) {
+                mismatchCount++;
+            }
+        }
+        return mismatchCount == 0;
     }
 
     private static void writeJson(Integer statusCode, Map<String, Object> body) {

@@ -110,9 +110,10 @@ private class PDFESignatureSendControllerTest {
 
         System.assert(html.contains('<table role="presentation" width="100%"'), 'Email should use the original table-based shell.');
         System.assert(
-            html.contains('src="https://example.com/signatures/resource/Kaizon_Solutions_Logo"'),
-            'Email logo should load from the public signing Site URL.'
+            html.contains('E-Signature'),
+            'Email should render generic package branding.'
         );
+        System.assert(!html.contains('/resource/'), 'Email should not reference a static resource logo.');
         System.assert(html.contains('has sent you a document that requires your signature'), 'Email should include the original request language.');
         System.assert(html.contains('Special Services Agreement'), 'Email should include the document title block.');
         System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');

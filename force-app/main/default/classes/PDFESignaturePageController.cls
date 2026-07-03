@@ -410,13 +410,6 @@ public without sharing class PDFESignaturePageController {
             return '';
         }
         String status = PDFESignatureUtil.stringValue(envelope.Envelope_Status__c);
-        if (String.isBlank(status)) {
-            try {
-                status = PDFESignatureUtil.stringValue(envelope.get('Status__c'));
-            } catch (Exception ignore) {
-                status = null;
-            }
-        }
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 

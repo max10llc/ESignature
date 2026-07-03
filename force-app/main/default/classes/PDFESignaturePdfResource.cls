@@ -88,13 +88,6 @@ global without sharing class PDFESignaturePdfResource {
             return '';
         }
         String status = PDFESignatureUtil.stringValue(env.Envelope_Status__c);
-        if (String.isBlank(status)) {
-            try {
-                status = PDFESignatureUtil.stringValue(env.get('Status__c'));
-            } catch (Exception ignore) {
-                status = null;
-            }
-        }
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 

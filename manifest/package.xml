@@ -83,7 +83,6 @@
         <members>ESignature_Envelope__c.Source_ContentVersion_Id__c</members>
         <members>ESignature_Envelope__c.Source_File_Title__c</members>
         <members>ESignature_Envelope__c.Envelope_Status__c</members>
-        <members>ESignature_Envelope__c.Status__c</members>
         <members>ESignature_Envelope__c.Viewed_At__c</members>
         <members>ESignature_Envelope__c.Work_Order__c</members>
         <members>ESignature_Field__c.Completed_At__c</members>
@@ -152,7 +151,6 @@
         <members>Document_Signed_Icon</members>
         <members>Document_Completed_Icon</members>
         <members>Document_Locked_Icon</members>
-        <members>Kaizon_Solutions_Logo</members>
         <members>Options_Button</members>
         <members>PDFESign_PdfJs</members>
         <name>StaticResource</name>

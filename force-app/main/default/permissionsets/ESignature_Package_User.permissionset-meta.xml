@@ -110,10 +110,6 @@
         <editable>true</editable>
         <field>ESignature_Envelope__c.Envelope_Status__c</field>
         <readable>true</readable>
-    </fieldPermissions>    <fieldPermissions>
-        <editable>true</editable>
-        <field>ESignature_Envelope__c.Status__c</field>
-        <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>

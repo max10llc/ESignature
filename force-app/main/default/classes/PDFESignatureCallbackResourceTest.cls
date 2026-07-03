@@ -15,6 +15,30 @@ private class PDFESignatureCallbackResourceTest {
     }
 
     @IsTest
+    static void postResultRejectsMissingSecret() {
+        ESignature_Envelope__c env = createEnvelope();
+        setRestRequest(new Map<String, Object>{
+            'envelopeId' => String.valueOf(env.Id),
+            'success' => false,
+            'message' => 'Do not apply this callback.'
+        }, false);
+
+        PDFESignatureFinalizerCallbackResource.postResult();
+
+        System.assertEquals(401, RestContext.response.statusCode);
+        Map<String, Object> body = responseBody();
+        System.assertEquals(false, body.get('success'));
+        System.assert(String.valueOf(body.get('message')).contains('Unauthorized'));
+        env = [
+            SELECT Envelope_Status__c, Error_Message__c
+            FROM ESignature_Envelope__c
+            WHERE Id = :env.Id
+        ];
+        System.assertEquals('Finalizing', env.Envelope_Status__c);
+        System.assertEquals(null, env.Error_Message__c);
+    }
+
+    @IsTest
     static void postResultFailureMarksEnvelopeError() {
         ESignature_Envelope__c env = createEnvelope();
         setRestRequest(new Map<String, Object>{
@@ -76,12 +100,16 @@ private class PDFESignatureCallbackResourceTest {
     }
 
     private static void setRestRequest(Map<String, Object> body) {
+        setRestRequest(body, true);
+    }
+
+    private static void setRestRequest(Map<String, Object> body, Boolean includeSecret) {
         RestRequest request = new RestRequest();
         request.requestUri = '/services/apexrest/PDFESign/v1/finalizer-callback';
         request.httpMethod = 'POST';
         request.requestBody = Blob.valueOf(JSON.serialize(body));
         String secret = PDFESignatureUtil.getSettings().Finalizer_Callback_Secret__c;
-        if (!String.isBlank(secret)) {
+        if (includeSecret == true && !String.isBlank(secret)) {
             request.headers.put('X-PDF-ESignature-Secret', secret);
         }
         RestContext.request = request;
