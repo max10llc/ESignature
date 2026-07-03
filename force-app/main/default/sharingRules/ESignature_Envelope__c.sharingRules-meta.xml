@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingGuestRules>
+        <fullName>Tokenized_Envelopes_To_Signatures_Guest</fullName>
+        <accessLevel>Read</accessLevel>
+        <criteriaItems>
+            <field>Secure_Token_Hash__c</field>
+            <operation>notEqual</operation>
+            <value></value>
+        </criteriaItems>
+        <label>Tokenized Envelopes To Signatures Guest</label>
+        <sharedTo>
+            <guestUser>Signatures</guestUser>
+        </sharedTo>
+    </sharingGuestRules>
+</SharingRules>

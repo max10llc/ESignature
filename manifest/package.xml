@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
         <members>PDFESignatureAuditReportBuilder</members>
@@ -157,5 +157,29 @@
         <members>PDFESign_PdfJs</members>
         <name>StaticResource</name>
     </types>
+    <types>
+        <members>ESignature_Envelope__c</members>
+        <members>ESignature_Field__c</members>
+        <name>SharingRules</name>
+    </types>
+    <types>
+        <members>ESignature_Audit_Event__c-E-Signature Audit Event Layout</members>
+        <members>ESignature_Envelope__c-E-Signature Envelope Layout</members>
+        <members>ESignature_Field__c-E-Signature Field Layout</members>
+        <members>Opportunity-Special Service</members>
+        <members>Opportunity-Monthly Service</members>
+        <name>Layout</name>
+    </types>
+    <types>
+        <members>Prepare_E_Signature_Document</members>
+        <name>Flow</name>
+    </types>
+    <types>
+        <members>Monthly_Service_Opportunity_Record_Page</members>
+        <members>Special_Service_Opportunity</members>
+        <name>FlexiPage</name>
+    </types>
     <version>67.0</version>
 </Package>
+
+

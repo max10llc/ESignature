@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
     <flexiPageRegions>
         <itemInstances>
@@ -37,14 +37,7 @@
                             </visibilityRule>
                         </valueListItems>
                         <valueListItems>
-                            <value>FeedItem.ContentPost</value>
-                            <visibilityRule>
-                                <criteria>
-                                    <leftValue>{!$Client.formFactor}</leftValue>
-                                    <operator>EQUAL</operator>
-                                    <rightValue>Small</rightValue>
-                                </criteria>
-                            </visibilityRule>
+                            <value>FeedItem.TextPost</value>
                         </valueListItems>
                         <valueListItems>
                             <value>Opportunity.Upload_Files</value>
@@ -57,44 +50,28 @@
                             </visibilityRule>
                         </valueListItems>
                         <valueListItems>
-                            <value>FeedItem.TextPost</value>
-                        </valueListItems>
-                        <valueListItems>
-                            <value>Opportunity.Create_Building_Survey</value>
-                        </valueListItems>
-                        <valueListItems>
                             <value>Submit</value>
                             <visibilityRule>
+                                <booleanFilter>1 AND 2</booleanFilter>
                                 <criteria>
                                     <leftValue>{!Record.Approval_Status__c}</leftValue>
                                     <operator>EQUAL</operator>
                                     <rightValue>Not Submitted</rightValue>
                                 </criteria>
+                                <criteria>
+                                    <leftValue>{!Record.Amount}</leftValue>
+                                    <operator>GT</operator>
+                                    <rightValue>0</rightValue>
+                                </criteria>
                             </visibilityRule>
                         </valueListItems>
                         <valueListItems>
-                            <value>Opportunity.Resubmit_For_Approval</value>
+                            <value>Opportunity.Reset_Opportunity</value>
                             <visibilityRule>
-                                <booleanFilter>( 1 AND 2 AND 3 ) OR 4</booleanFilter>
                                 <criteria>
                                     <leftValue>{!Record.Approval_Status__c}</leftValue>
                                     <operator>EQUAL</operator>
                                     <rightValue>Approved</rightValue>
-                                </criteria>
-                                <criteria>
-                                    <leftValue>{!Record.Resubmitted_For_Approval__c}</leftValue>
-                                    <operator>EQUAL</operator>
-                                    <rightValue>false</rightValue>
-                                </criteria>
-                                <criteria>
-                                    <leftValue>{!Record.StageName}</leftValue>
-                                    <operator>NE</operator>
-                                    <rightValue>Closed Won</rightValue>
-                                </criteria>
-                                <criteria>
-                                    <leftValue>{!$Permission.CustomPermission.Custom_Perm_Opportunity_Resubmit_For_Approval}</leftValue>
-                                    <operator>EQUAL</operator>
-                                    <rightValue>true</rightValue>
                                 </criteria>
                             </visibilityRule>
                         </valueListItems>
@@ -109,35 +86,18 @@
                             </visibilityRule>
                         </valueListItems>
                         <valueListItems>
-                            <value>Opportunity.Power_Automate</value>
-                        </valueListItems>
-                        <valueListItems>
-                            <value>Opportunity.Create_Contract</value>
+                            <value>Opportunity.Create_Work_Order</value>
                             <visibilityRule>
+                                <booleanFilter>1 AND 2</booleanFilter>
                                 <criteria>
-                                    <leftValue>{!Record.Contract_Created__c}</leftValue>
+                                    <leftValue>{!Record.Work_Order_Created__c}</leftValue>
                                     <operator>EQUAL</operator>
                                     <rightValue>false</rightValue>
                                 </criteria>
-                            </visibilityRule>
-                        </valueListItems>
-                        <valueListItems>
-                            <value>Opportunity.Bypass_Minimum_Price</value>
-                            <visibilityRule>
                                 <criteria>
-                                    <leftValue>{!$User.Profile.Name}</leftValue>
+                                    <leftValue>{!Record.Approved__c}</leftValue>
                                     <operator>EQUAL</operator>
-                                    <rightValue>Super System Administrator</rightValue>
-                                </criteria>
-                            </visibilityRule>
-                        </valueListItems>
-                        <valueListItems>
-                            <value>Opportunity.Apply_Discount</value>
-                            <visibilityRule>
-                                <criteria>
-                                    <leftValue>{!Record.Approval_Status__c}</leftValue>
-                                    <operator>EQUAL</operator>
-                                    <rightValue>Approved</rightValue>
+                                    <rightValue>true</rightValue>
                                 </criteria>
                             </visibilityRule>
                         </valueListItems>
@@ -152,16 +112,13 @@
                             </visibilityRule>
                         </valueListItems>
                         <valueListItems>
-                            <value>ChangeOwnerOne</value>
-                        </valueListItems>
-                        <valueListItems>
                             <value>ChangeRecordType</value>
                         </valueListItems>
                         <valueListItems>
-                            <value>Opportunity.New_Account_Offer_Case</value>
+                            <value>ChangeOwnerOne</value>
                         </valueListItems>
                         <valueListItems>
-                            <value>Opportunity.Remove_From_Follow_Up_Process</value>
+                            <value>DeepClone</value>
                         </valueListItems>
                         <valueListItems>
                             <value>Opportunity.Download_Files</value>
@@ -198,10 +155,6 @@
                     <value>true</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
-                    <name>hideSlackAction</name>
-                    <value>false</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
                     <name>numVisibleActions</name>
                     <value>10</value>
                 </componentInstanceProperties>
@@ -226,27 +179,20 @@
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
-                    <name>flowName</name>
-                    <value>OPPORTUNITY_Validation_Screen</value>
+                    <name>decorate</name>
+                    <value>true</value>
                 </componentInstanceProperties>
-                <componentName>Reloadable_Flow_Component</componentName>
-                <identifier>Reloadable_Flow_Component</identifier>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;p style=&quot;text-align: center;&quot;&gt;&lt;b style=&quot;font-size: 20px; color: rgb(255, 0, 0);&quot;&gt;This opportunity has not been submitted for approval.&lt;/b&gt;&lt;/p&gt;</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:richText</componentName>
+                <identifier>flexipage_richText</identifier>
                 <visibilityRule>
-                    <booleanFilter>1 AND 2 AND 3</booleanFilter>
                     <criteria>
-                        <leftValue>{!Record.StageName}</leftValue>
-                        <operator>NE</operator>
-                        <rightValue>Closed Won</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!Record.StageName}</leftValue>
-                        <operator>NE</operator>
-                        <rightValue>Closed Lost</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!Record.StageName}</leftValue>
-                        <operator>NE</operator>
-                        <rightValue>No Bid</rightValue>
+                        <leftValue>{!Record.Approval_Status__c}</leftValue>
+                        <operator>EQUAL</operator>
+                        <rightValue>Not Submitted</rightValue>
                     </criteria>
                 </visibilityRule>
             </componentInstance>
@@ -259,10 +205,63 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>richTextValue</name>
-                    <value>&lt;p style="text-align: center;"&gt;&lt;b style="font-size: 20px; color: rgb(255, 0, 0);"&gt;This Opportunity is closed and now locked. If you need assistance contact your admin.&lt;/b&gt;&lt;/p&gt;</value>
+                    <value>&lt;p style=&quot;text-align: center;&quot;&gt;&lt;b style=&quot;font-size: 20px; color: rgb(255, 0, 0);&quot;&gt;Opportunity has been submitted for approval!&lt;/b&gt;&lt;/p&gt;</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:richText</componentName>
-                <identifier>flexipage_richText</identifier>
+                <identifier>flexipage_richText2</identifier>
+                <visibilityRule>
+                    <criteria>
+                        <leftValue>{!Record.Approval_Status__c}</leftValue>
+                        <operator>EQUAL</operator>
+                        <rightValue>Submitted For Approval</rightValue>
+                    </criteria>
+                </visibilityRule>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>decorate</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;p style=&quot;text-align: center;&quot;&gt;&lt;b style=&quot;font-size: 20px; color: rgb(255, 0, 0);&quot;&gt;This Opportunity has not been Closed/Won.&lt;/b&gt;&lt;/p&gt;</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:richText</componentName>
+                <identifier>flexipage_richText3</identifier>
+                <visibilityRule>
+                    <booleanFilter>1 AND 2 AND NOT 3</booleanFilter>
+                    <criteria>
+                        <leftValue>{!Record.Work_Order_Created__c}</leftValue>
+                        <operator>EQUAL</operator>
+                        <rightValue>true</rightValue>
+                    </criteria>
+                    <criteria>
+                        <leftValue>{!Record.StageName}</leftValue>
+                        <operator>NE</operator>
+                        <rightValue>Closed Won</rightValue>
+                    </criteria>
+                    <criteria>
+                        <leftValue>{!Record.StageName}</leftValue>
+                        <operator>EQUAL</operator>
+                        <rightValue>Closed Lost</rightValue>
+                    </criteria>
+                </visibilityRule>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>decorate</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;p style=&quot;text-align: center;&quot;&gt;&lt;b style=&quot;color: rgb(255, 0, 0); font-size: 20px;&quot;&gt;This Opportunity is closed and now locked. If you need assistance contact your admin.&lt;/b&gt;&lt;/p&gt;</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:richText</componentName>
+                <identifier>flexipage_richText4</identifier>
                 <visibilityRule>
                     <criteria>
                         <leftValue>{!Record.StageName}</leftValue>
@@ -282,7 +281,7 @@
                 <identifier>force_detailPanel</identifier>
             </componentInstance>
         </itemInstances>
-        <name>detailTabContent</name>
+        <name>Facet-211bcb37-1ce6-4eca-8623-8ecee8dba985</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
@@ -293,21 +292,158 @@
                     <value>Id</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
-                    <name>titleFieldName</name>
-                    <value>Lost/No Bid Reason</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
                     <name>updateQuickActionName</name>
                     <value>Opportunity.Lost_No_Bid_Reason</value>
                 </componentInstanceProperties>
                 <componentName>console:relatedRecord</componentName>
-                <identifier>console_relatedRecord3</identifier>
+                <identifier>console_relatedRecord</identifier>
             </componentInstance>
         </itemInstances>
-        <name>Facet-093e7426-0bb0-48c9-a66e-d612f7705694</name>
+        <name>Facet-2281339f-a9ca-4777-bbba-c731a541ac6e</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>flowArguments</name>
+                    <value>[{&quot;label&quot;:&quot;recordId&quot;,&quot;dataType&quot;:&quot;SObject&quot;,&quot;supportsRecordId&quot;:true,&quot;value&quot;:&quot;{!Record.Id}&quot;}]</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowLayout</name>
+                    <value>oneColumn</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowName</name>
+                    <value>Opportunity_SF_Admin_Info</value>
+                </componentInstanceProperties>
+                <componentName>flowruntime:interview</componentName>
+                <identifier>flowruntime_interview</identifier>
+                <visibilityRule>
+                    <criteria>
+                        <leftValue>{!$Permission.CustomPermission.Custom_Perm_Opportunity_Edit}</leftValue>
+                        <operator>EQUAL</operator>
+                        <rightValue>true</rightValue>
+                    </criteria>
+                </visibilityRule>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-a7968191-352a-4d29-8b8b-f7530c39bb20</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>parentFieldApiName</name>
+                    <value>Opportunity.AccountId</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListApiName</name>
+                    <value>Opportunities</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListComponentOverride</name>
+                    <value>ADVGRID</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>rowsToDisplay</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>showActionBar</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentName>force:relatedListSingleContainer</componentName>
+                <identifier>force_relatedListSingleContainer11</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-49f7ad1c-6051-4b3a-97a2-7defd2ad2930</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>active</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-211bcb37-1ce6-4eca-8623-8ecee8dba985</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Standard.Tab.detail</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>detailTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-2281339f-a9ca-4777-bbba-c731a541ac6e</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Loss/No Bid Reason</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>customTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>active</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-a7968191-352a-4d29-8b8b-f7530c39bb20</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Admin Info</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>customTab2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-49f7ad1c-6051-4b3a-97a2-7defd2ad2930</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Existing Opportunities</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>flexipage_tab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-2a4477c0-92da-494c-80b3-1a23c6f389e7</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Tabs</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>tabs</name>
+                    <value>Facet-2a4477c0-92da-494c-80b3-1a23c6f389e7</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tabset</componentName>
+                <identifier>flexipage_tabset</identifier>
+            </componentInstance>
+        </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
@@ -316,7 +452,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListApiName</name>
-                    <value>Cleaning_Agreements__r</value>
+                    <value>OpenActivities</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListComponentOverride</name>
@@ -332,381 +468,11 @@
                 </componentInstanceProperties>
                 <componentName>force:relatedListSingleContainer</componentName>
                 <identifier>force_relatedListSingleContainer</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-baf7540b-242a-4131-8cbb-47e9bceaa64d</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>flowArguments</name>
-                    <value>[{"label":"recordId","dataType":"SObject","supportsRecordId":true,"value":"{!Record.Id}"}]</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowLayout</name>
-                    <value>oneColumn</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowName</name>
-                    <value>Opportunity_SF_Admin_Info</value>
-                </componentInstanceProperties>
-                <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview3</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-ab2528f6-42b5-4670-ba5c-6c19936092a3</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>lookupFieldName</name>
-                    <value>Id</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>titleFieldName</name>
-                    <value>TeleChoice Appointment Debriefing</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>updateQuickActionName</name>
-                    <value>Opportunity.TeleChoice_Appointment_Debriefing</value>
-                </componentInstanceProperties>
-                <componentName>console:relatedRecord</componentName>
-                <identifier>console_relatedRecord5</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-f94e33cc-443b-49e5-baf2-b75b7100640f</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>detailTabContent</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Standard.Tab.detail</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>detailTab</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-093e7426-0bb0-48c9-a66e-d612f7705694</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Lost/No Bid Reason</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>customTab2</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-baf7540b-242a-4131-8cbb-47e9bceaa64d</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Contract</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>customTab3</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-ab2528f6-42b5-4670-ba5c-6c19936092a3</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Admin Info</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>customTab4</identifier>
                 <visibilityRule>
                     <criteria>
-                        <leftValue>{!$Permission.CustomPermission.Custom_Perm_Opportunity_Edit}</leftValue>
+                        <leftValue>{!$Client.formFactor}</leftValue>
                         <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                </visibilityRule>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-f94e33cc-443b-49e5-baf2-b75b7100640f</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Appointment Debriefing</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>customTab5</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>tabs</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>flowArguments</name>
-                    <value>[{"label":"recordId","dataType":"String","supportsRecordId":true,"value":"{!Record.Id}"}]</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowLayout</name>
-                    <value>oneColumn</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowName</name>
-                    <value>Files_DataTable</value>
-                </componentInstanceProperties>
-                <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview5</identifier>
-                <visibilityRule>
-                    <criteria>
-                        <leftValue>{!$Permission.CustomPermission.Custom_Perm_LPC_New_File_Component}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                </visibilityRule>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>displayFileName</name>
-                    <value>true</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>fieldNameForFileID</name>
-                    <value>NextStep</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>headerText</name>
-                    <value>Related Files</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>showHeader</name>
-                    <value>false</value>
-                </componentInstanceProperties>
-                <componentName>AcctSeed:filePreviewCarousel</componentName>
-                <identifier>AcctSeed_filePreviewCarousel</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-3dab5a49-f554-45f3-b0ea-25bb89e1a34f</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>flowArguments</name>
-                    <value>[{"label":"recordId","dataType":"String","supportsRecordId":true,"value":"{!Record.Id}"}]</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowLayout</name>
-                    <value>oneColumn</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowName</name>
-                    <value>File_Viewer_SF</value>
-                </componentInstanceProperties>
-                <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview6</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-96ba0f34-f2fd-4ef1-9a30-104cf29279b6</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>flowArguments</name>
-                    <value>[{"label":"recordId","dataType":"String","supportsRecordId":true,"value":"{!Record.Id}"}]</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowLayout</name>
-                    <value>oneColumn</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowName</name>
-                    <value>Files_Mass_Delete</value>
-                </componentInstanceProperties>
-                <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview4</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-e52fd201-b490-4d71-8788-c97ed7a2c215</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>active</name>
-                    <value>true</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-3dab5a49-f554-45f3-b0ea-25bb89e1a34f</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Files</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>flexipage_tab</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-96ba0f34-f2fd-4ef1-9a30-104cf29279b6</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Files Preview</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>flexipage_tab3</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-e52fd201-b490-4d71-8788-c97ed7a2c215</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Delete Files</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>flexipage_tab2</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-1a140fb1-2791-46c1-9656-c728e2603ae7</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>flowArguments</name>
-                    <value>[{"label":"record","dataType":"SObject","supportsRecordId":true,"value":"{!Record.Id}"}]</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowLayout</name>
-                    <value>oneColumn</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowName</name>
-                    <value>OPPORTUNITY_Appointment_Debriefing</value>
-                </componentInstanceProperties>
-                <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview</identifier>
-                <visibilityRule>
-                    <booleanFilter>1 AND 2</booleanFilter>
-                    <criteria>
-                        <leftValue>{!Record.Appointment_Debriefing_Date__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!Record.Debriefing_Completed__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>false</rightValue>
-                    </criteria>
-                </visibilityRule>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>createQuickActionName</name>
-                    <value>NewOpportunity</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>lookupFieldName</name>
-                    <value>Opportunity.Id</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>titleFieldName</name>
-                    <value>Qualification Stage Information</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>updateQuickActionName</name>
-                    <value>Opportunity.Qualification_Stage_Information</value>
-                </componentInstanceProperties>
-                <componentName>console:relatedRecord</componentName>
-                <identifier>console_relatedRecord6</identifier>
-                <visibilityRule>
-                    <booleanFilter>1 AND 2</booleanFilter>
-                    <criteria>
-                        <leftValue>{!Record.Appointment_Debriefing_Date__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!Record.Debriefing_Completed__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>false</rightValue>
-                    </criteria>
-                </visibilityRule>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Tabs</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>tabs</name>
-                    <value>tabs</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tabset</componentName>
-                <identifier>flexipage_tabset</identifier>
-                <visibilityRule>
-                    <booleanFilter>(1 AND 2) OR 3 OR 4</booleanFilter>
-                    <criteria>
-                        <leftValue>{!Record.Appointment_Debriefing_Date__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!Record.Debriefing_Completed__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!Record.Appointment_Debriefing_Date__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>false</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!$User.Profile_Name__c}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>Super System Administrator</rightValue>
+                        <rightValue>Small</rightValue>
                     </criteria>
                 </visibilityRule>
             </componentInstance>
@@ -719,7 +485,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListApiName</name>
-                    <value>OpenActivities</value>
+                    <value>ActivityHistories</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListComponentOverride</name>
@@ -747,33 +513,12 @@
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Tabs</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>tabs</name>
-                    <value>Facet-1a140fb1-2791-46c1-9656-c728e2603ae7</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tabset</componentName>
-                <identifier>flexipage_tabset3</identifier>
-                <visibilityRule>
-                    <criteria>
-                        <leftValue>{!$Permission.CustomPermission.Custom_Perm_LPC_New_File_Component}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>true</rightValue>
-                    </criteria>
-                </visibilityRule>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
                     <name>parentFieldApiName</name>
                     <value>Opportunity.Id</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListApiName</name>
-                    <value>AttachedContentDocuments</value>
+                    <value>OpportunityLineItems</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListComponentOverride</name>
@@ -799,7 +544,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListApiName</name>
-                    <value>AttachedContentNotes</value>
+                    <value>Histories</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListComponentOverride</name>
@@ -817,83 +562,6 @@
                 <identifier>force_relatedListSingleContainer4</identifier>
             </componentInstance>
         </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>parentFieldApiName</name>
-                    <value>Opportunity.Id</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>relatedListApiName</name>
-                    <value>Histories</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>relatedListComponentOverride</name>
-                    <value>NONE</value>
-                </componentInstanceProperties>
-                <componentName>force:relatedListSingleContainer</componentName>
-                <identifier>force_relatedListSingleContainer5</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>parentFieldApiName</name>
-                    <value>Opportunity.Id</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>relatedListApiName</name>
-                    <value>ProcessSteps</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>relatedListComponentOverride</name>
-                    <value>ADVGRID</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>rowsToDisplay</name>
-                    <value>10</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>showActionBar</name>
-                    <value>true</value>
-                </componentInstanceProperties>
-                <componentName>force:relatedListSingleContainer</componentName>
-                <identifier>force_relatedListSingleContainer6</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>parentFieldApiName</name>
-                    <value>Opportunity.Id</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>relatedListApiName</name>
-                    <value>ActivityHistories</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>relatedListComponentOverride</name>
-                    <value>ADVGRID</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>rowsToDisplay</name>
-                    <value>10</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>showActionBar</name>
-                    <value>true</value>
-                </componentInstanceProperties>
-                <componentName>force:relatedListSingleContainer</componentName>
-                <identifier>force_relatedListSingleContainer7</identifier>
-                <visibilityRule>
-                    <criteria>
-                        <leftValue>{!$Client.formFactor}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>Small</rightValue>
-                    </criteria>
-                </visibilityRule>
-            </componentInstance>
-        </itemInstances>
         <name>leftcol</name>
         <type>Region</type>
     </flexiPageRegions>
@@ -908,7 +576,7 @@
                 <identifier>runtime_sales_activities_activityPanel</identifier>
             </componentInstance>
         </itemInstances>
-        <name>Facet-ecab8068-c3f5-45ec-9f98-768908602bd2</name>
+        <name>Facet-6add7ed1-80c0-494c-899e-030d4feb2dda</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
@@ -935,7 +603,7 @@
                     <value>true</value>
                 </componentInstanceProperties>
                 <componentName>force:relatedListSingleContainer</componentName>
-                <identifier>force_relatedListSingleContainer8</identifier>
+                <identifier>force_relatedListSingleContainer5</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
@@ -961,28 +629,10 @@
                     <value>true</value>
                 </componentInstanceProperties>
                 <componentName>force:relatedListSingleContainer</componentName>
-                <identifier>force_relatedListSingleContainer9</identifier>
+                <identifier>force_relatedListSingleContainer6</identifier>
             </componentInstance>
         </itemInstances>
-        <name>Facet-64448938-6448-4cbe-af30-de007d24b1ea</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>flowLayout</name>
-                    <value>oneColumn</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>flowName</name>
-                    <value>Bid_Calculator</value>
-                </componentInstanceProperties>
-                <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview2</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-69a421f1-839a-4234-ad15-b9d9bb6b2bf9</name>
+        <name>Facet-d98f0aa7-91f4-4435-a31d-9d0dc8257b56</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
@@ -1006,7 +656,7 @@
                 <identifier>forceChatter_exposedFeed1</identifier>
             </componentInstance>
         </itemInstances>
-        <name>Facet-f571b8af-42a4-4808-ad9f-93a7537ad0e6</name>
+        <name>Facet-007738b9-52c2-4868-8226-58a43d9da3fb</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
@@ -1017,18 +667,28 @@
                     <value>925</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
+                    <name>label</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
                     <name>pageName</name>
                     <value>Google_Doc_Proposal</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>showLabel</name>
-                    <value>false</value>
+                    <value>true</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:visualforcePage</componentName>
-                <identifier>flexipage_visualforcePage2</identifier>
+                <identifier>flexipage_visualforcePage</identifier>
+                <visibilityRule>
+                    <criteria>
+                        <leftValue>{!$User.Profile.Name}</leftValue>
+                        <operator>CONTAINS</operator>
+                        <rightValue>Administrator</rightValue>
+                    </criteria>
+                </visibilityRule>
             </componentInstance>
         </itemInstances>
-        <name>Facet-9c667687-f11e-4350-92fc-592ac5825929</name>
+        <name>Facet-5b445e97-9a1b-48e6-bbdf-ffb3b97712a1</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
@@ -1036,7 +696,7 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>flowArguments</name>
-                    <value>[{"label":"recordId","dataType":"String","supportsRecordId":true,"value":"{!Record.Id}"}]</value>
+                    <value>[{&quot;label&quot;:&quot;recordId&quot;,&quot;dataType&quot;:&quot;String&quot;,&quot;supportsRecordId&quot;:true,&quot;value&quot;:&quot;{!Record.Id}&quot;}]</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>flowLayout</name>
@@ -1047,22 +707,18 @@
                     <value>Email_Archive_Viewer</value>
                 </componentInstanceProperties>
                 <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview7</identifier>
+                <identifier>flowruntime_interview5</identifier>
             </componentInstance>
         </itemInstances>
-        <name>Facet-3be443ed-7a07-4589-9744-2b1499832407</name>
+        <name>Facet-19f7026b-c1bf-43e9-9d97-3172794b7505</name>
         <type>Facet</type>
     </flexiPageRegions>
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
-                    <name>active</name>
-                    <value>true</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-ecab8068-c3f5-45ec-9f98-768908602bd2</value>
+                    <value>Facet-6add7ed1-80c0-494c-899e-030d4feb2dda</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>title</name>
@@ -1076,35 +732,21 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-64448938-6448-4cbe-af30-de007d24b1ea</value>
+                    <value>Facet-d98f0aa7-91f4-4435-a31d-9d0dc8257b56</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>title</name>
                     <value>Contacts</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
-                <identifier>customTab6</identifier>
+                <identifier>customTab3</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-69a421f1-839a-4234-ad15-b9d9bb6b2bf9</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Bid Calculator</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>customTab7</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-f571b8af-42a4-4808-ad9f-93a7537ad0e6</value>
+                    <value>Facet-007738b9-52c2-4868-8226-58a43d9da3fb</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>title</name>
@@ -1118,17 +760,273 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-9c667687-f11e-4350-92fc-592ac5825929</value>
+                    <value>Facet-5b445e97-9a1b-48e6-bbdf-ffb3b97712a1</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>title</name>
                     <value>Google Doc Proposal</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
+                <identifier>flexipage_tab2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-19f7026b-c1bf-43e9-9d97-3172794b7505</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Archived Email</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
                 <identifier>flexipage_tab6</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-75b7363a-322a-4079-8237-3784fe251779</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>flowArguments</name>
+                    <value>[{&quot;label&quot;:&quot;recordId&quot;,&quot;dataType&quot;:&quot;String&quot;,&quot;supportsRecordId&quot;:true,&quot;value&quot;:&quot;{!Record.Id}&quot;}]</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowLayout</name>
+                    <value>oneColumn</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowName</name>
+                    <value>Files_DataTable</value>
+                </componentInstanceProperties>
+                <componentName>flowruntime:interview</componentName>
+                <identifier>flowruntime_interview2</identifier>
                 <visibilityRule>
                     <criteria>
-                        <leftValue>{!$Permission.CustomPermission.Custom_Perm_Opportunity_Edit}</leftValue>
+                        <leftValue>{!$Permission.CustomPermission.Custom_Perm_LPC_New_File_Component}</leftValue>
+                        <operator>EQUAL</operator>
+                        <rightValue>true</rightValue>
+                    </criteria>
+                </visibilityRule>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-a8dadd22-8596-4a4d-ae6a-8d83a5aa37f2</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>flowArguments</name>
+                    <value>[{&quot;label&quot;:&quot;recordId&quot;,&quot;dataType&quot;:&quot;String&quot;,&quot;supportsRecordId&quot;:true,&quot;value&quot;:&quot;{!Record.Id}&quot;}]</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowLayout</name>
+                    <value>oneColumn</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowName</name>
+                    <value>File_Viewer_SF</value>
+                </componentInstanceProperties>
+                <componentName>flowruntime:interview</componentName>
+                <identifier>flowruntime_interview4</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>displayFileName</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>fieldNameForFileID</name>
+                    <value>NextStep</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>headerText</name>
+                    <value>Related Riles</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>showHeader</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentName>AcctSeed:filePreviewCarousel</componentName>
+                <identifier>AcctSeed_filePreviewCarousel</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-845df9db-551a-4b29-8481-0693addd82fb</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>flowArguments</name>
+                    <value>[{&quot;label&quot;:&quot;recordId&quot;,&quot;dataType&quot;:&quot;String&quot;,&quot;supportsRecordId&quot;:true,&quot;value&quot;:&quot;{!Record.Id}&quot;}]</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowLayout</name>
+                    <value>oneColumn</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>flowName</name>
+                    <value>Files_Mass_Delete</value>
+                </componentInstanceProperties>
+                <componentName>flowruntime:interview</componentName>
+                <identifier>flowruntime_interview3</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-92a83113-a8ad-4157-99ac-af12561b8887</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>active</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-a8dadd22-8596-4a4d-ae6a-8d83a5aa37f2</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Files</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>flexipage_tab3</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-845df9db-551a-4b29-8481-0693addd82fb</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Files Preview</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>flexipage_tab5</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-92a83113-a8ad-4157-99ac-af12561b8887</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Delete Files</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>flexipage_tab4</identifier>
+                <visibilityRule>
+                    <criteria>
+                        <leftValue>{!$User.Profile.Name}</leftValue>
+                        <operator>CONTAINS</operator>
+                        <rightValue>Super System Administrator</rightValue>
+                    </criteria>
+                </visibilityRule>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-8dd56458-134d-4516-ab59-be81a456d52f</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>decorate</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;p style=&quot;text-align: center;&quot;&gt;&lt;b style=&quot;font-size: 18px; color: rgb(8, 7, 7);&quot;&gt;Winners just do it, and do it, and do it, and do it, and do it, and keep on doing it, no matter what.&lt;/b&gt;&lt;/p&gt;</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:richText</componentName>
+                <identifier>flexipage_richText5</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Tabs</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>tabs</name>
+                    <value>Facet-75b7363a-322a-4079-8237-3784fe251779</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tabset</componentName>
+                <identifier>flexipage_tabset2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>parentFieldApiName</name>
+                    <value>Opportunity.Id</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListApiName</name>
+                    <value>AttachedContentNotes</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListComponentOverride</name>
+                    <value>ADVGRID</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>rowsToDisplay</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>showActionBar</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentName>force:relatedListSingleContainer</componentName>
+                <identifier>force_relatedListSingleContainer7</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>lookupFieldName</name>
+                    <value>Id</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>titleFieldName</name>
+                    <value>Related Case</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>updateQuickActionName</name>
+                    <value>Opportunity.Case_Number</value>
+                </componentInstanceProperties>
+                <componentName>console:relatedRecord</componentName>
+                <identifier>console_relatedRecord2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Tabs</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>tabs</name>
+                    <value>Facet-8dd56458-134d-4516-ab59-be81a456d52f</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tabset</componentName>
+                <identifier>flexipage_tabset3</identifier>
+                <visibilityRule>
+                    <criteria>
+                        <leftValue>{!$Permission.CustomPermission.Custom_Perm_LPC_New_File_Component}</leftValue>
                         <operator>EQUAL</operator>
                         <rightValue>true</rightValue>
                     </criteria>
@@ -1138,26 +1036,8 @@
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-3be443ed-7a07-4589-9744-2b1499832407</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>title</name>
-                    <value>Archived Email</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:tab</componentName>
-                <identifier>flexipage_tab4</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-8608b2db-ef6e-4a36-b6f8-85204992f654</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
                     <name>flowArguments</name>
-                    <value>[{"label":"recordId","dataType":"String","supportsRecordId":true,"value":"{!Record.Id}"}]</value>
+                    <value>[{&quot;label&quot;:&quot;recordId&quot;,&quot;dataType&quot;:&quot;String&quot;,&quot;supportsRecordId&quot;:true,&quot;value&quot;:&quot;{!Record.Id}&quot;}]</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>flowLayout</name>
@@ -1168,7 +1048,7 @@
                     <value>Prepare_E_Signature_Document</value>
                 </componentInstanceProperties>
                 <componentName>flowruntime:interview</componentName>
-                <identifier>flowruntime_interview8</identifier>
+                <identifier>flowruntime_interview_esign</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
@@ -1177,9 +1057,6 @@
                 <identifier>c_pdfESignSendEnvelope</identifier>
             </componentInstance>
         </itemInstances>
-        
-        
-        
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
@@ -1203,27 +1080,91 @@
                     <value>true</value>
                 </componentInstanceProperties>
                 <componentName>force:relatedListSingleContainer</componentName>
-                <identifier>force_relatedListSingleContainer10</identifier>
+                <identifier>force_relatedListSingleContainer_esign</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Tabs</value>
+                    <name>parentFieldApiName</name>
+                    <value>Opportunity.Id</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
-                    <name>tabs</name>
-                    <value>Facet-8608b2db-ef6e-4a36-b6f8-85204992f654</value>
+                    <name>relatedListApiName</name>
+                    <value>AttachedContentDocuments</value>
                 </componentInstanceProperties>
-                <componentName>flexipage:tabset</componentName>
-                <identifier>flexipage_tabset2</identifier>
+                <componentInstanceProperties>
+                    <name>relatedListComponentOverride</name>
+                    <value>ADVGRID</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>rowsToDisplay</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>showActionBar</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentName>force:relatedListSingleContainer</componentName>
+                <identifier>force_relatedListSingleContainer8</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>parentFieldApiName</name>
+                    <value>Opportunity.Id</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListApiName</name>
+                    <value>Work_Orders__r</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListComponentOverride</name>
+                    <value>ADVGRID</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>rowsToDisplay</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>showActionBar</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentName>force:relatedListSingleContainer</componentName>
+                <identifier>force_relatedListSingleContainer9</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>parentFieldApiName</name>
+                    <value>Opportunity.Id</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListApiName</name>
+                    <value>ProcessSteps</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>relatedListComponentOverride</name>
+                    <value>ADVGRID</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>rowsToDisplay</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>showActionBar</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentName>force:relatedListSingleContainer</componentName>
+                <identifier>force_relatedListSingleContainer10</identifier>
             </componentInstance>
         </itemInstances>
         <name>rightcol</name>
         <type>Region</type>
     </flexiPageRegions>
-    <masterLabel>Monthly Service Opportunity Record Page</masterLabel>
+    <masterLabel>Special Service Opportunity</masterLabel>
     <sobjectType>Opportunity</sobjectType>
     <template>
         <name>flexipage:recordHomeTwoColEqualHeaderTemplateDesktop</name>

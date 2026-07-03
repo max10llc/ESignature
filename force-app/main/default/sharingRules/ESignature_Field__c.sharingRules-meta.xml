@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingGuestRules>
+        <fullName>Placed_Fields_To_Signatures_Guest</fullName>
+        <accessLevel>Read</accessLevel>
+        <criteriaItems>
+            <field>Page_Number__c</field>
+            <operation>greaterThan</operation>
+            <value>0</value>
+        </criteriaItems>
+        <label>Placed Fields To Signatures Guest</label>
+        <sharedTo>
+            <guestUser>Signatures</guestUser>
+        </sharedTo>
+    </sharingGuestRules>
+</SharingRules>
