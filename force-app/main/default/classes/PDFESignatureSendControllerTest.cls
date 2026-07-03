@@ -2,8 +2,8 @@
 private class PDFESignatureSendControllerTest {
     private class DraftFixture {
         Id parentId;
-        PDF_ESignature_Envelope__c envelope;
-        PDF_ESignature_Field__c field;
+        ESignature_Envelope__c envelope;
+        ESignature_Field__c field;
     }
 
     @IsTest
@@ -38,11 +38,11 @@ private class PDFESignatureSendControllerTest {
         System.assertEquals('Sent', result.status);
         System.assert(result.signingUrl.contains('/PDFESignaturePage?t='), 'Result should include a public signing URL.');
 
-        PDF_ESignature_Envelope__c env = [
+        ESignature_Envelope__c env = [
             SELECT Envelope_Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
                    Sent_At__c, Expires_At__c, Public_Signing_URL__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :fixture.envelope.Id
         ];
         System.assertEquals('Sent', env.Envelope_Status__c);
@@ -65,12 +65,12 @@ private class PDFESignatureSendControllerTest {
 
         System.assertEquals(1, [
             SELECT COUNT()
-            FROM PDF_ESignature_Source_Chunk__c
+            FROM ESignature_Source_Chunk__c
             WHERE Envelope__c = :fixture.envelope.Id
         ], 'Source PDF should be cached for public signing.');
         System.assertEquals(1, [
             SELECT COUNT()
-            FROM PDF_ESignature_Audit_Event__c
+            FROM ESignature_Audit_Event__c
             WHERE Envelope__c = :fixture.envelope.Id
             AND Event_Type__c = 'Sent'
         ], 'Sent audit event should be written.');
@@ -80,7 +80,7 @@ private class PDFESignatureSendControllerTest {
     static void sendEnvelopeRejectsDraftWithoutFields() {
         Account parent = new Account(Name = 'Send Controller No Fields');
         insert parent;
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Draft',
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Parent_Object_Api_Name__c = 'Account'
@@ -97,7 +97,7 @@ private class PDFESignatureSendControllerTest {
 
     @IsTest
     static void signatureRequestEmailUsesOriginalPackageFormat() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Signer_Name__c = 'Derek Hawley',
             Expires_At__c = Datetime.newInstance(2026, 7, 27, 12, 0, 0)
         );
@@ -124,7 +124,7 @@ private class PDFESignatureSendControllerTest {
         Account parent = new Account(Name = 'Send Controller Parent');
         insert parent;
 
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Draft',
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Parent_Object_Api_Name__c = 'Account'
@@ -140,7 +140,7 @@ private class PDFESignatureSendControllerTest {
         insert source;
         source = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];
 
-        PDF_ESignature_Field__c field = new PDF_ESignature_Field__c(
+        ESignature_Field__c field = new ESignature_Field__c(
             Envelope__c = env.Id,
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Content_Version_Id__c = String.valueOf(source.Id),

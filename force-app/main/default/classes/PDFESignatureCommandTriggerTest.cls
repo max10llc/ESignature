@@ -4,7 +4,7 @@ private class PDFESignatureCommandTriggerTest {
     static void viewedCommandUpdatesEnvelopeThroughTrigger() {
         String token = 'test-token';
         String tokenHash = PDFESignatureUtil.hashToken(token);
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Sent',
             Secure_Token_Hash__c = tokenHash,
             Signer_Email__c = 'signer@example.com'
@@ -12,7 +12,7 @@ private class PDFESignatureCommandTriggerTest {
         insert env;
 
         Test.startTest();
-        Database.SaveResult result = EventBus.publish(new PDF_ESignature_Command__e(
+        Database.SaveResult result = EventBus.publish(new ESignature_Command__e(
             Action__c = 'viewed',
             Token_Hash__c = tokenHash,
             Payload_JSON__c = '{"userAgent":"Unit Test","ipAddress":"127.0.0.1"}'
@@ -23,7 +23,7 @@ private class PDFESignatureCommandTriggerTest {
 
         env = [
             SELECT Envelope_Status__c, Viewed_At__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Viewed', env.Envelope_Status__c);
@@ -31,7 +31,7 @@ private class PDFESignatureCommandTriggerTest {
 
         System.assertEquals(1, [
             SELECT COUNT()
-            FROM PDF_ESignature_Audit_Event__c
+            FROM ESignature_Audit_Event__c
             WHERE Envelope__c = :env.Id
             AND Event_Type__c = 'Viewed'
         ]);
@@ -41,7 +41,7 @@ private class PDFESignatureCommandTriggerTest {
     static void signedCommandWithMissingRequiredFieldMarksEnvelopeError() {
         String token = 'required-field-token';
         String tokenHash = PDFESignatureUtil.hashToken(token);
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Name__c = 'Derek Hawley',
@@ -50,7 +50,7 @@ private class PDFESignatureCommandTriggerTest {
         );
         insert env;
 
-        insert new PDF_ESignature_Field__c(
+        insert new ESignature_Field__c(
             Envelope__c = env.Id,
             Field_Type__c = 'Text',
             Label__c = 'Required Text',
@@ -72,7 +72,7 @@ private class PDFESignatureCommandTriggerTest {
         };
 
         Test.startTest();
-        Database.SaveResult result = EventBus.publish(new PDF_ESignature_Command__e(
+        Database.SaveResult result = EventBus.publish(new ESignature_Command__e(
             Action__c = 'signed',
             Token_Hash__c = tokenHash,
             Payload_JSON__c = JSON.serialize(payload)
@@ -83,7 +83,7 @@ private class PDFESignatureCommandTriggerTest {
 
         env = [
             SELECT Envelope_Status__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Error', env.Envelope_Status__c, 'Envelope should not finalize when a required field is missing.');
@@ -95,7 +95,7 @@ private class PDFESignatureCommandTriggerTest {
         String token = 'declined-token';
         String tokenHash = PDFESignatureUtil.hashToken(token);
         ContentVersion source = createSourceFile('Declined Source');
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Email__c = 'signer@example.com',
@@ -105,7 +105,7 @@ private class PDFESignatureCommandTriggerTest {
         insert env;
 
         Test.startTest();
-        Database.SaveResult result = EventBus.publish(new PDF_ESignature_Command__e(
+        Database.SaveResult result = EventBus.publish(new ESignature_Command__e(
             Action__c = 'declined',
             Token_Hash__c = tokenHash,
             Payload_JSON__c = '{"declineReason":"No longer needed"}'
@@ -116,7 +116,7 @@ private class PDFESignatureCommandTriggerTest {
 
         env = [
             SELECT Envelope_Status__c, Decline_Reason__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Declined', env.Envelope_Status__c);
@@ -130,7 +130,7 @@ private class PDFESignatureCommandTriggerTest {
         String token = 'delegated-token';
         String tokenHash = PDFESignatureUtil.hashToken(token);
         ContentVersion source = createSourceFile('Delegated Source');
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Name__c = 'Original Signer',
@@ -151,7 +151,7 @@ private class PDFESignatureCommandTriggerTest {
         };
 
         Test.startTest();
-        Database.SaveResult result = EventBus.publish(new PDF_ESignature_Command__e(
+        Database.SaveResult result = EventBus.publish(new ESignature_Command__e(
             Action__c = 'delegated',
             Token_Hash__c = tokenHash,
             Payload_JSON__c = JSON.serialize(payload)
@@ -163,7 +163,7 @@ private class PDFESignatureCommandTriggerTest {
         env = [
             SELECT Envelope_Status__c, Secure_Token_Hash__c, Signer_Name__c, Signer_Email__c,
                    Signer_Title__c, Sent_At__c, Viewed_At__c, Public_Signing_URL__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Sent', env.Envelope_Status__c, 'Delegated envelope should be sent to the delegate. Error: ' + env.Error_Message__c);
@@ -177,9 +177,9 @@ private class PDFESignatureCommandTriggerTest {
         source = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :source.Id];
         System.assertEquals('Sent', source.E_Signature_Status__c, 'Delegating should keep the source file in sent status.');
 
-        PDF_ESignature_Audit_Event__c audit = [
+        ESignature_Audit_Event__c audit = [
             SELECT Actor_Email__c, Details__c
-            FROM PDF_ESignature_Audit_Event__c
+            FROM ESignature_Audit_Event__c
             WHERE Envelope__c = :env.Id
             AND Event_Type__c = 'Delegated'
             LIMIT 1
@@ -192,7 +192,7 @@ private class PDFESignatureCommandTriggerTest {
     static void signedCommandWithoutTypedNameMarksEnvelopeError() {
         String token = 'missing-name-token';
         String tokenHash = PDFESignatureUtil.hashToken(token);
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Email__c = 'signer@example.com'
@@ -200,7 +200,7 @@ private class PDFESignatureCommandTriggerTest {
         insert env;
 
         Test.startTest();
-        Database.SaveResult result = EventBus.publish(new PDF_ESignature_Command__e(
+        Database.SaveResult result = EventBus.publish(new ESignature_Command__e(
             Action__c = 'signed',
             Token_Hash__c = tokenHash,
             Payload_JSON__c = '{"typedName":"","signerTitle":"","signerFieldsJson":"[]"}'
@@ -211,7 +211,7 @@ private class PDFESignatureCommandTriggerTest {
 
         env = [
             SELECT Envelope_Status__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Error', env.Envelope_Status__c);

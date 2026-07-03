@@ -4,7 +4,7 @@ private class PDFESignatureAuditReportBuilderTest {
     static void buildsReportPdfFromEnvelopeAuditEvents() {
         User sender = auditReportUser('America/Chicago');
         System.runAs(sender) {
-            PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            ESignature_Envelope__c env = new ESignature_Envelope__c(
                 Envelope_Status__c = 'Signed',
                 Source_File_Title__c = 'Audit Report Contract',
                 Parent_Object_Api_Name__c = 'Opportunity',
@@ -19,7 +19,7 @@ private class PDFESignatureAuditReportBuilderTest {
             );
             insert env;
 
-            insert new List<PDF_ESignature_Audit_Event__c>{
+            insert new List<ESignature_Audit_Event__c>{
                 audit(env.Id, 'Sent', 'Envelope sent to derek.hawley@example.com.', DateTime.newInstanceGmt(2026, 6, 23, 14, 0, 0)),
                 audit(env.Id, 'Viewed', 'Signer opened the envelope.', DateTime.newInstanceGmt(2026, 6, 23, 14, 5, 0)),
                 audit(env.Id, 'Signed', 'Signer completed required fields and submitted signature.', DateTime.newInstanceGmt(2026, 6, 23, 14, 10, 0))
@@ -46,7 +46,7 @@ private class PDFESignatureAuditReportBuilderTest {
 
     @IsTest
     static void suppliedSourceTitleOverridesEnvelopeTitle() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
             Source_File_Title__c = 'Envelope Stored Title',
             Signer_Name__c = 'Derek Hawley',
@@ -63,8 +63,8 @@ private class PDFESignatureAuditReportBuilderTest {
         System.assert(pdfText.contains('Source Version Title'), 'The finalizer source title should be used when provided.');
     }
 
-    private static PDF_ESignature_Audit_Event__c audit(Id envelopeId, String typeValue, String details, Datetime occurredAt) {
-        return new PDF_ESignature_Audit_Event__c(
+    private static ESignature_Audit_Event__c audit(Id envelopeId, String typeValue, String details, Datetime occurredAt) {
+        return new ESignature_Audit_Event__c(
             Envelope__c = envelopeId,
             Event_Type__c = typeValue,
             Occurred_At__c = occurredAt,
@@ -89,6 +89,18 @@ private class PDFESignatureAuditReportBuilderTest {
             UserName = 'audit.report.' + uniqueValue + '@example.com'
         );
         insert userRecord;
+
+        PermissionSet packageUserPermissionSet = [
+            SELECT Id
+            FROM PermissionSet
+            WHERE Name = 'ESignature_Package_User'
+            LIMIT 1
+        ];
+        insert new PermissionSetAssignment(
+            AssigneeId = userRecord.Id,
+            PermissionSetId = packageUserPermissionSet.Id
+        );
+
         return userRecord;
     }
 }

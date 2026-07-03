@@ -4,7 +4,7 @@ global without sharing class PDFESignaturePdfResource {
     global static void getPdf() {
         RestResponse response = RestContext.response;
         String token = RestContext.request.params.get('t');
-        PDF_ESignature_Envelope__c env = PDFESignatureUtil.findEnvelopeByToken(token);
+        ESignature_Envelope__c env = PDFESignatureUtil.findEnvelopeByToken(token);
         if (env == null) {
             response.statusCode = 404;
             response.responseBody = Blob.valueOf('Document not found.');
@@ -43,7 +43,7 @@ global without sharing class PDFESignaturePdfResource {
         if (pdfData == null) {
             response.statusCode = 404;
             response.addHeader('Content-Type', 'text/plain; charset=UTF-8');
-            response.responseBody = Blob.valueOf('Source PDF not found for envelope ' + String.valueOf(env.Id) + '. Verify PDF_ESignature_Source_Chunk__c rows exist for this envelope, or resend the envelope after v13 is deployed.');
+            response.responseBody = Blob.valueOf('Source PDF not found for envelope ' + String.valueOf(env.Id) + '. Verify ESignature_Source_Chunk__c rows exist for this envelope, or resend the envelope after v13 is deployed.');
             return;
         }
         response.statusCode = 200;
@@ -53,7 +53,7 @@ global without sharing class PDFESignaturePdfResource {
         response.responseBody = pdfData;
     }
 
-    private static Boolean isCompletedEnvelope(PDF_ESignature_Envelope__c env) {
+    private static Boolean isCompletedEnvelope(ESignature_Envelope__c env) {
         if (env == null) {
             return false;
         }
@@ -63,14 +63,14 @@ global without sharing class PDFESignaturePdfResource {
         return new Set<String>{ 'signed', 'finalizing', 'completed', 'complete' }.contains(normalizedEnvelopeStatus(env));
     }
 
-    private static Boolean isCancelledEnvelope(PDF_ESignature_Envelope__c env) {
+    private static Boolean isCancelledEnvelope(ESignature_Envelope__c env) {
         String status = normalizedEnvelopeStatus(env);
         return new Set<String>{ 'cancelled', 'canceled', 'voided', 'cancelled by sender', 'canceled by sender' }.contains(status) ||
             status.contains('cancel') ||
             status.contains('void');
     }
 
-    private static Boolean isDeclinedEnvelope(PDF_ESignature_Envelope__c env) {
+    private static Boolean isDeclinedEnvelope(ESignature_Envelope__c env) {
         if (env == null) {
             return false;
         }
@@ -83,7 +83,7 @@ global without sharing class PDFESignaturePdfResource {
             status.contains('reject');
     }
 
-    private static String normalizedEnvelopeStatus(PDF_ESignature_Envelope__c env) {
+    private static String normalizedEnvelopeStatus(ESignature_Envelope__c env) {
         if (env == null) {
             return '';
         }

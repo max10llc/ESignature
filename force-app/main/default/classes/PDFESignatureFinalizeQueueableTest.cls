@@ -51,10 +51,10 @@ private class PDFESignatureFinalizeQueueableTest {
         System.enqueueJob(new PDFESignatureFinalizeQueueable(envelopeId));
         Test.stopTest();
 
-        PDF_ESignature_Envelope__c env = [
+        ESignature_Envelope__c env = [
             SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c,
                    Completion_Message__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
         ];
         System.assertEquals('Signed', env.Envelope_Status__c, 'Envelope should be completed when finalPdfBase64 is returned.');
@@ -63,9 +63,9 @@ private class PDFESignatureFinalizeQueueableTest {
         System.assertEquals(null, env.Error_Message__c, 'Successful finalization should clear error message.');
         System.assert(env.Completion_Message__c.contains('Finalizer debug:'), 'Completion message should include finalizer debug summary.');
         System.assert(env.Completion_Message__c.contains('stampOverlays='), 'Debug summary should include overlay count.');
-        PDF_ESignature_Field__c sourceField = [
+        ESignature_Field__c sourceField = [
             SELECT Content_Version_Id__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelopeId
             LIMIT 1
         ];
@@ -94,10 +94,10 @@ private class PDFESignatureFinalizeQueueableTest {
         System.enqueueJob(new PDFESignatureFinalizeQueueable(envelopeId));
         Test.stopTest();
 
-        PDF_ESignature_Envelope__c env = [
+        ESignature_Envelope__c env = [
             SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c,
                    Completion_Message__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
         ];
         System.assertEquals('Error', env.Envelope_Status__c, 'Missing finalPdfBase64 should put the envelope in Error.');
@@ -129,7 +129,7 @@ private class PDFESignatureFinalizeQueueableTest {
         insert finalFile;
         finalFile = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :finalFile.Id];
 
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Sent',
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Signer_Email__c = 'signer@example.com',
@@ -139,7 +139,7 @@ private class PDFESignatureFinalizeQueueableTest {
         insert env;
 
         PDFESignatureFinalizerService.markAccepted(env.Id, 'request-123', 'Accepted for finalization.');
-        env = [SELECT Envelope_Status__c, Finalizer_Request_Id__c, Completion_Message__c FROM PDF_ESignature_Envelope__c WHERE Id = :env.Id];
+        env = [SELECT Envelope_Status__c, Finalizer_Request_Id__c, Completion_Message__c FROM ESignature_Envelope__c WHERE Id = :env.Id];
         System.assertEquals('Finalizing', env.Envelope_Status__c);
         System.assertEquals('request-123', env.Finalizer_Request_Id__c);
         System.assertEquals('Accepted for finalization.', env.Completion_Message__c);
@@ -147,7 +147,7 @@ private class PDFESignatureFinalizeQueueableTest {
         PDFESignatureFinalizerService.completeWithExistingFile(env.Id, finalFile.Id, null, 'Final file attached.');
         env = [
             SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Signed', env.Envelope_Status__c);
@@ -164,13 +164,13 @@ private class PDFESignatureFinalizeQueueableTest {
         System.assertEquals('Signed Document.pdf', PDFESignatureFinalizerService.resolveFileName(env, 'Signed Document'));
 
         PDFESignatureFinalizerService.markError(env.Id, 'Something went wrong.');
-        env = [SELECT Envelope_Status__c, Error_Message__c FROM PDF_ESignature_Envelope__c WHERE Id = :env.Id];
+        env = [SELECT Envelope_Status__c, Error_Message__c FROM ESignature_Envelope__c WHERE Id = :env.Id];
         System.assertEquals('Error', env.Envelope_Status__c);
         System.assertEquals('Something went wrong.', env.Error_Message__c);
     }
 
     private static Id createEnvelopeWithSourceAndSignatureField() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
             Parent_Object_Api_Name__c = 'Opportunity',
             Signer_Name__c = 'Derek Hawley',
@@ -191,7 +191,7 @@ private class PDFESignatureFinalizeQueueableTest {
         insert source;
         source = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];
 
-        insert new PDF_ESignature_Field__c(
+        insert new ESignature_Field__c(
             Envelope__c = env.Id,
             Content_Version_Id__c = String.valueOf(source.Id),
             Content_Document_Id__c = String.valueOf(source.ContentDocumentId),
@@ -210,7 +210,7 @@ private class PDFESignatureFinalizeQueueableTest {
             Required__c = true,
             Sequence__c = 1
         );
-        insert new PDF_ESignature_Audit_Event__c(
+        insert new ESignature_Audit_Event__c(
             Envelope__c = env.Id,
             Event_Type__c = 'Sent',
             Occurred_At__c = System.now().addMinutes(-10),

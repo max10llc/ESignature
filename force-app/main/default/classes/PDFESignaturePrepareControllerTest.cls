@@ -73,10 +73,10 @@ private class PDFESignaturePrepareControllerTest {
         );
 
         System.assertNotEquals(null, result.envelopeId, 'Saving placements should create or update a draft envelope.');
-        PDF_ESignature_Envelope__c env = [
+        ESignature_Envelope__c env = [
             SELECT Envelope_Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c, Source_File_Title__c,
                    Parent_Record_Id__c, Parent_Object_Api_Name__c, Account__c, Opportunity__c, Work_Order__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :result.envelopeId
         ];
         System.assertEquals('Draft', env.Envelope_Status__c);
@@ -90,7 +90,7 @@ private class PDFESignaturePrepareControllerTest {
         System.assertEquals('Prepared E-Signature File', env.Source_File_Title__c);
         System.assertEquals(1, [
             SELECT COUNT()
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :env.Id
         ]);
 
@@ -122,9 +122,9 @@ private class PDFESignaturePrepareControllerTest {
             '[]'
         );
 
-        PDF_ESignature_Envelope__c env = [
+        ESignature_Envelope__c env = [
             SELECT Parent_Record_Id__c, Parent_Object_Api_Name__c, Account__c, Opportunity__c, Work_Order__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :result.envelopeId
         ];
         System.assertEquals(String.valueOf(parent.Id), env.Parent_Record_Id__c);

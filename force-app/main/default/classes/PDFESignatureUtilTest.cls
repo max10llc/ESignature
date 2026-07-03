@@ -23,7 +23,7 @@ private class PDFESignatureUtilTest {
 
     @IsTest
     static void getEnvelopeTitlePrefersStoredSourceContentVersionTitle() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Source_File_Title__c = 'Content Version Record Title'
         );
 
@@ -44,12 +44,12 @@ private class PDFESignatureUtilTest {
         insert source;
         source = [SELECT Id, ContentDocumentId, Title FROM ContentVersion WHERE Id = :source.Id];
 
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Draft',
             Parent_Record_Id__c = String.valueOf(parent.Id)
         );
         insert env;
-        insert new PDF_ESignature_Field__c(
+        insert new ESignature_Field__c(
             Envelope__c = env.Id,
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Content_Version_Id__c = String.valueOf(source.Id),
@@ -66,25 +66,25 @@ private class PDFESignatureUtilTest {
         System.assertEquals(source.Id, PDFESignatureUtil.getContentVersionById(source.Id, false).Id);
         System.assertEquals(source.Id, PDFESignatureUtil.getContentVersionById(source.Id, true).Id);
         System.assertEquals(source.Id, PDFESignatureUtil.getLatestContentVersion(source.ContentDocumentId, false).Id);
-        System.assertEquals(source.Id, PDFESignatureUtil.getLatestSourceVersion(new PDF_ESignature_Envelope__c(Id = env.Id), false).Id);
+        System.assertEquals(source.Id, PDFESignatureUtil.getLatestSourceVersion(new ESignature_Envelope__c(Id = env.Id), false).Id);
 
         Map<Id, Id> sourceByEnvelope = PDFESignatureUtil.getSourceDocumentIdsByEnvelopeId(new Set<Id>{ env.Id });
         System.assertEquals(source.ContentDocumentId, sourceByEnvelope.get(env.Id));
         Map<Id, String> titleByDocument = PDFESignatureUtil.getContentDocumentTitles(new Set<Id>{ source.ContentDocumentId });
         System.assertEquals('Utility Source PDF', titleByDocument.get(source.ContentDocumentId));
-        System.assertEquals('Utility Source PDF', PDFESignatureUtil.getEnvelopeTitle(new PDF_ESignature_Envelope__c(Id = env.Id)));
+        System.assertEquals('Utility Source PDF', PDFESignatureUtil.getEnvelopeTitle(new ESignature_Envelope__c(Id = env.Id)));
 
         PDFESignatureUtil.cacheSourcePdfForEnvelope(env.Id);
         System.assert(PDFESignatureUtil.getCachedSourcePdfBlob(env.Id).toString().contains('%source'));
 
-        PDFESignatureUtil.updateSourceFileESignatureStatus(new PDF_ESignature_Envelope__c(Id = env.Id), 'Sent');
+        PDFESignatureUtil.updateSourceFileESignatureStatus(new ESignature_Envelope__c(Id = env.Id), 'Sent');
         source = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :source.Id];
         System.assertEquals('Sent', source.E_Signature_Status__c);
 
         PDFESignatureUtil.audit(env.Id, 'Sent', UserInfo.getUserEmail(), 'Utility audit event.');
         System.assertEquals(1, [
             SELECT COUNT()
-            FROM PDF_ESignature_Audit_Event__c
+            FROM ESignature_Audit_Event__c
             WHERE Envelope__c = :env.Id
             AND Event_Type__c = 'Sent'
         ]);
@@ -97,7 +97,7 @@ private class PDFESignatureUtilTest {
         String tokenHash = PDFESignatureUtil.hashToken(token);
         System.assertEquals(64, tokenHash.length());
 
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Secure_Token_Hash__c = tokenHash,
             Signer_Email__c = 'signer@example.com'
         );
@@ -126,7 +126,7 @@ private class PDFESignatureUtilTest {
         System.assert(PDFESignatureUtil.buildPdfResourceUrl('abc 123').contains('abc'));
         System.assert(PDFESignatureUtil.buildPdfResourceUrl('abc 123').contains('123'));
 
-        PDF_ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+        ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
         System.assert(String.isNotBlank(PDFESignatureUtil.buildFinalizerCallbackUrl(settings)));
         if (!String.isBlank(settings.Site_Base_URL__c)) {
             System.assert(PDFESignatureUtil.buildSigningUrl('abc').contains('/PDFESignaturePage?t=abc'));

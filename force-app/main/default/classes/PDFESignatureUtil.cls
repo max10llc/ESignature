@@ -2,8 +2,8 @@ public without sharing class PDFESignatureUtil {
     private static final Integer SOURCE_PDF_CHUNK_SIZE = 100000;
     public class AppException extends Exception {}
 
-    public static PDF_ESignature_Setting__mdt getSettings() {
-        List<PDF_ESignature_Setting__mdt> rows = [
+    public static ESignature_Setting__mdt getSettings() {
+        List<ESignature_Setting__mdt> rows = [
             SELECT Site_Base_URL__c,
                    Finalizer_Named_Credential__c,
                    Finalizer_Mode__c,
@@ -16,12 +16,12 @@ public without sharing class PDFESignatureUtil {
                    Restrict_Copying__c,
                    Allow_Low_Quality_Printing__c,
                    Final_Pdf_Owner_Password__c
-            FROM PDF_ESignature_Setting__mdt
+            FROM ESignature_Setting__mdt
             WHERE DeveloperName = 'Default'
             LIMIT 1
         ];
         if (rows.isEmpty()) {
-            throw new AppException('Missing PDF_ESignature_Setting__mdt record named Default.');
+            throw new AppException('Missing ESignature_Setting__mdt record named Default.');
         }
         return rows[0];
     }
@@ -38,12 +38,12 @@ public without sharing class PDFESignatureUtil {
         return EncodingUtil.convertToHex(Crypto.generateDigest('SHA-256', Blob.valueOf(token)));
     }
 
-    public static PDF_ESignature_Envelope__c findEnvelopeByToken(String token) {
+    public static ESignature_Envelope__c findEnvelopeByToken(String token) {
         String hashValue = hashToken(token);
         if (String.isBlank(hashValue)) {
             return null;
         }
-        List<PDF_ESignature_Envelope__c> rows = [
+        List<ESignature_Envelope__c> rows = [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Status__c,
                    Final_ContentDocument_Id__c, Final_ContentVersion_Id__c, Secure_Token_Hash__c,
@@ -52,7 +52,7 @@ public without sharing class PDFESignatureUtil {
                    Sent_At__c, Viewed_At__c, Signed_At__c, Expires_At__c, Page_Count__c,
                    Public_Signing_URL__c, Signature_Method__c, Signature_Image_Data_Url__c,
                    Completed_Fields_JSON__c, Completion_Message__c, Decline_Reason__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Secure_Token_Hash__c = :hashValue
             LIMIT 1
         ];
@@ -63,9 +63,9 @@ public without sharing class PDFESignatureUtil {
         if (envelopeId == null) {
             return null;
         }
-        List<PDF_ESignature_Field__c> fields = [
+        List<ESignature_Field__c> fields = [
             SELECT Content_Document_Id__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelopeId
             AND Content_Document_Id__c != null
             ORDER BY Sequence__c ASC, CreatedDate ASC
@@ -81,9 +81,9 @@ public without sharing class PDFESignatureUtil {
         if (envelopeId == null) {
             return null;
         }
-        List<PDF_ESignature_Field__c> fields = [
+        List<ESignature_Field__c> fields = [
             SELECT Content_Version_Id__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelopeId
             AND Content_Version_Id__c != null
             ORDER BY Sequence__c ASC, CreatedDate ASC
@@ -100,9 +100,9 @@ public without sharing class PDFESignatureUtil {
         if (envelopeIds == null || envelopeIds.isEmpty()) {
             return output;
         }
-        for (PDF_ESignature_Field__c field : [
+        for (ESignature_Field__c field : [
             SELECT Envelope__c, Content_Document_Id__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c IN :envelopeIds
             AND Content_Document_Id__c != null
             ORDER BY Sequence__c ASC, CreatedDate ASC
@@ -117,7 +117,7 @@ public without sharing class PDFESignatureUtil {
         return output;
     }
 
-    public static String getEnvelopeTitle(PDF_ESignature_Envelope__c env) {
+    public static String getEnvelopeTitle(ESignature_Envelope__c env) {
         if (env == null) {
             return 'Document';
         }
@@ -133,7 +133,7 @@ public without sharing class PDFESignatureUtil {
         return fallback;
     }
 
-    public static ContentVersion getLatestSourceVersion(PDF_ESignature_Envelope__c env, Boolean includeData) {
+    public static ContentVersion getLatestSourceVersion(ESignature_Envelope__c env, Boolean includeData) {
         if (env == null) {
             return null;
         }
@@ -160,7 +160,7 @@ public without sharing class PDFESignatureUtil {
         return getLatestContentVersion(documentId, includeData);
     }
 
-    private static String getEnvelopeString(PDF_ESignature_Envelope__c env, String fieldName) {
+    private static String getEnvelopeString(ESignature_Envelope__c env, String fieldName) {
         if (env == null || String.isBlank(fieldName)) {
             return null;
         }
@@ -231,7 +231,7 @@ public without sharing class PDFESignatureUtil {
             throw new AppException('Envelope Id is required to cache the source PDF.');
         }
 
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(Id = envelopeId);
+        ESignature_Envelope__c env = new ESignature_Envelope__c(Id = envelopeId);
         ContentVersion source = getLatestSourceVersion(env, true);
         if (source == null || source.VersionData == null) {
             throw new AppException('Unable to cache source PDF because the source ContentVersion could not be read.');
@@ -239,16 +239,16 @@ public without sharing class PDFESignatureUtil {
 
         delete [
             SELECT Id
-            FROM PDF_ESignature_Source_Chunk__c
+            FROM ESignature_Source_Chunk__c
             WHERE Envelope__c = :envelopeId
         ];
 
         String encoded = EncodingUtil.base64Encode(source.VersionData);
-        List<PDF_ESignature_Source_Chunk__c> chunks = new List<PDF_ESignature_Source_Chunk__c>();
+        List<ESignature_Source_Chunk__c> chunks = new List<ESignature_Source_Chunk__c>();
         Integer sequence = 1;
         for (Integer index = 0; index < encoded.length(); index += SOURCE_PDF_CHUNK_SIZE) {
             Integer endIndex = Math.min(index + SOURCE_PDF_CHUNK_SIZE, encoded.length());
-            chunks.add(new PDF_ESignature_Source_Chunk__c(
+            chunks.add(new ESignature_Source_Chunk__c(
                 Envelope__c = envelopeId,
                 Sequence__c = sequence,
                 Content_Version_Id__c = String.valueOf(source.Id),
@@ -267,9 +267,9 @@ public without sharing class PDFESignatureUtil {
             return null;
         }
         try {
-            List<PDF_ESignature_Source_Chunk__c> chunks = [
+            List<ESignature_Source_Chunk__c> chunks = [
                 SELECT Sequence__c, Data__c
-                FROM PDF_ESignature_Source_Chunk__c
+                FROM ESignature_Source_Chunk__c
                 WHERE Envelope__c = :envelopeId
                 ORDER BY Sequence__c ASC
             ];
@@ -277,7 +277,7 @@ public without sharing class PDFESignatureUtil {
                 return null;
             }
             String encoded = '';
-            for (PDF_ESignature_Source_Chunk__c chunk : chunks) {
+            for (ESignature_Source_Chunk__c chunk : chunks) {
                 if (chunk.Data__c != null) {
                     encoded += chunk.Data__c;
                 }
@@ -307,7 +307,7 @@ public without sharing class PDFESignatureUtil {
         return output;
     }
 
-    public static void updateSourceFileESignatureStatus(PDF_ESignature_Envelope__c env, String status) {
+    public static void updateSourceFileESignatureStatus(ESignature_Envelope__c env, String status) {
         if (env == null || String.isBlank(status)) {
             return;
         }
@@ -335,7 +335,7 @@ public without sharing class PDFESignatureUtil {
         } catch (Exception ignore) {}
     }
 
-    public static String titleFromEnvelope(PDF_ESignature_Envelope__c env, Map<Id, String> titleByDocumentId, Map<Id, Id> documentIdByEnvelopeId) {
+    public static String titleFromEnvelope(ESignature_Envelope__c env, Map<Id, String> titleByDocumentId, Map<Id, Id> documentIdByEnvelopeId) {
         if (env == null) {
             return 'Document';
         }
@@ -347,7 +347,7 @@ public without sharing class PDFESignatureUtil {
         return String.isBlank(env.Name) ? 'Document' : env.Name;
     }
 
-    public static String titleFromEnvelope(PDF_ESignature_Envelope__c env, Map<Id, String> titleByDocumentId) {
+    public static String titleFromEnvelope(ESignature_Envelope__c env, Map<Id, String> titleByDocumentId) {
         Map<Id, Id> byEnvelope = new Map<Id, Id>();
         if (env != null) {
             byEnvelope.put(env.Id, getEnvelopeSourceDocumentId(env.Id));
@@ -359,7 +359,7 @@ public without sharing class PDFESignatureUtil {
         if (envelopeId == null) {
             return;
         }
-        PDF_ESignature_Audit_Event__c evt = new PDF_ESignature_Audit_Event__c();
+        ESignature_Audit_Event__c evt = new ESignature_Audit_Event__c();
         evt.Envelope__c = envelopeId;
         evt.Event_Type__c = eventType;
         evt.Occurred_At__c = System.now();
@@ -381,7 +381,7 @@ public without sharing class PDFESignatureUtil {
         insert evt;
     }
 
-    public static void stampEnvelopeParent(PDF_ESignature_Envelope__c env, String parentRecordId) {
+    public static void stampEnvelopeParent(ESignature_Envelope__c env, String parentRecordId) {
         if (env == null) {
             return;
         }
@@ -496,10 +496,10 @@ public without sharing class PDFESignatureUtil {
     }
 
     public static String buildSigningUrl(String token) {
-        PDF_ESignature_Setting__mdt settings = getSettings();
+        ESignature_Setting__mdt settings = getSettings();
         String apexBaseUrl = siteApexUrl(settings.Site_Base_URL__c);
         if (String.isBlank(apexBaseUrl)) {
-            throw new AppException('Set PDF_ESignature_Setting.Default.Site_Base_URL__c before sending an envelope. Use the public Site URL, for example https://domain.my.site.com/signatures.');
+            throw new AppException('Set ESignature_Setting.Default.Site_Base_URL__c before sending an envelope. Use the public Site URL, for example https://domain.my.site.com/signatures.');
         }
         return apexBaseUrl + '/PDFESignaturePage?t=' + EncodingUtil.urlEncode(token, 'UTF-8');
     }
@@ -512,7 +512,7 @@ public without sharing class PDFESignatureUtil {
         return '/services/apexrest/PDFESign/v1/pdf?t=' + encodedToken;
     }
 
-    public static String buildFinalizerCallbackUrl(PDF_ESignature_Setting__mdt settings) {
+    public static String buildFinalizerCallbackUrl(ESignature_Setting__mdt settings) {
         if (settings != null && !String.isBlank(settings.Finalizer_Callback_URL__c)) {
             return settings.Finalizer_Callback_URL__c.trim();
         }
@@ -544,8 +544,8 @@ public without sharing class PDFESignatureUtil {
         } catch (Exception ignore) {}
     }
 
-    public static void publishSignerCommand(String action, PDF_ESignature_Envelope__c env, String token, Map<String, Object> payload, Boolean required) {
-        PDF_ESignature_Command__e command = new PDF_ESignature_Command__e();
+    public static void publishSignerCommand(String action, ESignature_Envelope__c env, String token, Map<String, Object> payload, Boolean required) {
+        ESignature_Command__e command = new ESignature_Command__e();
         command.Action__c = action;
         command.Token_Hash__c = hashToken(token);
         command.Envelope_Id__c = env == null ? null : String.valueOf(env.Id);

@@ -110,14 +110,14 @@ public with sharing class PDFESignaturePrepareController {
 
     @AuraEnabled(cacheable=true)
     public static List<PlacementDTO> getPlacements(String parentRecordId, String contentDocumentId) {
-        List<PDF_ESignature_Envelope__c> envelopes = [
+        List<ESignature_Envelope__c> envelopes = [
             SELECT Id
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :parentRecordId
             AND (Envelope_Status__c = 'Draft' OR Envelope_Status__c = null)
             AND Id IN (
                 SELECT Envelope__c
-                FROM PDF_ESignature_Field__c
+                FROM ESignature_Field__c
                 WHERE Content_Document_Id__c = :contentDocumentId
             )
             ORDER BY LastModifiedDate DESC
@@ -127,11 +127,11 @@ public with sharing class PDFESignaturePrepareController {
             return new List<PlacementDTO>();
         }
         List<PlacementDTO> output = new List<PlacementDTO>();
-        for (PDF_ESignature_Field__c field : [
+        for (ESignature_Field__c field : [
             SELECT Id, Field_Type__c, Page_Number__c, X_Percent__c, Y_Percent__c,
                    Width_Percent__c, Height_Percent__c, Signer_Number__c, Required__c,
                    Label__c, Pdf_X__c, Pdf_Y__c, Pdf_Width__c, Pdf_Height__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelopes[0].Id
             ORDER BY Page_Number__c ASC, Sequence__c ASC, CreatedDate ASC
         ]) {
@@ -180,23 +180,23 @@ public with sharing class PDFESignaturePrepareController {
             throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
         }
         Integer pageCount = Integer.valueOf(PDFESignatureUtil.estimatePageCount(version.VersionData));
-        List<PDF_ESignature_Envelope__c> envelopes = [
+        List<ESignature_Envelope__c> envelopes = [
             SELECT Id, Envelope_Status__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :parentRecordId
             AND (Envelope_Status__c = 'Draft' OR Envelope_Status__c = null)
             AND Id IN (
                 SELECT Envelope__c
-                FROM PDF_ESignature_Field__c
+                FROM ESignature_Field__c
                 WHERE Content_Document_Id__c = :contentDocumentId
             )
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
-        PDF_ESignature_Envelope__c envelope;
+        ESignature_Envelope__c envelope;
         Boolean created = false;
         if (envelopes.isEmpty()) {
-            envelope = new PDF_ESignature_Envelope__c();
+            envelope = new ESignature_Envelope__c();
             envelope.Envelope_Status__c = 'Draft';
             envelope.Sender_User__c = UserInfo.getUserId();
             created = true;
@@ -210,16 +210,16 @@ public with sharing class PDFESignaturePrepareController {
         envelope.Source_File_Title__c = version.Title;
         upsert envelope;
 
-        delete [SELECT Id FROM PDF_ESignature_Field__c WHERE Envelope__c = :envelope.Id];
+        delete [SELECT Id FROM ESignature_Field__c WHERE Envelope__c = :envelope.Id];
 
-        List<PDF_ESignature_Field__c> fieldsToInsert = new List<PDF_ESignature_Field__c>();
+        List<ESignature_Field__c> fieldsToInsert = new List<ESignature_Field__c>();
         List<Object> rows = String.isBlank(placementsJson)
             ? new List<Object>()
             : (List<Object>) JSON.deserializeUntyped(placementsJson);
         Integer sequence = 1;
         for (Object item : rows) {
             Map<String, Object> row = (Map<String, Object>) item;
-            PDF_ESignature_Field__c field = new PDF_ESignature_Field__c();
+            ESignature_Field__c field = new ESignature_Field__c();
             field.Envelope__c = envelope.Id;
             field.Parent_Record_Id__c = parentRecordId;
             field.Content_Document_Id__c = contentDocumentId;

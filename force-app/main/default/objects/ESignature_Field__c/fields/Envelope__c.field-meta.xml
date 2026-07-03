@@ -3,9 +3,9 @@
     <fullName>Envelope__c</fullName>
     <deleteConstraint>Cascade</deleteConstraint>
     <label>Envelope</label>
-    <referenceTo>PDF_ESignature_Envelope__c</referenceTo>
-    <relationshipLabel>E-Signature Audit Events</relationshipLabel>
-    <relationshipName>PDF_ESignature_Audit_Events</relationshipName>
+    <referenceTo>ESignature_Envelope__c</referenceTo>
+    <relationshipLabel>E-Signature Fields</relationshipLabel>
+    <relationshipName>ESignature_Fields</relationshipName>
     <required>false</required>
     <trackHistory>false</trackHistory>
     <trackTrending>false</trackTrending>

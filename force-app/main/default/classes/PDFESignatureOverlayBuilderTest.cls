@@ -2,7 +2,7 @@
 private class PDFESignatureOverlayBuilderTest {
     @IsTest
     static void buildsOverlayForExplicitCompletedFields() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signer_Title__c = 'President',
@@ -10,7 +10,7 @@ private class PDFESignatureOverlayBuilderTest {
         );
         insert env;
 
-        insert new List<PDF_ESignature_Field__c>{
+        insert new List<ESignature_Field__c>{
             field(env.Id, 'Signature', 'Derek Hawley', 1, 100, 300, 160, 30, 1),
             field(env.Id, 'Name', 'Derek Hawley', 1, 100, 260, 160, 18, 2),
             field(env.Id, 'Title', 'President', 1, 100, 240, 160, 18, 3),
@@ -41,7 +41,7 @@ private class PDFESignatureOverlayBuilderTest {
 
     @IsTest
     static void synthesizesMissingIdentityFieldsNearSignature() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signer_Title__c = 'President',
@@ -62,7 +62,7 @@ private class PDFESignatureOverlayBuilderTest {
 
     @IsTest
     static void embedsSignatureImageWhenAvailable() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signer_Title__c = 'President',
@@ -71,7 +71,7 @@ private class PDFESignatureOverlayBuilderTest {
         );
         insert env;
 
-        insert new List<PDF_ESignature_Field__c>{
+        insert new List<ESignature_Field__c>{
             field(env.Id, 'Signature', 'Derek Hawley', 1, 100, 300, 180, 36, 1),
             field(env.Id, 'Name', 'Derek Hawley', 1, 100, 260, 160, 18, 2),
             field(env.Id, 'Title', 'President', 1, 100, 240, 160, 18, 3),
@@ -88,7 +88,7 @@ private class PDFESignatureOverlayBuilderTest {
 
     @IsTest
     static void rendersCheckedCheckboxAsCheckmarkOnly() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
@@ -106,7 +106,7 @@ private class PDFESignatureOverlayBuilderTest {
         System.assert(!pdfText.contains(' re S Q'), 'Checked checkbox should not draw a surrounding checkbox rectangle.');
     }
 
-    private static PDF_ESignature_Field__c field(
+    private static ESignature_Field__c field(
         Id envelopeId,
         String typeValue,
         String value,
@@ -117,7 +117,7 @@ private class PDFESignatureOverlayBuilderTest {
         Decimal height,
         Decimal sequence
     ) {
-        return new PDF_ESignature_Field__c(
+        return new ESignature_Field__c(
             Envelope__c = envelopeId,
             Field_Type__c = typeValue,
             Label__c = typeValue,

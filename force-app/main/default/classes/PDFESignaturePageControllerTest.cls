@@ -3,7 +3,7 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void signBlocksWhenRequiredFieldIsMissing() {
         String token = 'page-required-field-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
         insertRequiredField(env.Id, 'Required Text');
         setSigningPageToken(token);
 
@@ -22,8 +22,8 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void signPublishesWhenRequiredFieldsAreSubmitted() {
         String token = 'page-complete-field-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
-        PDF_ESignature_Field__c field = insertRequiredField(env.Id, 'Required Text');
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        ESignature_Field__c field = insertRequiredField(env.Id, 'Required Text');
         setSigningPageToken(token);
 
         PDFESignaturePageController controller = new PDFESignaturePageController();
@@ -145,7 +145,7 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void expiredTokenShowsErrorOnInitialize() {
         String token = 'page-expired-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Sent');
+        ESignature_Envelope__c env = createEnvelope(token, 'Sent');
         env.Expires_At__c = System.now().addMinutes(-5);
         update env;
         setSigningPageToken(token);
@@ -174,7 +174,7 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void signedEnvelopeInErrorStatusShowsCompletedMessage() {
         String token = 'page-signed-error-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Error');
+        ESignature_Envelope__c env = createEnvelope(token, 'Error');
         env.Signed_At__c = System.now();
         update env;
         setSigningPageToken(token);
@@ -208,7 +208,7 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void legacyDeclinedStatusShowsDeclinedMessage() {
         String token = 'page-legacy-declined-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, null);
+        ESignature_Envelope__c env = createEnvelope(token, null);
         env.Status__c = 'Declined';
         update env;
         setSigningPageToken(token);
@@ -223,7 +223,7 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void declineReasonWithoutDeclinedStatusShowsDeclinedMessage() {
         String token = 'page-decline-reason-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
         env.Decline_Reason__c = 'Signer declined from prompt.';
         update env;
         setSigningPageToken(token);
@@ -238,7 +238,7 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void downloadFileNameUsesSourceContentVersionTitle() {
         String token = 'page-download-title-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
         env.Source_File_Title__c = 'Customer Agreement Final';
         update env;
         setSigningPageToken(token);
@@ -252,7 +252,7 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void senderPanelUsesEnvelopeSenderAndDefaultMessage() {
         String token = 'page-sender-panel-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
         env.Sender_User__c = UserInfo.getUserId();
         update env;
         setSigningPageToken(token);
@@ -290,8 +290,8 @@ private class PDFESignaturePageControllerTest {
     @IsTest
     static void signAcceptsTitleFromSubmittedPdfField() {
         String token = 'page-title-field-token';
-        PDF_ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
-        PDF_ESignature_Field__c field = insertRequiredTitleField(env.Id, 'Signer Title');
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        ESignature_Field__c field = insertRequiredTitleField(env.Id, 'Signer Title');
         setSigningPageToken(token);
 
         PDFESignaturePageController controller = new PDFESignaturePageController();
@@ -309,8 +309,8 @@ private class PDFESignaturePageControllerTest {
         System.assertEquals(true, controller.submitted, 'Signer title can be supplied by the Title field on the PDF.');
     }
 
-    private static PDF_ESignature_Envelope__c createEnvelope(String token, String status) {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+    private static ESignature_Envelope__c createEnvelope(String token, String status) {
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = status,
             Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
             Signer_Name__c = 'Derek Hawley',
@@ -333,8 +333,8 @@ private class PDFESignaturePageControllerTest {
         System.assertEquals(false, controller.getCanSign(), status + ' envelopes should not be signable.');
     }
 
-    private static PDF_ESignature_Field__c insertRequiredField(Id envelopeId, String label) {
-        PDF_ESignature_Field__c field = new PDF_ESignature_Field__c(
+    private static ESignature_Field__c insertRequiredField(Id envelopeId, String label) {
+        ESignature_Field__c field = new ESignature_Field__c(
             Envelope__c = envelopeId,
             Field_Type__c = 'Text',
             Label__c = label,
@@ -352,8 +352,8 @@ private class PDFESignaturePageControllerTest {
         return field;
     }
 
-    private static PDF_ESignature_Field__c insertRequiredTitleField(Id envelopeId, String label) {
-        PDF_ESignature_Field__c field = insertRequiredField(envelopeId, label);
+    private static ESignature_Field__c insertRequiredTitleField(Id envelopeId, String label) {
+        ESignature_Field__c field = insertRequiredField(envelopeId, label);
         field.Field_Type__c = 'Title';
         update field;
         return field;

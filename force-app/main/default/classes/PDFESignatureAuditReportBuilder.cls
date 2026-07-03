@@ -70,8 +70,8 @@ public without sharing class PDFESignatureAuditReportBuilder {
         if (envelopeId == null) {
             throw new PDFESignatureUtil.AppException('Envelope Id is required to build the final audit report.');
         }
-        PDF_ESignature_Envelope__c env = loadEnvelope(envelopeId);
-        List<PDF_ESignature_Audit_Event__c> events = loadAuditEvents(envelopeId);
+        ESignature_Envelope__c env = loadEnvelope(envelopeId);
+        List<ESignature_Audit_Event__c> events = loadAuditEvents(envelopeId);
         return buildPdfRows(buildRows(env, events, sourceTitle));
     }
 
@@ -79,13 +79,13 @@ public without sharing class PDFESignatureAuditReportBuilder {
         return EncodingUtil.base64Encode(buildAuditReportPdf(envelopeId, sourceTitle));
     }
 
-    private static PDF_ESignature_Envelope__c loadEnvelope(Id envelopeId) {
-        List<PDF_ESignature_Envelope__c> rows = [
+    private static ESignature_Envelope__c loadEnvelope(Id envelopeId) {
+        List<ESignature_Envelope__c> rows = [
             SELECT Id, Name, CreatedDate, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sender_User__c, Sender_User__r.Email,
                    Sender_User__r.TimeZoneSidKey, Sent_At__c, Viewed_At__c, Signed_At__c, Signature_Method__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
         ];
@@ -95,18 +95,18 @@ public without sharing class PDFESignatureAuditReportBuilder {
         return rows[0];
     }
 
-    private static List<PDF_ESignature_Audit_Event__c> loadAuditEvents(Id envelopeId) {
+    private static List<ESignature_Audit_Event__c> loadAuditEvents(Id envelopeId) {
         return [
             SELECT Event_Type__c, Occurred_At__c, Actor_Email__c, Details__c, IP_Address__c, User_Agent__c
-            FROM PDF_ESignature_Audit_Event__c
+            FROM ESignature_Audit_Event__c
             WHERE Envelope__c = :envelopeId
             ORDER BY Occurred_At__c ASC, CreatedDate ASC
         ];
     }
 
     private static List<PdfRow> buildRows(
-        PDF_ESignature_Envelope__c env,
-        List<PDF_ESignature_Audit_Event__c> events,
+        ESignature_Envelope__c env,
+        List<ESignature_Audit_Event__c> events,
         String sourceTitle
     ) {
         List<PdfRow> rows = new List<PdfRow>();
@@ -117,9 +117,9 @@ public without sharing class PDFESignatureAuditReportBuilder {
         String signerName = nullToBlank(env.Signer_Name__c);
         String signerEmail = nullToBlank(env.Signer_Email__c);
         String transactionId = String.valueOf(env.Id);
-        PDF_ESignature_Audit_Event__c sentEvent = firstEvent(events, new Set<String>{ 'Sent' });
-        PDF_ESignature_Audit_Event__c viewedEvent = firstEvent(events, new Set<String>{ 'Viewed' });
-        PDF_ESignature_Audit_Event__c signedEvent = firstEvent(events, new Set<String>{ 'Signed' });
+        ESignature_Audit_Event__c sentEvent = firstEvent(events, new Set<String>{ 'Sent' });
+        ESignature_Audit_Event__c viewedEvent = firstEvent(events, new Set<String>{ 'Viewed' });
+        ESignature_Audit_Event__c signedEvent = firstEvent(events, new Set<String>{ 'Signed' });
 
         for (String titleLine : wrapLine(documentTitle, 48)) {
             rows.add(new PdfRow().add(titleLine, 'F1', 18));
@@ -345,11 +345,11 @@ public without sharing class PDFESignatureAuditReportBuilder {
         return value + '>>';
     }
 
-    private static PDF_ESignature_Audit_Event__c firstEvent(List<PDF_ESignature_Audit_Event__c> events, Set<String> eventTypes) {
+    private static ESignature_Audit_Event__c firstEvent(List<ESignature_Audit_Event__c> events, Set<String> eventTypes) {
         if (events == null || eventTypes == null || eventTypes.isEmpty()) {
             return null;
         }
-        for (PDF_ESignature_Audit_Event__c evt : events) {
+        for (ESignature_Audit_Event__c evt : events) {
             if (evt != null && eventTypes.contains(evt.Event_Type__c)) {
                 return evt;
             }
@@ -359,7 +359,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
 
     private static Boolean isFinalPdfSecured() {
         try {
-            PDF_ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+            ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
             return settings != null
                 && (settings.Restrict_Editing__c == true
                     || settings.Restrict_Copying__c == true
@@ -513,7 +513,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
         return '';
     }
 
-    private static String auditTimeZoneSid(PDF_ESignature_Envelope__c env) {
+    private static String auditTimeZoneSid(ESignature_Envelope__c env) {
         String senderTimeZone = env == null || env.Sender_User__r == null ? null : env.Sender_User__r.TimeZoneSidKey;
         if (String.isNotBlank(senderTimeZone)) {
             return senderTimeZone;

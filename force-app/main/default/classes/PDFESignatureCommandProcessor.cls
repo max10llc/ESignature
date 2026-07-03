@@ -3,12 +3,12 @@ public without sharing class PDFESignatureCommandProcessor {
         String titleValue;
     }
 
-    public static void process(List<PDF_ESignature_Command__e> commands) {
+    public static void process(List<ESignature_Command__e> commands) {
         if (commands == null || commands.isEmpty()) {
             return;
         }
         Set<String> tokenHashes = new Set<String>();
-        for (PDF_ESignature_Command__e command : commands) {
+        for (ESignature_Command__e command : commands) {
             if (!String.isBlank(command.Token_Hash__c)) {
                 tokenHashes.add(command.Token_Hash__c);
             }
@@ -17,8 +17,8 @@ public without sharing class PDFESignatureCommandProcessor {
             return;
         }
 
-        Map<String, PDF_ESignature_Envelope__c> envelopeByHash = new Map<String, PDF_ESignature_Envelope__c>();
-        for (PDF_ESignature_Envelope__c env : [
+        Map<String, ESignature_Envelope__c> envelopeByHash = new Map<String, ESignature_Envelope__c>();
+        for (ESignature_Envelope__c env : [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Final_ContentDocument_Id__c, Final_ContentVersion_Id__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sender_User__c,
@@ -26,15 +26,15 @@ public without sharing class PDFESignatureCommandProcessor {
                    Public_Signing_URL__c, Signature_Method__c, Signature_Image_Data_Url__c,
                    Completed_Fields_JSON__c, Completion_Message__c, Decline_Reason__c, Error_Message__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Secure_Token_Hash__c IN :tokenHashes
             FOR UPDATE
         ]) {
             envelopeByHash.put(env.Secure_Token_Hash__c, env);
         }
 
-        for (PDF_ESignature_Command__e command : commands) {
-            PDF_ESignature_Envelope__c env = envelopeByHash.get(command.Token_Hash__c);
+        for (ESignature_Command__e command : commands) {
+            ESignature_Envelope__c env = envelopeByHash.get(command.Token_Hash__c);
             if (env == null) {
                 continue;
             }
@@ -58,7 +58,7 @@ public without sharing class PDFESignatureCommandProcessor {
         }
     }
 
-    private static void handleViewed(PDF_ESignature_Envelope__c env, Map<String, Object> payload) {
+    private static void handleViewed(ESignature_Envelope__c env, Map<String, Object> payload) {
         if (env.Expires_At__c != null && env.Expires_At__c < System.now()) {
             handleExpired(env, payload);
             return;
@@ -71,7 +71,7 @@ public without sharing class PDFESignatureCommandProcessor {
         }
     }
 
-    private static void handleExpired(PDF_ESignature_Envelope__c env, Map<String, Object> payload) {
+    private static void handleExpired(ESignature_Envelope__c env, Map<String, Object> payload) {
         if (env.Envelope_Status__c != 'Expired' && env.Envelope_Status__c != 'Signed' && env.Envelope_Status__c != 'Finalizing') {
             env.Envelope_Status__c = 'Expired';
             update env;
@@ -80,7 +80,7 @@ public without sharing class PDFESignatureCommandProcessor {
         }
     }
 
-    private static void handleDeclined(PDF_ESignature_Envelope__c env, Map<String, Object> payload) {
+    private static void handleDeclined(ESignature_Envelope__c env, Map<String, Object> payload) {
         if (env.Envelope_Status__c == 'Signed' || env.Envelope_Status__c == 'Finalizing') {
             return;
         }
@@ -91,7 +91,7 @@ public without sharing class PDFESignatureCommandProcessor {
         audit(env, 'Declined', payload, env.Decline_Reason__c);
     }
 
-    private static void handleDelegated(PDF_ESignature_Envelope__c env, Map<String, Object> payload) {
+    private static void handleDelegated(ESignature_Envelope__c env, Map<String, Object> payload) {
         String status = String.isBlank(env.Envelope_Status__c) ? '' : env.Envelope_Status__c.trim().toLowerCase();
         if (new Set<String>{ 'signed', 'finalizing', 'completed', 'declined', 'expired', 'canceled', 'cancelled' }.contains(status)) {
             return;
@@ -137,7 +137,7 @@ public without sharing class PDFESignatureCommandProcessor {
         audit(env, 'Delegated', payload, details, previousSignerEmail);
     }
 
-    private static void handleSigned(PDF_ESignature_Envelope__c env, Map<String, Object> payload) {
+    private static void handleSigned(ESignature_Envelope__c env, Map<String, Object> payload) {
         if (env.Envelope_Status__c == 'Signed' || env.Envelope_Status__c == 'Finalizing') {
             return;
         }
@@ -170,16 +170,16 @@ public without sharing class PDFESignatureCommandProcessor {
         System.enqueueJob(new PDFESignatureFinalizeQueueable(env.Id));
     }
 
-    private static SubmittedFieldResult applySubmittedFields(PDF_ESignature_Envelope__c env, String signerFieldsJson) {
+    private static SubmittedFieldResult applySubmittedFields(ESignature_Envelope__c env, String signerFieldsJson) {
         SubmittedFieldResult result = new SubmittedFieldResult();
         Map<Id, String> submittedValues = submittedFieldValueMap(signerFieldsJson);
-        List<PDF_ESignature_Field__c> fields = [
+        List<ESignature_Field__c> fields = [
             SELECT Id, Field_Type__c, Label__c, Required__c, Value__c, Completed__c, Completed_At__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :env.Id
         ];
         List<String> missing = new List<String>();
-        for (PDF_ESignature_Field__c field : fields) {
+        for (ESignature_Field__c field : fields) {
             String value = submittedValues.get(field.Id);
             Boolean complete = !String.isBlank(value);
             if (field.Field_Type__c == 'Title' && String.isBlank(result.titleValue) && complete) {
@@ -229,11 +229,11 @@ public without sharing class PDFESignatureCommandProcessor {
         }
     }
 
-    private static void audit(PDF_ESignature_Envelope__c env, String eventType, Map<String, Object> payload, String details) {
+    private static void audit(ESignature_Envelope__c env, String eventType, Map<String, Object> payload, String details) {
         if (env == null || env.Id == null) {
             return;
         }
-        PDF_ESignature_Audit_Event__c evt = new PDF_ESignature_Audit_Event__c();
+        ESignature_Audit_Event__c evt = new ESignature_Audit_Event__c();
         evt.Envelope__c = env.Id;
         evt.Event_Type__c = eventType;
         evt.Occurred_At__c = System.now();
@@ -244,11 +244,11 @@ public without sharing class PDFESignatureCommandProcessor {
         insert evt;
     }
 
-    private static void audit(PDF_ESignature_Envelope__c env, String eventType, Map<String, Object> payload, String details, String actorEmail) {
+    private static void audit(ESignature_Envelope__c env, String eventType, Map<String, Object> payload, String details, String actorEmail) {
         if (env == null || env.Id == null) {
             return;
         }
-        PDF_ESignature_Audit_Event__c evt = new PDF_ESignature_Audit_Event__c();
+        ESignature_Audit_Event__c evt = new ESignature_Audit_Event__c();
         evt.Envelope__c = env.Id;
         evt.Event_Type__c = eventType;
         evt.Occurred_At__c = System.now();
@@ -259,7 +259,7 @@ public without sharing class PDFESignatureCommandProcessor {
         insert evt;
     }
 
-    private static void markError(PDF_ESignature_Envelope__c env, Map<String, Object> payload, String message) {
+    private static void markError(ESignature_Envelope__c env, Map<String, Object> payload, String message) {
         try {
             env.Envelope_Status__c = 'Error';
             env.Error_Message__c = truncate(message, 32768);
@@ -289,7 +289,7 @@ public without sharing class PDFESignatureCommandProcessor {
     }
 
     private static void sendDelegateEmail(
-        PDF_ESignature_Envelope__c env,
+        ESignature_Envelope__c env,
         String signingUrl,
         String delegateMessage,
         String previousSignerName,

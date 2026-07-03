@@ -42,26 +42,26 @@ public without sharing class PDFESignatureOverlayBuilder {
             return new List<OverlayPage>();
         }
 
-        PDF_ESignature_Envelope__c env = loadEnvelope(envelopeId);
-        List<PDF_ESignature_Field__c> fields = [
+        ESignature_Envelope__c env = loadEnvelope(envelopeId);
+        List<ESignature_Field__c> fields = [
             SELECT Id, Field_Type__c, Label__c, Page_Number__c, Pdf_X__c, Pdf_Y__c,
                    Pdf_Width__c, Pdf_Height__c, Page_Width_Points__c, Page_Height_Points__c,
                    Value__c, Completed__c, Sequence__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelopeId
             AND Completed__c = true
             ORDER BY Page_Number__c ASC, Sequence__c ASC, CreatedDate ASC
         ];
         fields = withSyntheticIdentityFields(fields, env);
 
-        Map<Integer, List<PDF_ESignature_Field__c>> fieldsByPage = new Map<Integer, List<PDF_ESignature_Field__c>>();
-        for (PDF_ESignature_Field__c field : fields) {
+        Map<Integer, List<ESignature_Field__c>> fieldsByPage = new Map<Integer, List<ESignature_Field__c>>();
+        for (ESignature_Field__c field : fields) {
             if (String.isBlank(field.Value__c)) {
                 continue;
             }
             Integer pageNumber = field.Page_Number__c == null ? 1 : Integer.valueOf(field.Page_Number__c);
             if (!fieldsByPage.containsKey(pageNumber)) {
-                fieldsByPage.put(pageNumber, new List<PDF_ESignature_Field__c>());
+                fieldsByPage.put(pageNumber, new List<ESignature_Field__c>());
             }
             fieldsByPage.get(pageNumber).add(field);
         }
@@ -71,7 +71,7 @@ public without sharing class PDFESignatureOverlayBuilder {
 
         List<OverlayPage> overlays = new List<OverlayPage>();
         for (Integer pageNumber : pageNumbers) {
-            List<PDF_ESignature_Field__c> pageFields = fieldsByPage.get(pageNumber);
+            List<ESignature_Field__c> pageFields = fieldsByPage.get(pageNumber);
             if (pageFields == null || pageFields.isEmpty()) {
                 continue;
             }
@@ -107,18 +107,18 @@ public without sharing class PDFESignatureOverlayBuilder {
         };
     }
 
-    private static PDF_ESignature_Envelope__c loadEnvelope(Id envelopeId) {
-        List<PDF_ESignature_Envelope__c> rows = [
+    private static ESignature_Envelope__c loadEnvelope(Id envelopeId) {
+        List<ESignature_Envelope__c> rows = [
             SELECT Id, Signer_Name__c, Signer_Title__c, Signed_At__c, Signature_Image_Data_Url__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
         ];
         return rows.isEmpty() ? null : rows[0];
     }
 
-    private static List<PDF_ESignature_Field__c> withSyntheticIdentityFields(List<PDF_ESignature_Field__c> fields, PDF_ESignature_Envelope__c env) {
-        List<PDF_ESignature_Field__c> output = new List<PDF_ESignature_Field__c>();
+    private static List<ESignature_Field__c> withSyntheticIdentityFields(List<ESignature_Field__c> fields, ESignature_Envelope__c env) {
+        List<ESignature_Field__c> output = new List<ESignature_Field__c>();
         if (fields != null) {
             output.addAll(fields);
         }
@@ -127,8 +127,8 @@ public without sharing class PDFESignatureOverlayBuilder {
         }
 
         Set<String> explicitTypes = new Set<String>();
-        PDF_ESignature_Field__c anchorSignature;
-        for (PDF_ESignature_Field__c field : fields) {
+        ESignature_Field__c anchorSignature;
+        for (ESignature_Field__c field : fields) {
             String typeValue = normalizeType(field.Field_Type__c);
             if (!String.isBlank(typeValue)) {
                 explicitTypes.add(typeValue);
@@ -157,7 +157,7 @@ public without sharing class PDFESignatureOverlayBuilder {
         return output;
     }
 
-    private static PDF_ESignature_Field__c syntheticField(PDF_ESignature_Field__c anchor, String typeValue, String value, Integer index) {
+    private static ESignature_Field__c syntheticField(ESignature_Field__c anchor, String typeValue, String value, Integer index) {
         Decimal anchorX = firstNonNull(anchor.Pdf_X__c, 0);
         Decimal anchorY = firstNonNull(anchor.Pdf_Y__c, 0);
         Decimal anchorWidth = firstNonNull(anchor.Pdf_Width__c, 160);
@@ -177,7 +177,7 @@ public without sharing class PDFESignatureOverlayBuilder {
             y = pageHeight - rowHeight - 4;
         }
 
-        PDF_ESignature_Field__c field = new PDF_ESignature_Field__c();
+        ESignature_Field__c field = new ESignature_Field__c();
         field.Field_Type__c = typeValue;
         field.Label__c = typeValue + ' (Auto)';
         field.Page_Number__c = anchor.Page_Number__c;
@@ -195,10 +195,10 @@ public without sharing class PDFESignatureOverlayBuilder {
     }
 
     private static Blob buildSinglePageOverlayPdf(
-        List<PDF_ESignature_Field__c> fields,
+        List<ESignature_Field__c> fields,
         Decimal pageWidth,
         Decimal pageHeight,
-        PDF_ESignature_Envelope__c env
+        ESignature_Envelope__c env
     ) {
         SignatureImageResource signatureImage = signatureImageFromDataUrl(env == null ? null : env.Signature_Image_Data_Url__c);
         if (signatureImage != null) {
@@ -210,9 +210,9 @@ public without sharing class PDFESignatureOverlayBuilder {
         return Blob.valueOf(pdf);
     }
 
-    private static String buildContentStream(List<PDF_ESignature_Field__c> fields, SignatureImageResource signatureImage) {
+    private static String buildContentStream(List<ESignature_Field__c> fields, SignatureImageResource signatureImage) {
         List<String> lines = new List<String>();
-        for (PDF_ESignature_Field__c field : fields) {
+        for (ESignature_Field__c field : fields) {
             String value = normalizeText(field.Value__c);
             if (String.isBlank(value)) {
                 continue;

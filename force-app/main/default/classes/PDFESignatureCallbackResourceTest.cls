@@ -16,7 +16,7 @@ private class PDFESignatureCallbackResourceTest {
 
     @IsTest
     static void postResultFailureMarksEnvelopeError() {
-        PDF_ESignature_Envelope__c env = createEnvelope();
+        ESignature_Envelope__c env = createEnvelope();
         setRestRequest(new Map<String, Object>{
             'envelopeId' => String.valueOf(env.Id),
             'success' => false,
@@ -28,7 +28,7 @@ private class PDFESignatureCallbackResourceTest {
         System.assertEquals(200, RestContext.response.statusCode);
         env = [
             SELECT Envelope_Status__c, Error_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Error', env.Envelope_Status__c);
@@ -39,7 +39,7 @@ private class PDFESignatureCallbackResourceTest {
     static void postResultCompletesWithBase64Pdf() {
         Account parent = new Account(Name = 'Callback Parent');
         insert parent;
-        PDF_ESignature_Envelope__c env = createEnvelope();
+        ESignature_Envelope__c env = createEnvelope();
         env.Parent_Record_Id__c = String.valueOf(parent.Id);
         update env;
         String finalPdfBase64 = EncodingUtil.base64Encode(Blob.valueOf('%PDF-1.4\n%%EOF'));
@@ -57,7 +57,7 @@ private class PDFESignatureCallbackResourceTest {
         System.assertEquals(200, RestContext.response.statusCode);
         env = [
             SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
         System.assertEquals('Signed', env.Envelope_Status__c);
@@ -66,8 +66,8 @@ private class PDFESignatureCallbackResourceTest {
         System.assertEquals('Callback finalized the PDF.', env.Completion_Message__c);
     }
 
-    private static PDF_ESignature_Envelope__c createEnvelope() {
-        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+    private static ESignature_Envelope__c createEnvelope() {
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Finalizing',
             Signer_Email__c = 'signer@example.com'
         );

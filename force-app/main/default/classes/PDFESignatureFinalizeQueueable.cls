@@ -7,16 +7,16 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
 
     public void execute(QueueableContext context) {
         String finalizerDebugContext = null;
-        PDF_ESignature_Envelope__c env = [
+        ESignature_Envelope__c env = [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Signed_At__c,
                    Signature_Image_Data_Url__c, Final_ContentDocument_Id__c, Final_ContentVersion_Id__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
         ];
         try {
-            PDF_ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+            ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
             String namedCredential = String.isBlank(settings.Finalizer_Named_Credential__c)
                 ? 'PDFESign_PowerAutomateFinalizer'
                 : settings.Finalizer_Named_Credential__c.trim();
@@ -79,7 +79,7 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
         }
     }
 
-    private Map<String, Object> buildPayload(PDF_ESignature_Envelope__c env, ContentVersion source, PDF_ESignature_Setting__mdt settings) {
+    private Map<String, Object> buildPayload(ESignature_Envelope__c env, ContentVersion source, ESignature_Setting__mdt settings) {
         Map<String, Object> payload = new Map<String, Object>();
         payload.put('envelopeId', env.Id);
         payload.put('status', env.Envelope_Status__c);
@@ -131,12 +131,12 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
         payload.put('callback', callback);
 
         List<Object> fieldPayload = new List<Object>();
-        for (PDF_ESignature_Field__c field : [
+        for (ESignature_Field__c field : [
             SELECT Id, Field_Type__c, Label__c, Page_Number__c, X_Percent__c, Y_Percent__c,
                    Width_Percent__c, Height_Percent__c, Pdf_X__c, Pdf_Y__c, Pdf_Width__c,
                    Pdf_Height__c, Page_Width_Points__c, Page_Height_Points__c, Value__c,
                    Completed__c, Required__c, Sequence__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :env.Id
             ORDER BY Page_Number__c ASC, Sequence__c ASC, CreatedDate ASC
         ]) {

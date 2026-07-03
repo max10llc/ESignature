@@ -1,6 +1,6 @@
 public without sharing class PDFESignaturePageController {
     public String token { get; private set; }
-    public PDF_ESignature_Envelope__c envelope { get; private set; }
+    public ESignature_Envelope__c envelope { get; private set; }
     public String typedName { get; set; }
     public String signerTitle { get; set; }
     public String signatureImageDataUrl { get; set; }
@@ -135,9 +135,9 @@ public without sharing class PDFESignaturePageController {
             return '';
         }
         try {
-            PDF_ESignature_Envelope__c senderEnvelope = [
+            ESignature_Envelope__c senderEnvelope = [
                 SELECT Sender_User__r.Name, CreatedBy.Name
-                FROM PDF_ESignature_Envelope__c
+                FROM ESignature_Envelope__c
                 WHERE Id = :envelope.Id
                 LIMIT 1
             ];
@@ -168,10 +168,10 @@ public without sharing class PDFESignaturePageController {
             return '[]';
         }
         List<Object> output = new List<Object>();
-        for (PDF_ESignature_Field__c field : [
+        for (ESignature_Field__c field : [
             SELECT Id, Field_Type__c, Label__c, Page_Number__c, X_Percent__c, Y_Percent__c,
                    Width_Percent__c, Height_Percent__c, Required__c, Value__c, Completed__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelope.Id
             ORDER BY Page_Number__c ASC, Sequence__c ASC, CreatedDate ASC
         ]) {
@@ -324,13 +324,13 @@ public without sharing class PDFESignaturePageController {
 
     private void validateSubmittedFieldsOnly() {
         Map<Id, String> submittedValues = submittedFieldValueMap(signerFieldsJson);
-        List<PDF_ESignature_Field__c> fields = [
+        List<ESignature_Field__c> fields = [
             SELECT Id, Field_Type__c, Label__c, Required__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelope.Id
         ];
         List<String> missing = new List<String>();
-        for (PDF_ESignature_Field__c field : fields) {
+        for (ESignature_Field__c field : fields) {
             String value = submittedValues.get(field.Id);
             if (field.Required__c && String.isBlank(value)) {
                 missing.add(String.isBlank(field.Label__c) ? field.Field_Type__c : field.Label__c);
@@ -361,9 +361,9 @@ public without sharing class PDFESignaturePageController {
         if (submittedValues.isEmpty()) {
             return null;
         }
-        for (PDF_ESignature_Field__c field : [
+        for (ESignature_Field__c field : [
             SELECT Id, Field_Type__c
-            FROM PDF_ESignature_Field__c
+            FROM ESignature_Field__c
             WHERE Envelope__c = :envelope.Id
             AND Field_Type__c = 'Title'
         ]) {

@@ -67,7 +67,7 @@ global without sharing class PDFESignatureFinalizerCallbackResource {
     }
 
     private static void validateSecret(Map<String, Object> body) {
-        PDF_ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+        ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
         String expected = settings.Finalizer_Callback_Secret__c;
         if (String.isBlank(expected)) {
             return;

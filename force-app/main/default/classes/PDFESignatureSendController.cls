@@ -18,17 +18,17 @@ public with sharing class PDFESignatureSendController {
     @AuraEnabled(cacheable=true)
     public static List<EnvelopeDTO> getDraftEnvelopes(String parentRecordId, String refreshKey) {
         List<EnvelopeDTO> output = new List<EnvelopeDTO>();
-        List<PDF_ESignature_Envelope__c> envelopes = [
+        List<ESignature_Envelope__c> envelopes = [
             SELECT Id, Name, Envelope_Status__c, LastModifiedDate,
-                   (SELECT Id FROM PDF_ESignature_Fields__r)
-            FROM PDF_ESignature_Envelope__c
+                   (SELECT Id FROM ESignature_Fields__r)
+            FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :parentRecordId
             AND (Envelope_Status__c = 'Draft' OR Envelope_Status__c = null)
             ORDER BY LastModifiedDate DESC
             LIMIT 50
         ];
         Set<Id> envelopeIds = new Set<Id>();
-        for (PDF_ESignature_Envelope__c env : envelopes) {
+        for (ESignature_Envelope__c env : envelopes) {
             envelopeIds.add(env.Id);
         }
         Map<Id, Id> documentIdByEnvelopeId = PDFESignatureUtil.getSourceDocumentIdsByEnvelopeId(envelopeIds);
@@ -39,14 +39,14 @@ public with sharing class PDFESignatureSendController {
             }
         }
         Map<Id, String> titleByDocumentId = PDFESignatureUtil.getContentDocumentTitles(documentIds);
-        for (PDF_ESignature_Envelope__c env : envelopes) {
+        for (ESignature_Envelope__c env : envelopes) {
             EnvelopeDTO row = new EnvelopeDTO();
             row.id = env.Id;
             row.name = env.Name;
             row.title = PDFESignatureUtil.titleFromEnvelope(env, titleByDocumentId, documentIdByEnvelopeId);
             row.status = String.isBlank(env.Envelope_Status__c) ? 'Draft' : env.Envelope_Status__c;
             row.lastModifiedDate = env.LastModifiedDate;
-            row.fieldCount = env.PDF_ESignature_Fields__r == null ? 0 : env.PDF_ESignature_Fields__r.size();
+            row.fieldCount = env.ESignature_Fields__r == null ? 0 : env.ESignature_Fields__r.size();
             output.add(row);
         }
         return output;
@@ -63,23 +63,23 @@ public with sharing class PDFESignatureSendController {
         if (String.isBlank(signerEmail)) {
             throw new AuraHandledException('Signer email is required.');
         }
-        PDF_ESignature_Envelope__c env = [
+        ESignature_Envelope__c env = [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sent_At__c,
                    Expires_At__c, Public_Signing_URL__c, Sender_User__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
-            FROM PDF_ESignature_Envelope__c
+            FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
         ];
         if (!String.isBlank(env.Envelope_Status__c) && env.Envelope_Status__c != 'Draft') {
             throw new AuraHandledException('Only draft envelopes can be sent. Current status: ' + env.Envelope_Status__c);
         }
-        Integer fieldCount = [SELECT COUNT() FROM PDF_ESignature_Field__c WHERE Envelope__c = :env.Id];
+        Integer fieldCount = [SELECT COUNT() FROM ESignature_Field__c WHERE Envelope__c = :env.Id];
         if (fieldCount == 0) {
             throw new AuraHandledException('Add at least one field before sending the envelope.');
         }
-        PDF_ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+        ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
         Integer days = expirationDays == null || expirationDays <= 0
             ? (settings.Default_Expiration_Days__c == null ? 365 : Integer.valueOf(settings.Default_Expiration_Days__c))
             : expirationDays;
@@ -122,7 +122,7 @@ public with sharing class PDFESignatureSendController {
         return result;
     }
 
-    private static void stampSourceFields(PDF_ESignature_Envelope__c env) {
+    private static void stampSourceFields(ESignature_Envelope__c env) {
         ContentVersion source = PDFESignatureUtil.getLatestSourceVersion(env, false);
         if (source == null) {
             return;
@@ -132,7 +132,7 @@ public with sharing class PDFESignatureSendController {
         env.Source_File_Title__c = source.Title;
     }
 
-    private static void sendEmail(PDF_ESignature_Envelope__c env, String signingUrl) {
+    private static void sendEmail(ESignature_Envelope__c env, String signingUrl) {
         Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
         message.setToAddresses(new List<String>{ env.Signer_Email__c });
         String documentTitle = PDFESignatureUtil.getEnvelopeTitle(env);
@@ -143,7 +143,7 @@ public with sharing class PDFESignatureSendController {
     }
 
     @TestVisible
-    private static String buildSignatureRequestEmailHtml(PDF_ESignature_Envelope__c env, String signingUrl, String documentTitle) {
+    private static String buildSignatureRequestEmailHtml(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
         String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : PDFESignatureUtil.escapeHtml(env.Signer_Name__c);
         String safeDocumentTitle = String.isBlank(documentTitle) ? 'Document' : PDFESignatureUtil.escapeHtml(documentTitle);
         String safeSigningUrl = PDFESignatureUtil.escapeHtml(signingUrl);
