@@ -381,6 +381,29 @@ public without sharing class PDFESignatureUtil {
         insert evt;
     }
 
+    public static void stampEnvelopeParent(PDF_ESignature_Envelope__c env, String parentRecordId) {
+        if (env == null) {
+            return;
+        }
+        env.Parent_Record_Id__c = parentRecordId;
+        Id parentId = safeId(parentRecordId);
+        String parentObjectApiName = parentId == null ? null : parentId.getSObjectType().getDescribe().getName();
+        env.Parent_Object_Api_Name__c = parentObjectApiName;
+        env.Account__c = null;
+        env.Opportunity__c = null;
+        env.Work_Order__c = null;
+        if (parentId == null || String.isBlank(parentObjectApiName)) {
+            return;
+        }
+        if (parentObjectApiName == 'Account') {
+            env.Account__c = parentId;
+        } else if (parentObjectApiName == 'Opportunity') {
+            env.Opportunity__c = parentId;
+        } else if (parentObjectApiName == 'WorkOrder') {
+            env.Work_Order__c = parentId;
+        }
+    }
+
     public static Id safeId(String value) {
         if (String.isBlank(value)) {
             return null;

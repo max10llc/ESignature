@@ -64,7 +64,7 @@ public with sharing class PDFESignatureSendController {
             throw new AuraHandledException('Signer email is required.');
         }
         PDF_ESignature_Envelope__c env = [
-            SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Secure_Token_Hash__c,
+            SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sent_At__c,
                    Expires_At__c, Public_Signing_URL__c, Sender_User__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
@@ -97,6 +97,7 @@ public with sharing class PDFESignatureSendController {
         env.Expires_At__c = System.now().addDays(days);
         env.Public_Signing_URL__c = signingUrl;
         env.Sender_User__c = UserInfo.getUserId();
+        PDFESignatureUtil.stampEnvelopeParent(env, env.Parent_Record_Id__c);
         stampSourceFields(env);
         update env;
 

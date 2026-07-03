@@ -198,14 +198,12 @@ public with sharing class PDFESignaturePrepareController {
         if (envelopes.isEmpty()) {
             envelope = new PDF_ESignature_Envelope__c();
             envelope.Envelope_Status__c = 'Draft';
-            envelope.Parent_Record_Id__c = parentRecordId;
-            Id parentIdValue = PDFESignatureUtil.safeId(parentRecordId);
-            envelope.Parent_Object_Api_Name__c = parentIdValue == null ? null : parentIdValue.getSObjectType().getDescribe().getName();
             envelope.Sender_User__c = UserInfo.getUserId();
             created = true;
         } else {
             envelope = envelopes[0];
         }
+        PDFESignatureUtil.stampEnvelopeParent(envelope, parentRecordId);
         envelope.Page_Count__c = pageCount;
         envelope.Source_ContentVersion_Id__c = String.valueOf(version.Id);
         envelope.Source_ContentDocument_Id__c = String.valueOf(version.ContentDocumentId);

@@ -6,6 +6,7 @@
         <members>PDFESignatureFinalizeQueueable</members>
         <members>PDFESignatureFinalizeQueueableTest</members>
         <members>PDFESignatureFinalizerCallbackResource</members>
+        <members>PDFESignatureCallbackResourceTest</members>
         <members>PDFESignatureFinalizerService</members>
         <members>PDFESignatureCommandProcessor</members>
         <members>PDFESignatureCommandTriggerTest</members>
@@ -55,6 +56,7 @@
         <members>PDF_ESignature_Audit_Event__c.IP_Address__c</members>
         <members>PDF_ESignature_Audit_Event__c.Occurred_At__c</members>
         <members>PDF_ESignature_Audit_Event__c.User_Agent__c</members>
+        <members>PDF_ESignature_Envelope__c.Account__c</members>
         <members>PDF_ESignature_Envelope__c.Completed_Fields_JSON__c</members>
         <members>PDF_ESignature_Envelope__c.Completion_Message__c</members>
         <members>PDF_ESignature_Envelope__c.Decline_Reason__c</members>
@@ -64,6 +66,7 @@
         <members>PDF_ESignature_Envelope__c.Final_ContentVersion_Id__c</members>
         <members>PDF_ESignature_Envelope__c.Finalizer_Request_Id__c</members>
         <members>PDF_ESignature_Envelope__c.Page_Count__c</members>
+        <members>PDF_ESignature_Envelope__c.Opportunity__c</members>
         <members>PDF_ESignature_Envelope__c.Parent_Object_Api_Name__c</members>
         <members>PDF_ESignature_Envelope__c.Parent_Record_Id__c</members>
         <members>PDF_ESignature_Envelope__c.Public_Signing_URL__c</members>
@@ -81,6 +84,7 @@
         <members>PDF_ESignature_Envelope__c.Source_File_Title__c</members>
         <members>PDF_ESignature_Envelope__c.Envelope_Status__c</members>
         <members>PDF_ESignature_Envelope__c.Viewed_At__c</members>
+        <members>PDF_ESignature_Envelope__c.Work_Order__c</members>
         <members>PDF_ESignature_Field__c.Completed_At__c</members>
         <members>PDF_ESignature_Field__c.Completed__c</members>
         <members>PDF_ESignature_Field__c.Content_Document_Id__c</members>

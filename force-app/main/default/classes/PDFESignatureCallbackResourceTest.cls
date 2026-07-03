@@ -1,0 +1,94 @@
+@IsTest
+private class PDFESignatureCallbackResourceTest {
+    @IsTest
+    static void postResultRequiresEnvelopeId() {
+        setRestRequest(new Map<String, Object>{
+            'success' => true
+        });
+
+        PDFESignatureFinalizerCallbackResource.postResult();
+
+        System.assertEquals(400, RestContext.response.statusCode);
+        Map<String, Object> body = responseBody();
+        System.assertEquals(false, body.get('success'));
+        System.assert(String.valueOf(body.get('message')).contains('envelopeId'));
+    }
+
+    @IsTest
+    static void postResultFailureMarksEnvelopeError() {
+        PDF_ESignature_Envelope__c env = createEnvelope();
+        setRestRequest(new Map<String, Object>{
+            'envelopeId' => String.valueOf(env.Id),
+            'success' => false,
+            'message' => 'Finalizer failed during processing.'
+        });
+
+        PDFESignatureFinalizerCallbackResource.postResult();
+
+        System.assertEquals(200, RestContext.response.statusCode);
+        env = [
+            SELECT Envelope_Status__c, Error_Message__c
+            FROM PDF_ESignature_Envelope__c
+            WHERE Id = :env.Id
+        ];
+        System.assertEquals('Error', env.Envelope_Status__c);
+        System.assertEquals('Finalizer failed during processing.', env.Error_Message__c);
+    }
+
+    @IsTest
+    static void postResultCompletesWithBase64Pdf() {
+        Account parent = new Account(Name = 'Callback Parent');
+        insert parent;
+        PDF_ESignature_Envelope__c env = createEnvelope();
+        env.Parent_Record_Id__c = String.valueOf(parent.Id);
+        update env;
+        String finalPdfBase64 = EncodingUtil.base64Encode(Blob.valueOf('%PDF-1.4\n%%EOF'));
+
+        setRestRequest(new Map<String, Object>{
+            'envelopeId' => String.valueOf(env.Id),
+            'success' => true,
+            'finalPdfBase64' => finalPdfBase64,
+            'fileName' => 'Callback Signed.pdf',
+            'message' => 'Callback finalized the PDF.'
+        });
+
+        PDFESignatureFinalizerCallbackResource.postResult();
+
+        System.assertEquals(200, RestContext.response.statusCode);
+        env = [
+            SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c
+            FROM PDF_ESignature_Envelope__c
+            WHERE Id = :env.Id
+        ];
+        System.assertEquals('Signed', env.Envelope_Status__c);
+        System.assertNotEquals(null, env.Final_ContentVersion_Id__c);
+        System.assertNotEquals(null, env.Final_ContentDocument_Id__c);
+        System.assertEquals('Callback finalized the PDF.', env.Completion_Message__c);
+    }
+
+    private static PDF_ESignature_Envelope__c createEnvelope() {
+        PDF_ESignature_Envelope__c env = new PDF_ESignature_Envelope__c(
+            Envelope_Status__c = 'Finalizing',
+            Signer_Email__c = 'signer@example.com'
+        );
+        insert env;
+        return env;
+    }
+
+    private static void setRestRequest(Map<String, Object> body) {
+        RestRequest request = new RestRequest();
+        request.requestUri = '/services/apexrest/PDFESign/v1/finalizer-callback';
+        request.httpMethod = 'POST';
+        request.requestBody = Blob.valueOf(JSON.serialize(body));
+        String secret = PDFESignatureUtil.getSettings().Finalizer_Callback_Secret__c;
+        if (!String.isBlank(secret)) {
+            request.headers.put('X-PDF-ESignature-Secret', secret);
+        }
+        RestContext.request = request;
+        RestContext.response = new RestResponse();
+    }
+
+    private static Map<String, Object> responseBody() {
+        return (Map<String, Object>) JSON.deserializeUntyped(RestContext.response.responseBody.toString());
+    }
+}

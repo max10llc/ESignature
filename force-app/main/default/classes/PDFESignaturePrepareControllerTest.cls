@@ -74,11 +74,17 @@ private class PDFESignaturePrepareControllerTest {
 
         System.assertNotEquals(null, result.envelopeId, 'Saving placements should create or update a draft envelope.');
         PDF_ESignature_Envelope__c env = [
-            SELECT Envelope_Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c, Source_File_Title__c
+            SELECT Envelope_Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c, Source_File_Title__c,
+                   Parent_Record_Id__c, Parent_Object_Api_Name__c, Account__c, Opportunity__c, Work_Order__c
             FROM PDF_ESignature_Envelope__c
             WHERE Id = :result.envelopeId
         ];
         System.assertEquals('Draft', env.Envelope_Status__c);
+        System.assertEquals(String.valueOf(parent.Id), env.Parent_Record_Id__c);
+        System.assertEquals('Account', env.Parent_Object_Api_Name__c);
+        System.assertEquals(parent.Id, env.Account__c);
+        System.assertEquals(null, env.Opportunity__c);
+        System.assertEquals(null, env.Work_Order__c);
         System.assertEquals(String.valueOf(source.Id), env.Source_ContentVersion_Id__c);
         System.assertEquals(String.valueOf(source.ContentDocumentId), env.Source_ContentDocument_Id__c);
         System.assertEquals('Prepared E-Signature File', env.Source_File_Title__c);
@@ -94,6 +100,38 @@ private class PDFESignaturePrepareControllerTest {
         System.assertEquals('Signature', placements[0].fieldType);
         System.assertEquals(1, placements[0].pageNumber);
         System.assertEquals(true, placements[0].required);
+    }
+
+    @IsTest
+    static void savePlacementsPopulatesOpportunityLookup() {
+        Account account = new Account(Name = 'Prepare Controller Opportunity Account');
+        insert account;
+        Opportunity parent = new Opportunity(
+            Name = 'Prepare Controller Opportunity',
+            AccountId = account.Id,
+            StageName = 'Prospecting',
+            CloseDate = Date.today().addDays(30)
+        );
+        insert parent;
+        ContentVersion source = createPdfFile(parent.Id, 'Prepared Opportunity E-Signature File', true);
+
+        PDFESignaturePrepareController.SaveResultDTO result = PDFESignaturePrepareController.savePlacements(
+            String.valueOf(parent.Id),
+            String.valueOf(source.ContentDocumentId),
+            String.valueOf(source.Id),
+            '[]'
+        );
+
+        PDF_ESignature_Envelope__c env = [
+            SELECT Parent_Record_Id__c, Parent_Object_Api_Name__c, Account__c, Opportunity__c, Work_Order__c
+            FROM PDF_ESignature_Envelope__c
+            WHERE Id = :result.envelopeId
+        ];
+        System.assertEquals(String.valueOf(parent.Id), env.Parent_Record_Id__c);
+        System.assertEquals('Opportunity', env.Parent_Object_Api_Name__c);
+        System.assertEquals(null, env.Account__c);
+        System.assertEquals(parent.Id, env.Opportunity__c);
+        System.assertEquals(null, env.Work_Order__c);
     }
 
     private static ContentVersion createPdfFile(Id parentId, String title, Boolean eSignatureFile) {

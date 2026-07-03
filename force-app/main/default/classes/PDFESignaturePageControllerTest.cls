@@ -42,7 +42,7 @@ private class PDFESignaturePageControllerTest {
         Test.stopTest();
 
         System.assertEquals(true, controller.submitted, 'Signer should be submitted when required fields are complete.');
-        System.assert(controller.pageMessage.contains('electronic signature has been recorded'), 'Success message should match the original package wording.');
+        System.assertEquals('The document is complete and will be emailed to you shortly.', controller.pageMessage);
     }
 
     @IsTest
