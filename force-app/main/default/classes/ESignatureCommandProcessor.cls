@@ -72,16 +72,17 @@ public without sharing class ESignatureCommandProcessor {
     }
 
     private static void handleExpired(ESignature_Envelope__c env, Map<String, Object> payload) {
-        if (env.Envelope_Status__c != 'Expired' && env.Envelope_Status__c != 'Signed' && env.Envelope_Status__c != 'Finalizing') {
-            env.Envelope_Status__c = 'Expired';
-            update env;
-            ESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
-            audit(env, 'Expired', payload, 'Signing link expired when opened.');
+        if (isTerminalEnvelope(env)) {
+            return;
         }
+        env.Envelope_Status__c = 'Expired';
+        update env;
+        ESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
+        audit(env, 'Expired', payload, 'Signing link expired when opened.');
     }
 
     private static void handleDeclined(ESignature_Envelope__c env, Map<String, Object> payload) {
-        if (env.Envelope_Status__c == 'Signed' || env.Envelope_Status__c == 'Finalizing') {
+        if (isTerminalEnvelope(env)) {
             return;
         }
         env.Envelope_Status__c = 'Declined';
@@ -89,11 +90,11 @@ public without sharing class ESignatureCommandProcessor {
         update env;
         ESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
         audit(env, 'Declined', payload, env.Decline_Reason__c);
+        sendDeclineNotificationEmail(env);
     }
 
     private static void handleDelegated(ESignature_Envelope__c env, Map<String, Object> payload) {
-        String status = String.isBlank(env.Envelope_Status__c) ? '' : env.Envelope_Status__c.trim().toLowerCase();
-        if (new Set<String>{ 'signed', 'finalizing', 'completed', 'declined', 'expired', 'canceled', 'cancelled' }.contains(status)) {
+        if (isTerminalEnvelope(env)) {
             return;
         }
         if (env.Expires_At__c != null && env.Expires_At__c < System.now()) {
@@ -131,14 +132,14 @@ public without sharing class ESignatureCommandProcessor {
         update env;
         ESignatureUtil.updateSourceFileESignatureStatus(env, 'Sent');
 
-        sendDelegateEmail(env, signingUrl, delegateMessage, previousSignerName, previousSignerEmail);
+        sendDelegateEmails(env, signingUrl, delegateMessage, previousSignerName, previousSignerEmail);
         String previousSigner = String.isBlank(previousSignerName) ? previousSignerEmail : previousSignerName + ' (' + previousSignerEmail + ')';
         String details = 'Delegated from ' + previousSigner + ' to ' + delegateName + ' (' + delegateEmail + '). Message: ' + delegateMessage;
         audit(env, 'Delegated', payload, details, previousSignerEmail);
     }
 
     private static void handleSigned(ESignature_Envelope__c env, Map<String, Object> payload) {
-        if (env.Envelope_Status__c == 'Signed' || env.Envelope_Status__c == 'Finalizing') {
+        if (isTerminalEnvelope(env)) {
             return;
         }
         if (env.Expires_At__c != null && env.Expires_At__c < System.now()) {
@@ -168,6 +169,29 @@ public without sharing class ESignatureCommandProcessor {
 
         audit(env, 'Signed', payload, 'Signer completed required fields and submitted signature.');
         System.enqueueJob(new ESignatureFinalizeQueueable(env.Id));
+    }
+
+    private static Boolean isTerminalEnvelope(ESignature_Envelope__c env) {
+        if (env == null) {
+            return true;
+        }
+        if (env.Signed_At__c != null) {
+            return true;
+        }
+        String status = String.isBlank(env.Envelope_Status__c) ? '' : env.Envelope_Status__c.trim().toLowerCase();
+        return new Set<String>{
+            'signed',
+            'finalizing',
+            'completed',
+            'complete',
+            'declined',
+            'expired',
+            'canceled',
+            'cancelled',
+            'voided'
+        }.contains(status)
+            || status.contains('cancel')
+            || status.contains('void');
     }
 
     private static SubmittedFieldResult applySubmittedFields(ESignature_Envelope__c env, String signerFieldsJson) {
@@ -288,34 +312,190 @@ public without sharing class ESignatureCommandProcessor {
             dotIndex < normalized.length() - 1;
     }
 
-    private static void sendDelegateEmail(
+    private static void sendDelegateEmails(
         ESignature_Envelope__c env,
         String signingUrl,
         String delegateMessage,
         String previousSignerName,
         String previousSignerEmail
     ) {
-        Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
-        message.setToAddresses(new List<String>{ env.Signer_Email__c });
         String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
-        String delegator = String.isBlank(previousSignerName) ? previousSignerEmail : previousSignerName;
-        String escapedMessage = ESignatureUtil.escapeHtml(delegateMessage)
+        List<Messaging.SingleEmailMessage> messages = new List<Messaging.SingleEmailMessage>();
+
+        addEmailMessage(
+            messages,
+            env.Signer_Email__c,
+            'Signature requested: ' + documentTitle,
+            buildDelegateSignerEmailHtml(env, signingUrl, delegateMessage, previousSignerName, previousSignerEmail)
+        );
+        addEmailMessage(
+            messages,
+            previousSignerEmail,
+            'Signature request delegated: ' + documentTitle,
+            buildOriginalSignerDelegationEmailHtml(env, delegateMessage, previousSignerName, previousSignerEmail)
+        );
+        addEmailMessage(
+            messages,
+            ESignatureUtil.senderEmail(env.Sender_User__c),
+            'Signature request delegated: ' + documentTitle,
+            buildSalesforceUserDelegationEmailHtml(env, delegateMessage, previousSignerName, previousSignerEmail)
+        );
+
+        if (!messages.isEmpty()) {
+            Messaging.sendEmail(messages);
+        }
+    }
+
+    private static void addEmailMessage(List<Messaging.SingleEmailMessage> messages, String recipientEmail, String subject, String htmlBody) {
+        if (messages == null || !isValidEmail(recipientEmail)) {
+            return;
+        }
+        Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+        message.setToAddresses(new List<String>{ recipientEmail.trim() });
+        message.setSubject(subject);
+        message.setHtmlBody(htmlBody);
+        message.setSaveAsActivity(false);
+        ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
+        messages.add(message);
+    }
+
+    @TestVisible
+    private static String buildDelegateSignerEmailHtml(
+        ESignature_Envelope__c env,
+        String signingUrl,
+        String delegateMessage,
+        String previousSignerName,
+        String previousSignerEmail
+    ) {
+        String safeSignerName = env == null || String.isBlank(env.Signer_Name__c) ? 'there' : ESignatureUtil.escapeHtml(env.Signer_Name__c);
+        String safeDocumentTitle = ESignatureUtil.escapeHtml(ESignatureUtil.getEnvelopeTitle(env));
+        String safeSigningUrl = ESignatureUtil.escapeHtml(signingUrl);
+        String delegator = displayNameWithEmail(previousSignerName, previousSignerEmail);
+
+        String expirationRow = '';
+        if (env != null && env.Expires_At__c != null) {
+            expirationRow = ESignatureUtil.emailSubtleRow('This link is unique to you and will expire on ' + formatDateForEmail(env.Expires_At__c) + '.');
+        }
+
+        return ESignatureUtil.emailShell(
+            ESignatureUtil.emailParagraphRow('Hi ' + safeSignerName + ',')
+            + ESignatureUtil.emailParagraphRow(delegator + ' delegated a document to you for signature:')
+            + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
+            + ESignatureUtil.emailParagraphRow('<strong>Message:</strong><br/>' + multilineSafeHtml(delegateMessage))
+            + ESignatureUtil.emailParagraphRow('Please review and sign the agreement.')
+            + ESignatureUtil.emailButtonRow('Review &amp; Sign Document', safeSigningUrl, '#0176d3')
+            + expirationRow
+            + ESignatureUtil.emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
+        );
+    }
+
+    @TestVisible
+    private static String buildOriginalSignerDelegationEmailHtml(
+        ESignature_Envelope__c env,
+        String delegateMessage,
+        String previousSignerName,
+        String previousSignerEmail
+    ) {
+        String safePreviousSignerName = String.isBlank(previousSignerName) ? 'there' : ESignatureUtil.escapeHtml(previousSignerName);
+        String safeDocumentTitle = ESignatureUtil.escapeHtml(ESignatureUtil.getEnvelopeTitle(env));
+        String delegate = displayNameWithEmail(env == null ? null : env.Signer_Name__c, env == null ? null : env.Signer_Email__c);
+
+        return ESignatureUtil.emailShell(
+            ESignatureUtil.emailParagraphRow('Hi ' + safePreviousSignerName + ',')
+            + ESignatureUtil.emailParagraphRow('Your signature request was delegated to ' + delegate + '.')
+            + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
+            + ESignatureUtil.emailParagraphRow('<strong>Message you included:</strong><br/>' + multilineSafeHtml(delegateMessage))
+            + ESignatureUtil.emailSubtleRow('Your original signing link is no longer active. The delegated signer received a new signing link.')
+        );
+    }
+
+    @TestVisible
+    private static String buildSalesforceUserDelegationEmailHtml(
+        ESignature_Envelope__c env,
+        String delegateMessage,
+        String previousSignerName,
+        String previousSignerEmail
+    ) {
+        String safeDocumentTitle = ESignatureUtil.escapeHtml(ESignatureUtil.getEnvelopeTitle(env));
+        String originalSigner = displayNameWithEmail(previousSignerName, previousSignerEmail);
+        String delegate = displayNameWithEmail(env == null ? null : env.Signer_Name__c, env == null ? null : env.Signer_Email__c);
+
+        return ESignatureUtil.emailShell(
+            ESignatureUtil.emailParagraphRow(originalSigner + ' delegated the signature request to ' + delegate + '.')
+            + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
+            + ESignatureUtil.emailParagraphRow('<strong>Delegate message:</strong><br/>' + multilineSafeHtml(delegateMessage))
+            + ESignatureUtil.emailSubtleRow('The original signer link is no longer active. The delegated signer received a new signing link.')
+        );
+    }
+
+    private static String displayNameWithEmail(String name, String email) {
+        if (String.isBlank(name)) {
+            return ESignatureUtil.escapeHtml(email);
+        }
+        if (String.isBlank(email)) {
+            return ESignatureUtil.escapeHtml(name);
+        }
+        return ESignatureUtil.escapeHtml(name) + ' (' + ESignatureUtil.escapeHtml(email) + ')';
+    }
+
+    private static String multilineSafeHtml(String value) {
+        return ESignatureUtil.escapeHtml(value)
             .replace('\r\n', '<br/>')
             .replace('\n', '<br/>')
             .replace('\r', '<br/>');
-        message.setSubject('Signature delegated: ' + documentTitle);
-        String body = ''
-            + '<div style="font-family:Arial,sans-serif;font-size:15px;color:#111827;line-height:1.45">'
-            + '<p>Hello ' + ESignatureUtil.escapeHtml(env.Signer_Name__c) + ',</p>'
-            + '<p>' + ESignatureUtil.escapeHtml(delegator) + ' delegated <strong>' + ESignatureUtil.escapeHtml(documentTitle) + '</strong> to you for signature.</p>'
-            + '<p><strong>Message:</strong><br/>' + escapedMessage + '</p>'
-            + '<p><a href="' + ESignatureUtil.escapeHtml(signingUrl) + '" style="display:inline-block;background:#1e51a4;color:#ffffff;padding:12px 18px;text-decoration:none;border-radius:6px;font-weight:bold">Review and Sign</a></p>'
-            + '<p>If the button does not work, copy and paste this link into your browser:<br/>'
-            + ESignatureUtil.escapeHtml(signingUrl) + '</p>'
-            + '</div>';
-        message.setHtmlBody(body);
-        message.setSaveAsActivity(false);
-        Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
+    }
+
+    private static String formatDateForEmail(Datetime expirationDate) {
+        if (expirationDate == null) {
+            return '';
+        }
+        return expirationDate.format('MMMM d, yyyy');
+    }
+
+    private static void sendDeclineNotificationEmail(ESignature_Envelope__c env) {
+        try {
+            List<String> recipients = declineNotificationRecipients(env);
+            if (recipients.isEmpty()) {
+                return;
+            }
+            Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+            message.setToAddresses(recipients);
+            message.setSubject('Signature request declined: ' + ESignatureUtil.getEnvelopeTitle(env));
+            message.setHtmlBody(buildDeclineNotificationEmailHtml(env));
+            message.setSaveAsActivity(false);
+            ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
+            Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
+        } catch (Exception ignore) {}
+    }
+
+    @TestVisible
+    private static List<String> declineNotificationRecipients(ESignature_Envelope__c env) {
+        return ESignatureUtil.signerAndSenderEmails(env);
+    }
+
+    @TestVisible
+    private static String buildDeclineNotificationEmailHtml(ESignature_Envelope__c env) {
+        String signerName = env == null || String.isBlank(env.Signer_Name__c) ? 'The signer' : env.Signer_Name__c;
+        String signerEmail = env == null ? null : env.Signer_Email__c;
+        String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
+        String reason = env == null ? null : env.Decline_Reason__c;
+        if (String.isBlank(reason)) {
+            reason = 'No reason was provided.';
+        }
+        String escapedReason = ESignatureUtil.escapeHtml(reason)
+            .replace('\r\n', '<br/>')
+            .replace('\n', '<br/>')
+            .replace('\r', '<br/>');
+
+        String safeSigner = ESignatureUtil.escapeHtml(signerName)
+            + (String.isBlank(signerEmail) ? '' : ' (' + ESignatureUtil.escapeHtml(signerEmail) + ')');
+        return ESignatureUtil.emailShell(
+            ESignatureUtil.emailParagraphRow('The signature request was declined.')
+            + ESignatureUtil.emailDocumentBlockRow('Document', ESignatureUtil.escapeHtml(documentTitle), '#b91c1c')
+            + ESignatureUtil.emailParagraphRow('<strong>Signer:</strong> ' + safeSigner)
+            + ESignatureUtil.emailParagraphRow('<strong>Reason:</strong><br/>' + escapedReason)
+            + ESignatureUtil.emailSubtleRow('No further action is available from the declined signing link. A new signature request can be sent from Salesforce if needed.')
+        );
     }
 
     private static String truncate(String value, Integer maxLength) {

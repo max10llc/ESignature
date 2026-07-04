@@ -15,6 +15,10 @@
         <value xsi:type="xsd:string">noreply@kaizonsolutions.com</value>
     </values>
     <values>
+        <field>Email_Logo_URL__c</field>
+        <value xsi:type="xsd:string">https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png</value>
+    </values>
+    <values>
         <field>Final_Pdf_Owner_Password__c</field>
         <value xsi:nil="true"/>
     </values>
@@ -37,6 +41,10 @@
     <values>
         <field>Include_Source_PDF_In_Finalizer_Request__c</field>
         <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Org_Wide_Email_Address__c</field>
+        <value xsi:type="xsd:string">noreply@kaizonsolutions.com</value>
     </values>
     <values>
         <field>Restrict_Copying__c</field>

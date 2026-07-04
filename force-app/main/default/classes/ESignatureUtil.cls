@@ -11,6 +11,8 @@ public without sharing class ESignatureUtil {
                    Finalizer_Callback_Secret__c,
                    Include_Source_PDF_In_Finalizer_Request__c,
                    Default_From_Email__c,
+                   Org_Wide_Email_Address__c,
+                   Email_Logo_URL__c,
                    Default_Expiration_Days__c,
                    Restrict_Editing__c,
                    Restrict_Copying__c,
@@ -520,6 +522,163 @@ public without sharing class ESignatureUtil {
             return null;
         }
         return root + '/services/apexrest/ESignature/v1/finalizer-callback';
+    }
+
+    public static void applyConfiguredOrgWideEmailAddress(Messaging.SingleEmailMessage message) {
+        if (message == null) {
+            return;
+        }
+        try {
+            Id orgWideEmailAddressId = orgWideEmailAddressId(configuredOrgWideEmailAddress(getSettings()));
+            if (orgWideEmailAddressId != null) {
+                message.setOrgWideEmailAddressId(orgWideEmailAddressId);
+            }
+        } catch (Exception ignore) {}
+    }
+
+    @TestVisible
+    private static String configuredOrgWideEmailAddress(ESignature_Setting__mdt settings) {
+        if (settings == null) {
+            return null;
+        }
+        return firstNonBlank(new List<String>{
+            settings.Org_Wide_Email_Address__c,
+            settings.Default_From_Email__c
+        });
+    }
+
+    private static Id orgWideEmailAddressId(String emailAddress) {
+        if (String.isBlank(emailAddress)) {
+            return null;
+        }
+        List<OrgWideEmailAddress> rows = [
+            SELECT Id
+            FROM OrgWideEmailAddress
+            WHERE Address = :emailAddress.trim()
+            LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows[0].Id;
+    }
+
+    public static String configuredEmailLogoUrl() {
+        try {
+            return configuredEmailLogoUrl(getSettings());
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    @TestVisible
+    private static String configuredEmailLogoUrl(ESignature_Setting__mdt settings) {
+        return settings == null || String.isBlank(settings.Email_Logo_URL__c)
+            ? null
+            : settings.Email_Logo_URL__c.trim();
+    }
+
+    public static String emailShell(String contentHtml) {
+        return ''
+            + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#ffffff;margin:0;padding:0;border-collapse:collapse;">'
+            + '  <tr>'
+            + '    <td align="center" style="padding:24px 10px 24px 10px;">'
+            + '      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;background-color:#ffffff;border:1px solid #e5e7eb;border-collapse:collapse;">'
+            + emailHeaderRow()
+            +          nullToBlank(contentHtml)
+            + '      </table>'
+            + '    </td>'
+            + '  </tr>'
+            + '</table>';
+    }
+
+    private static String emailHeaderRow() {
+        String logoUrl = configuredEmailLogoUrl();
+        String content = String.isBlank(logoUrl)
+            ? 'E-Signature'
+            : '<img src="' + escapeHtml(logoUrl) + '" width="180" alt="Kaizon Solutions" style="display:block;width:180px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />';
+        return ''
+            + '        <tr>'
+            + '          <td bgcolor="#0176d3" align="left" style="padding:16px 24px;background-color:#0176d3;font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:24px;font-weight:bold;color:#ffffff;">'
+            +              content
+            + '          </td>'
+            + '        </tr>';
+    }
+
+    public static String emailRow(String innerHtml) {
+        return '<tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;">' + nullToBlank(innerHtml) + '</td></tr>';
+    }
+
+    public static String emailParagraphRow(String safeHtml) {
+        return emailRow('<p style="Margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;">' + nullToBlank(safeHtml) + '</p>');
+    }
+
+    public static String emailSubtleRow(String safeHtml) {
+        return emailRow('<p style="Margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;">' + nullToBlank(safeHtml) + '</p>');
+    }
+
+    public static String emailDocumentBlockRow(String label, String safeTitle, String accentColor) {
+        String color = String.isBlank(accentColor) ? '#0176d3' : accentColor;
+        return ''
+            + '<tr>'
+            + '  <td style="padding:0 24px 18px 24px;">'
+            + '    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;background-color:#f7f8fa;border-left:4px solid ' + color + ';">'
+            + '      <tr>'
+            + '        <td style="padding:13px 16px;font-family:Arial,Helvetica,sans-serif;">'
+            + '          <div style="font-size:12px;line-height:16px;color:#64748b;Margin:0 0 6px 0;">' + escapeHtml(label) + '</div>'
+            + '          <div style="font-size:15px;line-height:20px;font-weight:bold;color:#111827;Margin:0;">' + nullToBlank(safeTitle) + '</div>'
+            + '        </td>'
+            + '      </tr>'
+            + '    </table>'
+            + '  </td>'
+            + '</tr>';
+    }
+
+    public static String emailButtonRow(String safeLabel, String safeUrl, String backgroundColor) {
+        String color = String.isBlank(backgroundColor) ? '#0176d3' : backgroundColor;
+        return ''
+            + '<tr>'
+            + '  <td align="center" style="padding:8px 24px 22px 24px;">'
+            + '    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">'
+            + '      <tr>'
+            + '        <td bgcolor="' + color + '" style="background-color:' + color + ';padding:12px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:18px;font-weight:bold;text-align:center;">'
+            + '          <a href="' + nullToBlank(safeUrl) + '" target="_blank" style="color:#ffffff;text-decoration:none;display:block;">' + nullToBlank(safeLabel) + '</a>'
+            + '        </td>'
+            + '      </tr>'
+            + '    </table>'
+            + '  </td>'
+            + '</tr>';
+    }
+
+    private static String nullToBlank(String value) {
+        return value == null ? '' : value;
+    }
+
+    public static List<String> signerAndSenderEmails(ESignature_Envelope__c env) {
+        Set<String> recipients = new Set<String>();
+        addEmail(recipients, env == null ? null : env.Signer_Email__c);
+        addEmail(recipients, senderEmail(env == null ? null : env.Sender_User__c));
+        List<String> output = new List<String>();
+        output.addAll(recipients);
+        output.sort();
+        return output;
+    }
+
+    private static void addEmail(Set<String> recipients, String email) {
+        String normalized = String.isBlank(email) ? null : email.trim();
+        if (normalized != null) {
+            recipients.add(normalized);
+        }
+    }
+
+    public static String senderEmail(Id userId) {
+        if (userId == null) {
+            return null;
+        }
+        List<User> users = [
+            SELECT Email
+            FROM User
+            WHERE Id = :userId
+            LIMIT 1
+        ];
+        return users.isEmpty() ? null : users[0].Email;
     }
 
     public static void addCurrentRequestContext(Map<String, Object> payload) {

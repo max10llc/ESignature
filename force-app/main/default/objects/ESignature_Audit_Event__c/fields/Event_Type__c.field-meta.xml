@@ -61,6 +61,16 @@
                 <label>Declined</label>
             </value>
             <value>
+                <fullName>Canceled</fullName>
+                <default>false</default>
+                <label>Canceled</label>
+            </value>
+            <value>
+                <fullName>Expired</fullName>
+                <default>false</default>
+                <label>Expired</label>
+            </value>
+            <value>
                 <fullName>Error</fullName>
                 <default>false</default>
                 <label>Error</label>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Email_Logo_URL__c</fullName>
+    <description>Publicly accessible company logo URL used in outbound e-signature emails. Email clients must be able to load this URL without Salesforce authentication.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Email Logo URL</label>
+    <required>false</required>
+    <type>Url</type>
+</CustomField>

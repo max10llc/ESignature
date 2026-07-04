@@ -98,7 +98,10 @@ private class ESignatureCommandTriggerTest {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
+            Signer_Name__c = 'Declining Signer',
             Signer_Email__c = 'signer@example.com',
+            Sender_User__c = UserInfo.getUserId(),
+            Source_File_Title__c = 'Declined Agreement',
             Source_ContentVersion_Id__c = String.valueOf(source.Id),
             Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
         );
@@ -126,6 +129,28 @@ private class ESignatureCommandTriggerTest {
     }
 
     @IsTest
+    static void declineNotificationIncludesSignerAndSender() {
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Signer_Name__c = 'Declining Signer',
+            Signer_Email__c = 'signer@example.com',
+            Sender_User__c = UserInfo.getUserId(),
+            Source_File_Title__c = 'Declined Agreement',
+            Decline_Reason__c = 'No longer needed'
+        );
+
+        List<String> recipients = ESignatureCommandProcessor.declineNotificationRecipients(env);
+        System.assert(recipients.contains('signer@example.com'), 'Signer should receive the decline notification.');
+        System.assert(recipients.contains(UserInfo.getUserEmail()), 'Salesforce sender should receive the decline notification.');
+
+        String html = ESignatureCommandProcessor.buildDeclineNotificationEmailHtml(env);
+        System.assert(html.contains('<table role="presentation" width="100%"'), 'Decline email should use the same table-based shell as the request email.');
+        System.assert(html.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Decline email should render the configured company logo.');
+        System.assert(html.contains('Declined Agreement'), 'Notification should identify the document.');
+        System.assert(html.contains('Declining Signer'), 'Notification should identify the signer.');
+        System.assert(html.contains('No longer needed'), 'Notification should include the decline reason.');
+    }
+
+    @IsTest
     static void delegatedCommandTransfersSignerAndRotatesToken() {
         String token = 'delegated-token';
         String tokenHash = ESignatureUtil.hashToken(token);
@@ -136,6 +161,7 @@ private class ESignatureCommandTriggerTest {
             Signer_Name__c = 'Original Signer',
             Signer_Email__c = 'original@example.com',
             Signer_Title__c = 'Owner',
+            Sender_User__c = UserInfo.getUserId(),
             Viewed_At__c = System.now(),
             Public_Signing_URL__c = 'https://example.com/old-link',
             Source_File_Title__c = 'Delegated Agreement',
@@ -189,6 +215,53 @@ private class ESignatureCommandTriggerTest {
     }
 
     @IsTest
+    static void delegateEmailsUseBrandedSeparateTemplates() {
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Signer_Name__c = 'Delegate Signer',
+            Signer_Email__c = 'delegate@example.com',
+            Sender_User__c = UserInfo.getUserId(),
+            Source_File_Title__c = 'Delegated Agreement',
+            Expires_At__c = Datetime.newInstance(2026, 7, 27, 12, 0, 0)
+        );
+
+        String delegateHtml = ESignatureCommandProcessor.buildDelegateSignerEmailHtml(
+            env,
+            'https://example.com/signatures/apex/ESignaturePage?t=newtoken',
+            'Please review and sign this agreement.',
+            'Original Signer',
+            'original@example.com'
+        );
+        String originalSignerHtml = ESignatureCommandProcessor.buildOriginalSignerDelegationEmailHtml(
+            env,
+            'Please review and sign this agreement.',
+            'Original Signer',
+            'original@example.com'
+        );
+        String salesforceUserHtml = ESignatureCommandProcessor.buildSalesforceUserDelegationEmailHtml(
+            env,
+            'Please review and sign this agreement.',
+            'Original Signer',
+            'original@example.com'
+        );
+
+        System.assert(delegateHtml.contains('<table role="presentation" width="100%"'), 'Delegate email should use the branded shell.');
+        System.assert(delegateHtml.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Delegate email should render the configured company logo.');
+        System.assert(delegateHtml.contains('Review &amp; Sign Document'), 'Delegate email should include the signing call to action.');
+        System.assert(delegateHtml.contains('https://example.com/signatures/apex/ESignaturePage?t=newtoken'), 'Delegate email should include the fresh signing URL.');
+        System.assert(delegateHtml.contains('Original Signer'), 'Delegate email should identify the original signer.');
+        System.assert(delegateHtml.contains('Please review and sign this agreement.'), 'Delegate email should include the delegate message.');
+
+        System.assert(originalSignerHtml.contains('<table role="presentation" width="100%"'), 'Original signer email should use the branded shell.');
+        System.assert(originalSignerHtml.contains('Your signature request was delegated to Delegate Signer'), 'Original signer email should confirm delegation.');
+        System.assert(originalSignerHtml.contains('Your original signing link is no longer active'), 'Original signer email should explain the old link.');
+
+        System.assert(salesforceUserHtml.contains('<table role="presentation" width="100%"'), 'Salesforce user email should use the branded shell.');
+        System.assert(salesforceUserHtml.contains('Original Signer'), 'Salesforce user email should identify the original signer.');
+        System.assert(salesforceUserHtml.contains('Delegate Signer'), 'Salesforce user email should identify the delegated signer.');
+        System.assert(salesforceUserHtml.contains('Delegated Agreement'), 'Salesforce user email should identify the document.');
+    }
+
+    @IsTest
     static void signedCommandWithoutTypedNameMarksEnvelopeError() {
         String token = 'missing-name-token';
         String tokenHash = ESignatureUtil.hashToken(token);
@@ -216,6 +289,42 @@ private class ESignatureCommandTriggerTest {
         ];
         System.assertEquals('Error', env.Envelope_Status__c);
         System.assert(env.Error_Message__c.contains('Type your full legal name.'), 'Error should explain the missing signer name.');
+    }
+
+    @IsTest
+    static void signedCommandForCanceledEnvelopeIsIgnored() {
+        String token = 'canceled-sign-token';
+        String tokenHash = ESignatureUtil.hashToken(token);
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Envelope_Status__c = 'Canceled',
+            Secure_Token_Hash__c = tokenHash,
+            Signer_Email__c = 'signer@example.com'
+        );
+        insert env;
+
+        Test.startTest();
+        Database.SaveResult result = EventBus.publish(new ESignature_Command__e(
+            Action__c = 'signed',
+            Token_Hash__c = tokenHash,
+            Payload_JSON__c = '{"typedName":"Derek Hawley","signerTitle":"","signerFieldsJson":"[]"}'
+        ));
+        System.assert(result.isSuccess(), 'Platform event should publish successfully.');
+        Test.getEventBus().deliver();
+        Test.stopTest();
+
+        env = [
+            SELECT Envelope_Status__c, Signed_At__c
+            FROM ESignature_Envelope__c
+            WHERE Id = :env.Id
+        ];
+        System.assertEquals('Canceled', env.Envelope_Status__c, 'Canceled envelopes should not be reopened by an old signing page.');
+        System.assertEquals(null, env.Signed_At__c, 'Canceled envelopes should not be marked signed.');
+        System.assertEquals(0, [
+            SELECT COUNT()
+            FROM ESignature_Audit_Event__c
+            WHERE Envelope__c = :env.Id
+            AND Event_Type__c = 'Signed'
+        ]);
     }
 
     private static ContentVersion createSourceFile(String title) {

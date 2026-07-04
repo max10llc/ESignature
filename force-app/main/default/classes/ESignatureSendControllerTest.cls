@@ -77,6 +77,66 @@ private class ESignatureSendControllerTest {
     }
 
     @IsTest
+    static void sendEnvelopeCancelsPriorOpenEnvelopesForSameParent() {
+        DraftFixture fixture = createDraftFixture();
+        ContentVersion sentSource = createSourceFile('Prior Sent Source');
+        ContentVersion viewedSource = createSourceFile('Prior Viewed Source');
+
+        Account otherParent = new Account(Name = 'Other Send Controller Parent');
+        insert otherParent;
+        ContentVersion otherSource = createSourceFile('Other Parent Source');
+
+        ESignature_Envelope__c priorSent = activeEnvelope(fixture.parentId, 'Sent', sentSource);
+        ESignature_Envelope__c priorViewed = activeEnvelope(fixture.parentId, 'Viewed', viewedSource);
+        ESignature_Envelope__c sameParentSigned = activeEnvelope(fixture.parentId, 'Signed', createSourceFile('Signed Source'));
+        ESignature_Envelope__c otherParentSent = activeEnvelope(otherParent.Id, 'Sent', otherSource);
+        insert new List<ESignature_Envelope__c>{ priorSent, priorViewed, sameParentSigned, otherParentSent };
+
+        Test.startTest();
+        ESignatureSendController.sendEnvelope(
+            String.valueOf(fixture.envelope.Id),
+            'Derek Hawley',
+            'signer@example.com',
+            'President',
+            30
+        );
+        Test.stopTest();
+
+        Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
+            SELECT Envelope_Status__c
+            FROM ESignature_Envelope__c
+            WHERE Id IN :new Set<Id>{ fixture.envelope.Id, priorSent.Id, priorViewed.Id, sameParentSigned.Id, otherParentSent.Id }
+        ]);
+        System.assertEquals('Sent', envelopes.get(fixture.envelope.Id).Envelope_Status__c, 'The newly sent envelope should stay active.');
+        System.assertEquals('Canceled', envelopes.get(priorSent.Id).Envelope_Status__c, 'Prior sent envelope on the same parent should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Envelope_Status__c, 'Prior viewed envelope on the same parent should be canceled.');
+        System.assertEquals('Signed', envelopes.get(sameParentSigned.Id).Envelope_Status__c, 'Completed envelopes should not be changed.');
+        System.assertEquals('Sent', envelopes.get(otherParentSent.Id).Envelope_Status__c, 'Open envelopes on other parent records should not be changed.');
+
+        Map<Id, ContentVersion> sources = new Map<Id, ContentVersion>([
+            SELECT ESignature_Status__c
+            FROM ContentVersion
+            WHERE Id IN :new Set<Id>{
+                ESignatureUtil.safeId(fixture.field.Content_Version_Id__c),
+                sentSource.Id,
+                viewedSource.Id,
+                otherSource.Id
+            }
+        ]);
+        System.assertEquals('Sent', sources.get(ESignatureUtil.safeId(fixture.field.Content_Version_Id__c)).ESignature_Status__c);
+        System.assertEquals('Canceled', sources.get(sentSource.Id).ESignature_Status__c);
+        System.assertEquals('Canceled', sources.get(viewedSource.Id).ESignature_Status__c);
+        System.assertNotEquals('Canceled', sources.get(otherSource.Id).ESignature_Status__c);
+
+        System.assertEquals(2, [
+            SELECT COUNT()
+            FROM ESignature_Audit_Event__c
+            WHERE Envelope__c IN :new Set<Id>{ priorSent.Id, priorViewed.Id }
+            AND Event_Type__c = 'Canceled'
+        ], 'Each automatically canceled envelope should receive a cancel audit event.');
+    }
+
+    @IsTest
     static void sendEnvelopeRejectsDraftWithoutFields() {
         Account parent = new Account(Name = 'Send Controller No Fields');
         insert parent;
@@ -109,11 +169,8 @@ private class ESignatureSendControllerTest {
         );
 
         System.assert(html.contains('<table role="presentation" width="100%"'), 'Email should use the original table-based shell.');
-        System.assert(
-            html.contains('E-Signature'),
-            'Email should render generic package branding.'
-        );
-        System.assert(!html.contains('/resource/'), 'Email should not reference a static resource logo.');
+        System.assert(html.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Email should render the configured company logo.');
+        System.assert(html.contains('alt="Kaizon Solutions"'), 'Email logo should include accessible alt text.');
         System.assert(html.contains('has sent you a document that requires your signature'), 'Email should include the original request language.');
         System.assert(html.contains('Special Services Agreement'), 'Email should include the document title block.');
         System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');
@@ -165,5 +222,27 @@ private class ESignatureSendControllerTest {
         fixture.envelope = env;
         fixture.field = field;
         return fixture;
+    }
+
+    private static ContentVersion createSourceFile(String title) {
+        ContentVersion source = new ContentVersion(
+            Title = title,
+            PathOnClient = title + '.pdf',
+            VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF'),
+            ESignature_File__c = true
+        );
+        insert source;
+        return [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];
+    }
+
+    private static ESignature_Envelope__c activeEnvelope(Id parentId, String status, ContentVersion source) {
+        return new ESignature_Envelope__c(
+            Envelope_Status__c = status,
+            Parent_Record_Id__c = String.valueOf(parentId),
+            Parent_Object_Api_Name__c = 'Account',
+            Signer_Email__c = 'prior@example.com',
+            Source_ContentVersion_Id__c = String.valueOf(source.Id),
+            Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
+        );
     }
 }

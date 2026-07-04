@@ -140,4 +140,18 @@ private class ESignatureUtilTest {
         ESignatureUtil.publishSignerCommand('Viewed', env, token, payload, false);
         Test.stopTest();
     }
+
+    @IsTest
+    static void configuredOrgWideEmailAddressPrefersExplicitSetting() {
+        ESignature_Setting__mdt settings = new ESignature_Setting__mdt(
+            Org_Wide_Email_Address__c = 'orgwide@example.com',
+            Default_From_Email__c = 'default@example.com',
+            Email_Logo_URL__c = 'https://example.com/logo.png'
+        );
+        System.assertEquals('orgwide@example.com', ESignatureUtil.configuredOrgWideEmailAddress(settings));
+        System.assertEquals('https://example.com/logo.png', ESignatureUtil.configuredEmailLogoUrl(settings));
+
+        settings.Org_Wide_Email_Address__c = null;
+        System.assertEquals('default@example.com', ESignatureUtil.configuredOrgWideEmailAddress(settings));
+    }
 }

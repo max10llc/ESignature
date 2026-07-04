@@ -116,12 +116,14 @@
         <members>ESignature_Setting__mdt.Allow_Low_Quality_Printing__c</members>
         <members>ESignature_Setting__mdt.Default_Expiration_Days__c</members>
         <members>ESignature_Setting__mdt.Default_From_Email__c</members>
+        <members>ESignature_Setting__mdt.Email_Logo_URL__c</members>
         <members>ESignature_Setting__mdt.Final_Pdf_Owner_Password__c</members>
         <members>ESignature_Setting__mdt.Finalizer_Named_Credential__c</members>
         <members>ESignature_Setting__mdt.Finalizer_Mode__c</members>
         <members>ESignature_Setting__mdt.Finalizer_Callback_URL__c</members>
         <members>ESignature_Setting__mdt.Finalizer_Callback_Secret__c</members>
         <members>ESignature_Setting__mdt.Include_Source_PDF_In_Finalizer_Request__c</members>
+        <members>ESignature_Setting__mdt.Org_Wide_Email_Address__c</members>
         <members>ESignature_Setting__mdt.Restrict_Copying__c</members>
         <members>ESignature_Setting__mdt.Restrict_Editing__c</members>
         <members>ESignature_Setting__mdt.Site_Base_URL__c</members>
