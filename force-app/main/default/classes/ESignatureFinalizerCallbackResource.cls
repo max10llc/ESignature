@@ -1,5 +1,5 @@
-@RestResource(urlMapping='/PDFESign/v1/finalizer-callback')
-global without sharing class PDFESignatureFinalizerCallbackResource {
+@RestResource(urlMapping='/ESignature/v1/finalizer-callback')
+global without sharing class ESignatureFinalizerCallbackResource {
     @HttpPost
     global static void postResult() {
         RestResponse response = RestContext.response;
@@ -8,15 +8,15 @@ global without sharing class PDFESignatureFinalizerCallbackResource {
             Map<String, Object> body = parseRequestBody();
             validateSecret(body);
 
-            Id envelopeId = PDFESignatureUtil.safeId(PDFESignatureUtil.stringValue(body.get('envelopeId')));
+            Id envelopeId = ESignatureUtil.safeId(ESignatureUtil.stringValue(body.get('envelopeId')));
             if (envelopeId == null) {
-                throw new PDFESignatureUtil.AppException('Callback payload must include envelopeId.');
+                throw new ESignatureUtil.AppException('Callback payload must include envelopeId.');
             }
 
-            Boolean success = PDFESignatureUtil.boolValue(body.get('success'), true);
-            String message = PDFESignatureUtil.stringValue(body.get('message'));
+            Boolean success = ESignatureUtil.boolValue(body.get('success'), true);
+            String message = ESignatureUtil.stringValue(body.get('message'));
             if (!success) {
-                PDFESignatureFinalizerService.markError(envelopeId, message);
+                ESignatureFinalizerService.markError(envelopeId, message);
                 writeJson(200, new Map<String, Object>{
                     'success' => true,
                     'message' => 'Envelope was marked Error.'
@@ -24,20 +24,20 @@ global without sharing class PDFESignatureFinalizerCallbackResource {
                 return;
             }
 
-            String finalPdfBase64 = PDFESignatureUtil.stringValue(body.get('finalPdfBase64'));
-            String fileName = PDFESignatureUtil.stringValue(body.get('fileName'));
+            String finalPdfBase64 = ESignatureUtil.stringValue(body.get('finalPdfBase64'));
+            String fileName = ESignatureUtil.stringValue(body.get('fileName'));
             if (!String.isBlank(finalPdfBase64)) {
-                PDFESignatureFinalizerService.completeWithBase64(envelopeId, finalPdfBase64, fileName, message);
+                ESignatureFinalizerService.completeWithBase64(envelopeId, finalPdfBase64, fileName, message);
             } else {
-                Id finalContentVersionId = PDFESignatureUtil.safeId(PDFESignatureUtil.firstNonBlank(new List<String>{
-                    PDFESignatureUtil.stringValue(body.get('finalContentVersionId')),
-                    PDFESignatureUtil.stringValue(body.get('contentVersionId'))
+                Id finalContentVersionId = ESignatureUtil.safeId(ESignatureUtil.firstNonBlank(new List<String>{
+                    ESignatureUtil.stringValue(body.get('finalContentVersionId')),
+                    ESignatureUtil.stringValue(body.get('contentVersionId'))
                 }));
-                Id finalContentDocumentId = PDFESignatureUtil.safeId(PDFESignatureUtil.firstNonBlank(new List<String>{
-                    PDFESignatureUtil.stringValue(body.get('finalContentDocumentId')),
-                    PDFESignatureUtil.stringValue(body.get('contentDocumentId'))
+                Id finalContentDocumentId = ESignatureUtil.safeId(ESignatureUtil.firstNonBlank(new List<String>{
+                    ESignatureUtil.stringValue(body.get('finalContentDocumentId')),
+                    ESignatureUtil.stringValue(body.get('contentDocumentId'))
                 }));
-                PDFESignatureFinalizerService.completeWithExistingFile(envelopeId, finalContentVersionId, finalContentDocumentId, message);
+                ESignatureFinalizerService.completeWithExistingFile(envelopeId, finalContentVersionId, finalContentDocumentId, message);
             }
 
             writeJson(200, new Map<String, Object>{
@@ -68,25 +68,25 @@ global without sharing class PDFESignatureFinalizerCallbackResource {
         try {
             return (Map<String, Object>) JSON.deserializeUntyped(rawBody);
         } catch (Exception e) {
-            throw new PDFESignatureUtil.AppException('Callback request body must be a JSON object.');
+            throw new ESignatureUtil.AppException('Callback request body must be a JSON object.');
         }
     }
 
     private static void validateSecret(Map<String, Object> body) {
-        ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+        ESignature_Setting__mdt settings = ESignatureUtil.getSettings();
         String expected = settings.Finalizer_Callback_Secret__c;
         if (String.isBlank(expected)) {
-            throw new PDFESignatureUtil.AppException('Finalizer callback secret is not configured.');
+            throw new ESignatureUtil.AppException('Finalizer callback secret is not configured.');
         }
         String provided = RestContext.request.headers.get('X-PDF-ESignature-Secret');
         if (String.isBlank(provided)) {
-            provided = PDFESignatureUtil.stringValue(body.get('callbackSecret'));
+            provided = ESignatureUtil.stringValue(body.get('callbackSecret'));
         }
         if (String.isBlank(provided)) {
-            provided = PDFESignatureUtil.stringValue(body.get('secret'));
+            provided = ESignatureUtil.stringValue(body.get('secret'));
         }
         if (String.isBlank(provided) || !secretsMatch(provided, expected)) {
-            throw new PDFESignatureUtil.AppException('Unauthorized finalizer callback.');
+            throw new ESignatureUtil.AppException('Unauthorized finalizer callback.');
         }
     }
 

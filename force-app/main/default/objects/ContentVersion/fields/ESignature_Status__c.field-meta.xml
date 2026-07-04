@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>E_Signature_Status__c</fullName>
+    <fullName>ESignature_Status__c</fullName>
     <description>Tracks the e-signature lifecycle status for this file.</description>
     <label>E-Signature Status</label>
     <required>false</required>

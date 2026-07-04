@@ -1,5 +1,5 @@
 @IsTest
-private class PDFESignaturePrepareControllerTest {
+private class ESignaturePrepareControllerTest {
     @IsTest
     static void getRecordPdfFilesReturnsOnlyMarkedPdfFiles() {
         Account parent = new Account(Name = 'Prepare Controller Parent');
@@ -7,8 +7,8 @@ private class PDFESignaturePrepareControllerTest {
         ContentVersion eligible = createPdfFile(parent.Id, 'Eligible E-Signature File', true);
         createPdfFile(parent.Id, 'Regular PDF File', false);
 
-        List<PDFESignaturePrepareController.RecordFileDTO> files =
-            PDFESignaturePrepareController.getRecordPdfFiles(parent.Id);
+        List<ESignaturePrepareController.RecordFileDTO> files =
+            ESignaturePrepareController.getRecordPdfFiles(parent.Id);
 
         System.assertEquals(1, files.size(), 'Only files marked as E-Signature File should be returned.');
         System.assertEquals(String.valueOf(eligible.ContentDocumentId), files[0].contentDocumentId);
@@ -22,7 +22,7 @@ private class PDFESignaturePrepareControllerTest {
         ContentVersion source = createPdfFile(parent.Id, 'Unmarked PDF File', false);
 
         try {
-            PDFESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId));
+            ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId));
             System.assert(false, 'Expected unmarked PDF to be rejected.');
         } catch (AuraHandledException ex) {
             System.assertNotEquals(null, ex.getMessage(), 'The caller should receive a clear AuraHandledException.');
@@ -35,8 +35,8 @@ private class PDFESignaturePrepareControllerTest {
         insert parent;
         ContentVersion source = createPdfFile(parent.Id, 'Marked PDF File', true);
 
-        PDFESignaturePrepareController.PdfInfoDTO info =
-            PDFESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId));
+        ESignaturePrepareController.PdfInfoDTO info =
+            ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId));
 
         System.assertEquals(String.valueOf(source.ContentDocumentId), info.contentDocumentId);
         System.assertEquals(String.valueOf(source.Id), info.contentVersionId);
@@ -65,7 +65,7 @@ private class PDFESignaturePrepareControllerTest {
             }
         });
 
-        PDFESignaturePrepareController.SaveResultDTO result = PDFESignaturePrepareController.savePlacements(
+        ESignaturePrepareController.SaveResultDTO result = ESignaturePrepareController.savePlacements(
             String.valueOf(parent.Id),
             String.valueOf(source.ContentDocumentId),
             String.valueOf(source.Id),
@@ -94,8 +94,8 @@ private class PDFESignaturePrepareControllerTest {
             WHERE Envelope__c = :env.Id
         ]);
 
-        List<PDFESignaturePrepareController.PlacementDTO> placements =
-            PDFESignaturePrepareController.getPlacements(String.valueOf(parent.Id), String.valueOf(source.ContentDocumentId));
+        List<ESignaturePrepareController.PlacementDTO> placements =
+            ESignaturePrepareController.getPlacements(String.valueOf(parent.Id), String.valueOf(source.ContentDocumentId));
         System.assertEquals(1, placements.size(), 'Saved draft placements should be returned.');
         System.assertEquals('Signature', placements[0].fieldType);
         System.assertEquals(1, placements[0].pageNumber);
@@ -115,7 +115,7 @@ private class PDFESignaturePrepareControllerTest {
         insert parent;
         ContentVersion source = createPdfFile(parent.Id, 'Prepared Opportunity E-Signature File', true);
 
-        PDFESignaturePrepareController.SaveResultDTO result = PDFESignaturePrepareController.savePlacements(
+        ESignaturePrepareController.SaveResultDTO result = ESignaturePrepareController.savePlacements(
             String.valueOf(parent.Id),
             String.valueOf(source.ContentDocumentId),
             String.valueOf(source.Id),
@@ -140,11 +140,11 @@ private class PDFESignaturePrepareControllerTest {
             PathOnClient = title + '.pdf',
             VersionData = Blob.valueOf('%PDF-1.4\n1 0 obj\n<</Type/Page>>\nendobj\n%%EOF'),
             FirstPublishLocationId = parentId,
-            E_Signature_File__c = eSignatureFile
+            ESignature_File__c = eSignatureFile
         );
         insert source;
         return [
-            SELECT Id, ContentDocumentId, E_Signature_File__c
+            SELECT Id, ContentDocumentId, ESignature_File__c
             FROM ContentVersion
             WHERE Id = :source.Id
         ];

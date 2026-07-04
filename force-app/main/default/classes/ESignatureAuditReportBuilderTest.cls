@@ -1,5 +1,5 @@
 @IsTest
-private class PDFESignatureAuditReportBuilderTest {
+private class ESignatureAuditReportBuilderTest {
     @IsTest
     static void buildsReportPdfFromEnvelopeAuditEvents() {
         User sender = auditReportUser('America/Chicago');
@@ -25,7 +25,7 @@ private class PDFESignatureAuditReportBuilderTest {
                 audit(env.Id, 'Signed', 'Signer completed required fields and submitted signature.', DateTime.newInstanceGmt(2026, 6, 23, 14, 10, 0))
             };
 
-            String reportPdfBase64 = PDFESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, null);
+            String reportPdfBase64 = ESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, null);
             System.assert(String.isNotBlank(reportPdfBase64), 'Report PDF base64 should be returned.');
 
             String pdfText = EncodingUtil.base64Decode(reportPdfBase64).toString();
@@ -57,7 +57,7 @@ private class PDFESignatureAuditReportBuilderTest {
         insert env;
 
         String pdfText = EncodingUtil.base64Decode(
-            PDFESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, 'Source Version Title')
+            ESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, 'Source Version Title')
         ).toString();
 
         System.assert(pdfText.contains('Source Version Title'), 'The finalizer source title should be used when provided.');

@@ -1,4 +1,4 @@
-public without sharing class PDFESignatureCommandProcessor {
+public without sharing class ESignatureCommandProcessor {
     private class SubmittedFieldResult {
         String titleValue;
     }
@@ -75,7 +75,7 @@ public without sharing class PDFESignatureCommandProcessor {
         if (env.Envelope_Status__c != 'Expired' && env.Envelope_Status__c != 'Signed' && env.Envelope_Status__c != 'Finalizing') {
             env.Envelope_Status__c = 'Expired';
             update env;
-            PDFESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
+            ESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
             audit(env, 'Expired', payload, 'Signing link expired when opened.');
         }
     }
@@ -85,9 +85,9 @@ public without sharing class PDFESignatureCommandProcessor {
             return;
         }
         env.Envelope_Status__c = 'Declined';
-        env.Decline_Reason__c = PDFESignatureUtil.stringValue(payload.get('declineReason'));
+        env.Decline_Reason__c = ESignatureUtil.stringValue(payload.get('declineReason'));
         update env;
-        PDFESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
+        ESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
         audit(env, 'Declined', payload, env.Decline_Reason__c);
     }
 
@@ -101,25 +101,25 @@ public without sharing class PDFESignatureCommandProcessor {
             return;
         }
 
-        String delegateEmail = trimToNull(PDFESignatureUtil.stringValue(payload.get('delegateEmail')));
-        String delegateName = trimToNull(PDFESignatureUtil.stringValue(payload.get('delegateName')));
-        String delegateMessage = trimToNull(PDFESignatureUtil.stringValue(payload.get('delegateMessage')));
+        String delegateEmail = trimToNull(ESignatureUtil.stringValue(payload.get('delegateEmail')));
+        String delegateName = trimToNull(ESignatureUtil.stringValue(payload.get('delegateName')));
+        String delegateMessage = trimToNull(ESignatureUtil.stringValue(payload.get('delegateMessage')));
         if (!isValidEmail(delegateEmail)) {
-            throw new PDFESignatureUtil.AppException('Enter a valid delegate email address.');
+            throw new ESignatureUtil.AppException('Enter a valid delegate email address.');
         }
         if (String.isBlank(delegateName)) {
-            throw new PDFESignatureUtil.AppException('Delegate name is required.');
+            throw new ESignatureUtil.AppException('Delegate name is required.');
         }
         if (String.isBlank(delegateMessage)) {
-            throw new PDFESignatureUtil.AppException('A message is required when delegating this agreement.');
+            throw new ESignatureUtil.AppException('A message is required when delegating this agreement.');
         }
 
         String previousSignerEmail = env.Signer_Email__c;
         String previousSignerName = env.Signer_Name__c;
-        String newToken = PDFESignatureUtil.generateToken();
-        String signingUrl = PDFESignatureUtil.buildSigningUrl(newToken);
+        String newToken = ESignatureUtil.generateToken();
+        String signingUrl = ESignatureUtil.buildSigningUrl(newToken);
 
-        env.Secure_Token_Hash__c = PDFESignatureUtil.hashToken(newToken);
+        env.Secure_Token_Hash__c = ESignatureUtil.hashToken(newToken);
         env.Signer_Name__c = delegateName;
         env.Signer_Email__c = delegateEmail;
         env.Signer_Title__c = null;
@@ -129,7 +129,7 @@ public without sharing class PDFESignatureCommandProcessor {
         env.Public_Signing_URL__c = signingUrl;
         env.Error_Message__c = null;
         update env;
-        PDFESignatureUtil.updateSourceFileESignatureStatus(env, 'Sent');
+        ESignatureUtil.updateSourceFileESignatureStatus(env, 'Sent');
 
         sendDelegateEmail(env, signingUrl, delegateMessage, previousSignerName, previousSignerEmail);
         String previousSigner = String.isBlank(previousSignerName) ? previousSignerEmail : previousSignerName + ' (' + previousSignerEmail + ')';
@@ -145,13 +145,13 @@ public without sharing class PDFESignatureCommandProcessor {
             handleExpired(env, payload);
             return;
         }
-        String typedName = trimToNull(PDFESignatureUtil.stringValue(payload.get('typedName')));
-        String signerTitle = trimToNull(PDFESignatureUtil.stringValue(payload.get('signerTitle')));
+        String typedName = trimToNull(ESignatureUtil.stringValue(payload.get('typedName')));
+        String signerTitle = trimToNull(ESignatureUtil.stringValue(payload.get('signerTitle')));
         if (String.isBlank(typedName)) {
-            throw new PDFESignatureUtil.AppException('Type your full legal name.');
+            throw new ESignatureUtil.AppException('Type your full legal name.');
         }
 
-        String signerFieldsJson = PDFESignatureUtil.stringValue(payload.get('signerFieldsJson'));
+        String signerFieldsJson = ESignatureUtil.stringValue(payload.get('signerFieldsJson'));
         SubmittedFieldResult fieldResult = applySubmittedFields(env, signerFieldsJson);
         if (String.isBlank(signerTitle)) {
             signerTitle = fieldResult.titleValue;
@@ -161,13 +161,13 @@ public without sharing class PDFESignatureCommandProcessor {
         env.Signer_Title__c = signerTitle;
         env.Signed_At__c = System.now();
         env.Envelope_Status__c = 'Finalizing';
-        env.Signature_Image_Data_Url__c = PDFESignatureUtil.stringValue(payload.get('signatureImageDataUrl'));
+        env.Signature_Image_Data_Url__c = ESignatureUtil.stringValue(payload.get('signatureImageDataUrl'));
         env.Signature_Method__c = String.isBlank(env.Signature_Image_Data_Url__c) ? 'Typed' : 'Drawn';
         env.Completed_Fields_JSON__c = signerFieldsJson;
         update env;
 
         audit(env, 'Signed', payload, 'Signer completed required fields and submitted signature.');
-        System.enqueueJob(new PDFESignatureFinalizeQueueable(env.Id));
+        System.enqueueJob(new ESignatureFinalizeQueueable(env.Id));
     }
 
     private static SubmittedFieldResult applySubmittedFields(ESignature_Envelope__c env, String signerFieldsJson) {
@@ -195,7 +195,7 @@ public without sharing class PDFESignatureCommandProcessor {
             }
         }
         if (!missing.isEmpty()) {
-            throw new PDFESignatureUtil.AppException('Complete required fields before signing: ' + String.join(missing, ', '));
+            throw new ESignatureUtil.AppException('Complete required fields before signing: ' + String.join(missing, ', '));
         }
         if (!fields.isEmpty()) {
             update fields;
@@ -209,9 +209,9 @@ public without sharing class PDFESignatureCommandProcessor {
             List<Object> rows = (List<Object>) JSON.deserializeUntyped(rawJson);
             for (Object item : rows) {
                 Map<String, Object> row = (Map<String, Object>) item;
-                Id fieldId = PDFESignatureUtil.safeId(PDFESignatureUtil.stringValue(row.get('id')));
+                Id fieldId = ESignatureUtil.safeId(ESignatureUtil.stringValue(row.get('id')));
                 if (fieldId != null) {
-                    submittedValues.put(fieldId, PDFESignatureUtil.stringValue(row.get('value')));
+                    submittedValues.put(fieldId, ESignatureUtil.stringValue(row.get('value')));
                 }
             }
         }
@@ -239,8 +239,8 @@ public without sharing class PDFESignatureCommandProcessor {
         evt.Occurred_At__c = System.now();
         evt.Actor_Email__c = env.Signer_Email__c;
         evt.Details__c = details;
-        evt.User_Agent__c = truncate(PDFESignatureUtil.stringValue(payload.get('userAgent')), 255);
-        evt.IP_Address__c = truncate(PDFESignatureUtil.stringValue(payload.get('ipAddress')), 80);
+        evt.User_Agent__c = truncate(ESignatureUtil.stringValue(payload.get('userAgent')), 255);
+        evt.IP_Address__c = truncate(ESignatureUtil.stringValue(payload.get('ipAddress')), 80);
         insert evt;
     }
 
@@ -254,8 +254,8 @@ public without sharing class PDFESignatureCommandProcessor {
         evt.Occurred_At__c = System.now();
         evt.Actor_Email__c = actorEmail;
         evt.Details__c = details;
-        evt.User_Agent__c = truncate(PDFESignatureUtil.stringValue(payload.get('userAgent')), 255);
-        evt.IP_Address__c = truncate(PDFESignatureUtil.stringValue(payload.get('ipAddress')), 80);
+        evt.User_Agent__c = truncate(ESignatureUtil.stringValue(payload.get('userAgent')), 255);
+        evt.IP_Address__c = truncate(ESignatureUtil.stringValue(payload.get('ipAddress')), 80);
         insert evt;
     }
 
@@ -297,21 +297,21 @@ public without sharing class PDFESignatureCommandProcessor {
     ) {
         Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
         message.setToAddresses(new List<String>{ env.Signer_Email__c });
-        String documentTitle = PDFESignatureUtil.getEnvelopeTitle(env);
+        String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
         String delegator = String.isBlank(previousSignerName) ? previousSignerEmail : previousSignerName;
-        String escapedMessage = PDFESignatureUtil.escapeHtml(delegateMessage)
+        String escapedMessage = ESignatureUtil.escapeHtml(delegateMessage)
             .replace('\r\n', '<br/>')
             .replace('\n', '<br/>')
             .replace('\r', '<br/>');
         message.setSubject('Signature delegated: ' + documentTitle);
         String body = ''
             + '<div style="font-family:Arial,sans-serif;font-size:15px;color:#111827;line-height:1.45">'
-            + '<p>Hello ' + PDFESignatureUtil.escapeHtml(env.Signer_Name__c) + ',</p>'
-            + '<p>' + PDFESignatureUtil.escapeHtml(delegator) + ' delegated <strong>' + PDFESignatureUtil.escapeHtml(documentTitle) + '</strong> to you for signature.</p>'
+            + '<p>Hello ' + ESignatureUtil.escapeHtml(env.Signer_Name__c) + ',</p>'
+            + '<p>' + ESignatureUtil.escapeHtml(delegator) + ' delegated <strong>' + ESignatureUtil.escapeHtml(documentTitle) + '</strong> to you for signature.</p>'
             + '<p><strong>Message:</strong><br/>' + escapedMessage + '</p>'
-            + '<p><a href="' + PDFESignatureUtil.escapeHtml(signingUrl) + '" style="display:inline-block;background:#1e51a4;color:#ffffff;padding:12px 18px;text-decoration:none;border-radius:6px;font-weight:bold">Review and Sign</a></p>'
+            + '<p><a href="' + ESignatureUtil.escapeHtml(signingUrl) + '" style="display:inline-block;background:#1e51a4;color:#ffffff;padding:12px 18px;text-decoration:none;border-radius:6px;font-weight:bold">Review and Sign</a></p>'
             + '<p>If the button does not work, copy and paste this link into your browser:<br/>'
-            + PDFESignatureUtil.escapeHtml(signingUrl) + '</p>'
+            + ESignatureUtil.escapeHtml(signingUrl) + '</p>'
             + '</div>';
         message.setHtmlBody(body);
         message.setSaveAsActivity(false);

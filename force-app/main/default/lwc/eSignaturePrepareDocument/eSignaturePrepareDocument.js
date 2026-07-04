@@ -1,12 +1,12 @@
 import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { loadScript } from 'lightning/platformResourceLoader';
-import PDF_JS from '@salesforce/resourceUrl/PDFESign_PdfJs';
+import PDF_JS from '@salesforce/resourceUrl/ESignature_PdfJs';
 
-import getRecordPdfFiles from '@salesforce/apex/PDFESignaturePrepareController.getRecordPdfFiles';
-import getPdfDocumentInfo from '@salesforce/apex/PDFESignaturePrepareController.getPdfDocumentInfo';
-import getPlacements from '@salesforce/apex/PDFESignaturePrepareController.getPlacements';
-import savePlacements from '@salesforce/apex/PDFESignaturePrepareController.savePlacements';
+import getRecordPdfFiles from '@salesforce/apex/ESignaturePrepareController.getRecordPdfFiles';
+import getPdfDocumentInfo from '@salesforce/apex/ESignaturePrepareController.getPdfDocumentInfo';
+import getPlacements from '@salesforce/apex/ESignaturePrepareController.getPlacements';
+import savePlacements from '@salesforce/apex/ESignaturePrepareController.savePlacements';
 
 const FIELD_TYPES = [
     { label: 'Signature', value: 'Signature', width: 0.28, height: 0.055, defaultRequired: true },

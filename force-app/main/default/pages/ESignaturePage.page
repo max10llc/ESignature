@@ -1,10 +1,10 @@
-<apex:page controller="PDFESignaturePageController" action="{!initializePage}" showHeader="false" sidebar="false" standardStylesheets="false" docType="html-5.0" applyHtmlTag="false" applyBodyTag="false">
+<apex:page controller="ESignaturePageController" action="{!initializePage}" showHeader="false" sidebar="false" standardStylesheets="false" docType="html-5.0" applyHtmlTag="false" applyBodyTag="false">
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Electronic Signature</title>
-    <script src="{!URLFOR($Resource.PDFESign_PdfJs, 'pdf.min.js')}"></script>
+    <script src="{!URLFOR($Resource.ESignature_PdfJs, 'pdf.min.js')}"></script>
     <style>
         html { height:100%; overflow:hidden; }
         body { height:100%; margin:0; overflow:hidden; font-family:Arial, sans-serif; background:#e8edf5; color:#111827; }
@@ -455,7 +455,7 @@
 var sitePrefix = '{!JSENCODE($Site.Prefix)}';
 if (!sitePrefix || sitePrefix === '/') { sitePrefix = ''; }
 var pdfToken = '{!JSENCODE(token)}';
-var pdfUrl = sitePrefix + '/services/apexrest/PDFESign/v1/pdf?t=' + encodeURIComponent(pdfToken);
+var pdfUrl = sitePrefix + '/services/apexrest/ESignature/v1/pdf?t=' + encodeURIComponent(pdfToken);
 var CHECKMARK_VALUE = '\u2713';
 var downloadFileName = '{!JSENCODE(documentDownloadFileName)}';
 if (!downloadFileName) { downloadFileName = 'document'; }
@@ -475,7 +475,7 @@ var signatureDialogMode = 'typed';
 var activeRequiredFieldId = null;
 
 if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '{!URLFOR($Resource.PDFESign_PdfJs, 'pdf.worker.min.js')}';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '{!URLFOR($Resource.ESignature_PdfJs, 'pdf.worker.min.js')}';
 }
 
 function setDownloadLinks() {

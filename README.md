@@ -11,7 +11,7 @@ Salesforce package for preparing PDF signature fields, sending a public signing 
    - `E-Signature Envelopes`
    - `E-Signature Fields`
    - `E-Signature Audit Events`
-5. Add `ContentVersion.E_Signature_File__c` and `ContentVersion.E_Signature_Status__c` to the Files UI if users need to flag source PDFs and see source file status.
+5. Add `ContentVersion.ESignature_File__c` and `ContentVersion.ESignature_Status__c` to the Files UI if users need to flag source PDFs and see source file status.
 
 ## Custom Metadata
 
@@ -39,7 +39,7 @@ Optional values:
 3. Configure the flow to call the Azure PDF finalizer function.
 4. Configure the flow's final callback step to POST to:
 
-   `/services/apexrest/PDFESign/v1/finalizer-callback`
+   `/services/apexrest/ESignature/v1/finalizer-callback`
 
 5. Include the shared secret in one of these places:
    - Preferred header: `X-PDF-ESignature-Secret`

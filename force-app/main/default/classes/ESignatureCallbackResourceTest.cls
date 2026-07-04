@@ -1,12 +1,12 @@
 @IsTest
-private class PDFESignatureCallbackResourceTest {
+private class ESignatureCallbackResourceTest {
     @IsTest
     static void postResultRequiresEnvelopeId() {
         setRestRequest(new Map<String, Object>{
             'success' => true
         });
 
-        PDFESignatureFinalizerCallbackResource.postResult();
+        ESignatureFinalizerCallbackResource.postResult();
 
         System.assertEquals(400, RestContext.response.statusCode);
         Map<String, Object> body = responseBody();
@@ -23,7 +23,7 @@ private class PDFESignatureCallbackResourceTest {
             'message' => 'Do not apply this callback.'
         }, false);
 
-        PDFESignatureFinalizerCallbackResource.postResult();
+        ESignatureFinalizerCallbackResource.postResult();
 
         System.assertEquals(401, RestContext.response.statusCode);
         Map<String, Object> body = responseBody();
@@ -47,7 +47,7 @@ private class PDFESignatureCallbackResourceTest {
             'message' => 'Finalizer failed during processing.'
         });
 
-        PDFESignatureFinalizerCallbackResource.postResult();
+        ESignatureFinalizerCallbackResource.postResult();
 
         System.assertEquals(200, RestContext.response.statusCode);
         env = [
@@ -76,7 +76,7 @@ private class PDFESignatureCallbackResourceTest {
             'message' => 'Callback finalized the PDF.'
         });
 
-        PDFESignatureFinalizerCallbackResource.postResult();
+        ESignatureFinalizerCallbackResource.postResult();
 
         System.assertEquals(200, RestContext.response.statusCode);
         env = [
@@ -105,10 +105,10 @@ private class PDFESignatureCallbackResourceTest {
 
     private static void setRestRequest(Map<String, Object> body, Boolean includeSecret) {
         RestRequest request = new RestRequest();
-        request.requestUri = '/services/apexrest/PDFESign/v1/finalizer-callback';
+        request.requestUri = '/services/apexrest/ESignature/v1/finalizer-callback';
         request.httpMethod = 'POST';
         request.requestBody = Blob.valueOf(JSON.serialize(body));
-        String secret = PDFESignatureUtil.getSettings().Finalizer_Callback_Secret__c;
+        String secret = ESignatureUtil.getSettings().Finalizer_Callback_Secret__c;
         if (includeSecret == true && !String.isBlank(secret)) {
             request.headers.put('X-PDF-ESignature-Secret', secret);
         }

@@ -1,5 +1,5 @@
 @IsTest
-private class PDFESignatureSendControllerTest {
+private class ESignatureSendControllerTest {
     private class DraftFixture {
         Id parentId;
         ESignature_Envelope__c envelope;
@@ -10,8 +10,8 @@ private class PDFESignatureSendControllerTest {
     static void getDraftEnvelopesReturnsCurrentDraftsWithRefreshKey() {
         DraftFixture fixture = createDraftFixture();
 
-        List<PDFESignatureSendController.EnvelopeDTO> drafts =
-            PDFESignatureSendController.getDraftEnvelopes(String.valueOf(fixture.parentId), 'first-refresh');
+        List<ESignatureSendController.EnvelopeDTO> drafts =
+            ESignatureSendController.getDraftEnvelopes(String.valueOf(fixture.parentId), 'first-refresh');
 
         System.assertEquals(1, drafts.size(), 'One draft envelope should be returned.');
         System.assertEquals(String.valueOf(fixture.envelope.Id), drafts[0].id);
@@ -25,7 +25,7 @@ private class PDFESignatureSendControllerTest {
         DraftFixture fixture = createDraftFixture();
 
         Test.startTest();
-        PDFESignatureSendController.SendResultDTO result = PDFESignatureSendController.sendEnvelope(
+        ESignatureSendController.SendResultDTO result = ESignatureSendController.sendEnvelope(
             String.valueOf(fixture.envelope.Id),
             'Derek Hawley',
             'signer@example.com',
@@ -36,7 +36,7 @@ private class PDFESignatureSendControllerTest {
 
         System.assertEquals(String.valueOf(fixture.envelope.Id), result.envelopeId);
         System.assertEquals('Sent', result.status);
-        System.assert(result.signingUrl.contains('/PDFESignaturePage?t='), 'Result should include a public signing URL.');
+        System.assert(result.signingUrl.contains('/ESignaturePage?t='), 'Result should include a public signing URL.');
 
         ESignature_Envelope__c env = [
             SELECT Envelope_Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
@@ -55,13 +55,13 @@ private class PDFESignatureSendControllerTest {
         System.assertEquals('Send Controller Source', env.Source_File_Title__c);
         System.assertEquals(fixture.field.Content_Version_Id__c, env.Source_ContentVersion_Id__c);
         System.assertEquals(fixture.field.Content_Document_Id__c, env.Source_ContentDocument_Id__c);
-        Id sourceVersionId = PDFESignatureUtil.safeId(fixture.field.Content_Version_Id__c);
+        Id sourceVersionId = ESignatureUtil.safeId(fixture.field.Content_Version_Id__c);
         ContentVersion sourceStatus = [
-            SELECT E_Signature_Status__c
+            SELECT ESignature_Status__c
             FROM ContentVersion
             WHERE Id = :sourceVersionId
         ];
-        System.assertEquals('Sent', sourceStatus.E_Signature_Status__c, 'Sending should stamp the source file status.');
+        System.assertEquals('Sent', sourceStatus.ESignature_Status__c, 'Sending should stamp the source file status.');
 
         System.assertEquals(1, [
             SELECT COUNT()
@@ -88,7 +88,7 @@ private class PDFESignatureSendControllerTest {
         insert env;
 
         try {
-            PDFESignatureSendController.sendEnvelope(String.valueOf(env.Id), 'Derek Hawley', 'signer@example.com', null, 30);
+            ESignatureSendController.sendEnvelope(String.valueOf(env.Id), 'Derek Hawley', 'signer@example.com', null, 30);
             System.assert(false, 'Expected sendEnvelope to reject a draft without fields.');
         } catch (AuraHandledException ex) {
             System.assertNotEquals(null, ex.getMessage(), 'An AuraHandledException should be thrown.');
@@ -102,9 +102,9 @@ private class PDFESignatureSendControllerTest {
             Expires_At__c = Datetime.newInstance(2026, 7, 27, 12, 0, 0)
         );
 
-        String html = PDFESignatureSendController.buildSignatureRequestEmailHtml(
+        String html = ESignatureSendController.buildSignatureRequestEmailHtml(
             env,
-            'https://example.com/signatures/apex/PDFESignaturePage?t=abc123',
+            'https://example.com/signatures/apex/ESignaturePage?t=abc123',
             'Special Services Agreement'
         );
 
@@ -118,7 +118,7 @@ private class PDFESignatureSendControllerTest {
         System.assert(html.contains('Special Services Agreement'), 'Email should include the document title block.');
         System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');
         System.assert(html.contains('This link is unique to you and will expire on'), 'Email should include the expiration notice.');
-        System.assert(html.contains('https://example.com/signatures/apex/PDFESignaturePage?t=abc123'), 'Email should include the fallback signing URL.');
+        System.assert(html.contains('https://example.com/signatures/apex/ESignaturePage?t=abc123'), 'Email should include the fallback signing URL.');
     }
 
     private static DraftFixture createDraftFixture() {
@@ -136,7 +136,7 @@ private class PDFESignatureSendControllerTest {
             Title = 'Send Controller Source',
             PathOnClient = 'Send Controller Source.pdf',
             VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF'),
-            E_Signature_File__c = true
+            ESignature_File__c = true
         );
         insert source;
         source = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];

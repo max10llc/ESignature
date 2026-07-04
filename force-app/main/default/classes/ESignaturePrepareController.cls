@@ -1,4 +1,4 @@
-public with sharing class PDFESignaturePrepareController {
+public with sharing class ESignaturePrepareController {
     public class RecordFileDTO {
         @AuraEnabled public String contentDocumentId;
         @AuraEnabled public String contentVersionId;
@@ -57,12 +57,12 @@ public with sharing class PDFESignaturePrepareController {
         }
         List<RecordFileDTO> output = new List<RecordFileDTO>();
         for (ContentVersion version : [
-            SELECT Id, ContentDocumentId, Title, FileExtension, ContentSize, CreatedDate, E_Signature_File__c
+            SELECT Id, ContentDocumentId, Title, FileExtension, ContentSize, CreatedDate, ESignature_File__c
             FROM ContentVersion
             WHERE ContentDocumentId IN :documentIds
             AND IsLatest = true
             AND FileExtension = 'pdf'
-            AND E_Signature_File__c = true
+            AND ESignature_File__c = true
             ORDER BY CreatedDate DESC
         ]) {
             RecordFileDTO row = new RecordFileDTO();
@@ -83,7 +83,7 @@ public with sharing class PDFESignaturePrepareController {
             throw new AuraHandledException('Content Document Id is required.');
         }
         List<ContentVersion> versions = [
-            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData, E_Signature_File__c
+            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData, ESignature_File__c
             FROM ContentVersion
             WHERE ContentDocumentId = :contentDocumentId
             AND IsLatest = true
@@ -96,7 +96,7 @@ public with sharing class PDFESignaturePrepareController {
         if (String.valueOf(version.FileExtension).toLowerCase() != 'pdf') {
             throw new AuraHandledException('Only PDF files can be prepared for signature.');
         }
-        if (version.E_Signature_File__c != true) {
+        if (version.ESignature_File__c != true) {
             throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
         }
         PdfInfoDTO info = new PdfInfoDTO();
@@ -104,7 +104,7 @@ public with sharing class PDFESignaturePrepareController {
         info.contentVersionId = version.Id;
         info.title = version.Title;
         info.fileExtension = version.FileExtension;
-        info.pageCount = Integer.valueOf(PDFESignatureUtil.estimatePageCount(version.VersionData));
+        info.pageCount = Integer.valueOf(ESignatureUtil.estimatePageCount(version.VersionData));
         return info;
     }
 
@@ -164,22 +164,22 @@ public with sharing class PDFESignaturePrepareController {
             throw new AuraHandledException('Content Document Id is required.');
         }
         ContentVersion version = [
-            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData, E_Signature_File__c
+            SELECT Id, ContentDocumentId, Title, FileExtension, VersionData, ESignature_File__c
             FROM ContentVersion
             WHERE Id = :contentVersionId
             LIMIT 1
         ];
-        Id requestedDocumentId = PDFESignatureUtil.safeId(contentDocumentId);
+        Id requestedDocumentId = ESignatureUtil.safeId(contentDocumentId);
         if (requestedDocumentId == null || version.ContentDocumentId != requestedDocumentId) {
             throw new AuraHandledException('Selected ContentVersion does not belong to the selected ContentDocument.');
         }
         if (String.valueOf(version.FileExtension).toLowerCase() != 'pdf') {
             throw new AuraHandledException('Only PDF files can be prepared for signature.');
         }
-        if (version.E_Signature_File__c != true) {
+        if (version.ESignature_File__c != true) {
             throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
         }
-        Integer pageCount = Integer.valueOf(PDFESignatureUtil.estimatePageCount(version.VersionData));
+        Integer pageCount = Integer.valueOf(ESignatureUtil.estimatePageCount(version.VersionData));
         List<ESignature_Envelope__c> envelopes = [
             SELECT Id, Envelope_Status__c
             FROM ESignature_Envelope__c
@@ -203,7 +203,7 @@ public with sharing class PDFESignaturePrepareController {
         } else {
             envelope = envelopes[0];
         }
-        PDFESignatureUtil.stampEnvelopeParent(envelope, parentRecordId);
+        ESignatureUtil.stampEnvelopeParent(envelope, parentRecordId);
         envelope.Page_Count__c = pageCount;
         envelope.Source_ContentVersion_Id__c = String.valueOf(version.Id);
         envelope.Source_ContentDocument_Id__c = String.valueOf(version.ContentDocumentId);
@@ -224,19 +224,19 @@ public with sharing class PDFESignaturePrepareController {
             field.Parent_Record_Id__c = parentRecordId;
             field.Content_Document_Id__c = contentDocumentId;
             field.Content_Version_Id__c = version.Id;
-            field.Field_Type__c = PDFESignatureUtil.stringValue(row.get('fieldType'));
-            field.Page_Number__c = PDFESignatureUtil.intValue(row.get('pageNumber'), 1);
-            field.X_Percent__c = PDFESignatureUtil.decimalValue(row.get('xPercent'), 0);
-            field.Y_Percent__c = PDFESignatureUtil.decimalValue(row.get('yPercent'), 0);
-            field.Width_Percent__c = PDFESignatureUtil.decimalValue(row.get('widthPercent'), 0.2);
-            field.Height_Percent__c = PDFESignatureUtil.decimalValue(row.get('heightPercent'), 0.04);
-            field.Signer_Number__c = PDFESignatureUtil.intValue(row.get('signerNumber'), 1);
-            field.Required__c = PDFESignatureUtil.boolValue(row.get('required'), true);
-            field.Label__c = PDFESignatureUtil.stringValue(row.get('label'));
-            field.Pdf_X__c = PDFESignatureUtil.decimalValue(row.get('pdfX'), field.X_Percent__c * 612);
-            field.Pdf_Y__c = PDFESignatureUtil.decimalValue(row.get('pdfY'), 792 - ((field.Y_Percent__c + field.Height_Percent__c) * 792));
-            field.Pdf_Width__c = PDFESignatureUtil.decimalValue(row.get('pdfWidth'), field.Width_Percent__c * 612);
-            field.Pdf_Height__c = PDFESignatureUtil.decimalValue(row.get('pdfHeight'), field.Height_Percent__c * 792);
+            field.Field_Type__c = ESignatureUtil.stringValue(row.get('fieldType'));
+            field.Page_Number__c = ESignatureUtil.intValue(row.get('pageNumber'), 1);
+            field.X_Percent__c = ESignatureUtil.decimalValue(row.get('xPercent'), 0);
+            field.Y_Percent__c = ESignatureUtil.decimalValue(row.get('yPercent'), 0);
+            field.Width_Percent__c = ESignatureUtil.decimalValue(row.get('widthPercent'), 0.2);
+            field.Height_Percent__c = ESignatureUtil.decimalValue(row.get('heightPercent'), 0.04);
+            field.Signer_Number__c = ESignatureUtil.intValue(row.get('signerNumber'), 1);
+            field.Required__c = ESignatureUtil.boolValue(row.get('required'), true);
+            field.Label__c = ESignatureUtil.stringValue(row.get('label'));
+            field.Pdf_X__c = ESignatureUtil.decimalValue(row.get('pdfX'), field.X_Percent__c * 612);
+            field.Pdf_Y__c = ESignatureUtil.decimalValue(row.get('pdfY'), 792 - ((field.Y_Percent__c + field.Height_Percent__c) * 792));
+            field.Pdf_Width__c = ESignatureUtil.decimalValue(row.get('pdfWidth'), field.Width_Percent__c * 612);
+            field.Pdf_Height__c = ESignatureUtil.decimalValue(row.get('pdfHeight'), field.Height_Percent__c * 792);
             field.Page_Width_Points__c = 612;
             field.Page_Height_Points__c = 792;
             field.Sequence__c = sequence;
@@ -246,7 +246,7 @@ public with sharing class PDFESignaturePrepareController {
         if (!fieldsToInsert.isEmpty()) {
             insert fieldsToInsert;
         }
-        PDFESignatureUtil.audit(envelope.Id, created ? 'Draft Created' : 'Fields Saved', UserInfo.getUserEmail(), 'Saved ' + fieldsToInsert.size() + ' prepared fields.');
+        ESignatureUtil.audit(envelope.Id, created ? 'Draft Created' : 'Fields Saved', UserInfo.getUserEmail(), 'Saved ' + fieldsToInsert.size() + ' prepared fields.');
 
         SaveResultDTO result = new SaveResultDTO();
         result.envelopeId = envelope.Id;

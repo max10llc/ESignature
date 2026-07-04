@@ -1,10 +1,10 @@
-@RestResource(urlMapping='/PDFESign/v1/pdf')
-global without sharing class PDFESignaturePdfResource {
+@RestResource(urlMapping='/ESignature/v1/pdf')
+global without sharing class ESignaturePdfResource {
     @HttpGet
     global static void getPdf() {
         RestResponse response = RestContext.response;
         String token = RestContext.request.params.get('t');
-        ESignature_Envelope__c env = PDFESignatureUtil.findEnvelopeByToken(token);
+        ESignature_Envelope__c env = ESignatureUtil.findEnvelopeByToken(token);
         if (env == null) {
             response.statusCode = 404;
             response.responseBody = Blob.valueOf('Document not found.');
@@ -33,9 +33,9 @@ global without sharing class PDFESignaturePdfResource {
             response.responseBody = Blob.valueOf('This document has already been cancelled.');
             return;
         }
-        Blob pdfData = PDFESignatureUtil.getCachedSourcePdfBlob(env.Id);
+        Blob pdfData = ESignatureUtil.getCachedSourcePdfBlob(env.Id);
         if (pdfData == null) {
-            ContentVersion source = PDFESignatureUtil.getLatestSourceVersion(env, true);
+            ContentVersion source = ESignatureUtil.getLatestSourceVersion(env, true);
             if (source != null) {
                 pdfData = source.VersionData;
             }
@@ -49,7 +49,7 @@ global without sharing class PDFESignaturePdfResource {
         response.statusCode = 200;
         response.addHeader('Content-Type', 'application/pdf');
         response.addHeader('Cache-Control', 'private, no-store, no-cache, max-age=0');
-        response.addHeader('Content-Disposition', 'inline; filename="' + pdfFileName(PDFESignatureUtil.getEnvelopeTitle(env)) + '"');
+        response.addHeader('Content-Disposition', 'inline; filename="' + pdfFileName(ESignatureUtil.getEnvelopeTitle(env)) + '"');
         response.responseBody = pdfData;
     }
 
@@ -74,7 +74,7 @@ global without sharing class PDFESignaturePdfResource {
         if (env == null) {
             return false;
         }
-        if (!String.isBlank(PDFESignatureUtil.stringValue(env.Decline_Reason__c))) {
+        if (!String.isBlank(ESignatureUtil.stringValue(env.Decline_Reason__c))) {
             return true;
         }
         String status = normalizedEnvelopeStatus(env);
@@ -87,7 +87,7 @@ global without sharing class PDFESignaturePdfResource {
         if (env == null) {
             return '';
         }
-        String status = PDFESignatureUtil.stringValue(env.Envelope_Status__c);
+        String status = ESignatureUtil.stringValue(env.Envelope_Status__c);
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 

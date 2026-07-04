@@ -1,27 +1,27 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
-        <members>PDFESignatureAuditReportBuilder</members>
-        <members>PDFESignatureAuditReportBuilderTest</members>
-        <members>PDFESignatureFinalizeQueueable</members>
-        <members>PDFESignatureFinalizeQueueableTest</members>
-        <members>PDFESignatureFinalizerCallbackResource</members>
-        <members>PDFESignatureCallbackResourceTest</members>
-        <members>PDFESignatureFinalizerService</members>
-        <members>PDFESignatureCommandProcessor</members>
-        <members>PDFESignatureCommandTriggerTest</members>
-        <members>PDFESignatureOverlayBuilder</members>
-        <members>PDFESignatureOverlayBuilderTest</members>
-        <members>PDFESignaturePageController</members>
-        <members>PDFESignaturePageControllerTest</members>
-        <members>PDFESignaturePdfResource</members>
-        <members>PDFESignaturePdfResourceTest</members>
-        <members>PDFESignaturePrepareController</members>
-        <members>PDFESignaturePrepareControllerTest</members>
-        <members>PDFESignatureSendController</members>
-        <members>PDFESignatureSendControllerTest</members>
-        <members>PDFESignatureUtil</members>
-        <members>PDFESignatureUtilTest</members>
+        <members>ESignatureAuditReportBuilder</members>
+        <members>ESignatureAuditReportBuilderTest</members>
+        <members>ESignatureFinalizeQueueable</members>
+        <members>ESignatureFinalizeQueueableTest</members>
+        <members>ESignatureFinalizerCallbackResource</members>
+        <members>ESignatureCallbackResourceTest</members>
+        <members>ESignatureFinalizerService</members>
+        <members>ESignatureCommandProcessor</members>
+        <members>ESignatureCommandTriggerTest</members>
+        <members>ESignatureOverlayBuilder</members>
+        <members>ESignatureOverlayBuilderTest</members>
+        <members>ESignaturePageController</members>
+        <members>ESignaturePageControllerTest</members>
+        <members>ESignaturePdfResource</members>
+        <members>ESignaturePdfResourceTest</members>
+        <members>ESignaturePrepareController</members>
+        <members>ESignaturePrepareControllerTest</members>
+        <members>ESignatureSendController</members>
+        <members>ESignatureSendControllerTest</members>
+        <members>ESignatureUtil</members>
+        <members>ESignatureUtilTest</members>
         <name>ApexClass</name>
     </types>
     <types>
@@ -29,7 +29,7 @@
         <name>ApexTrigger</name>
     </types>
     <types>
-        <members>PDFESignaturePage</members>
+        <members>ESignaturePage</members>
         <name>ApexPage</name>
     </types>
     <types>
@@ -42,8 +42,8 @@
         <name>CustomObject</name>
     </types>
     <types>
-        <members>ContentVersion.E_Signature_File__c</members>
-        <members>ContentVersion.E_Signature_Status__c</members>
+        <members>ContentVersion.ESignature_File__c</members>
+        <members>ContentVersion.ESignature_Status__c</members>
         <members>ESignature_Command__e.Action__c</members>
         <members>ESignature_Command__e.Actor_Email__c</members>
         <members>ESignature_Command__e.Envelope_Id__c</members>
@@ -132,8 +132,8 @@
         <name>CustomMetadata</name>
     </types>
     <types>
-        <members>pdfESignPrepareDocument</members>
-        <members>pdfESignSendEnvelope</members>
+        <members>eSignaturePrepareDocument</members>
+        <members>eSignatureSendEnvelope</members>
         <name>LightningComponentBundle</name>
     </types>
     <types>
@@ -152,7 +152,7 @@
         <members>Document_Completed_Icon</members>
         <members>Document_Locked_Icon</members>
         <members>Options_Button</members>
-        <members>PDFESign_PdfJs</members>
+        <members>ESignature_PdfJs</members>
         <name>StaticResource</name>
     </types>
     <types>
@@ -169,7 +169,7 @@
         <name>Layout</name>
     </types>
     <types>
-        <members>Prepare_E_Signature_Document</members>
+        <members>Prepare_ESignature_Document</members>
         <name>Flow</name>
     </types>
     <types>

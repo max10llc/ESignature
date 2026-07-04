@@ -1,5 +1,5 @@
 @IsTest
-private class PDFESignaturePageControllerTest {
+private class ESignaturePageControllerTest {
     @IsTest
     static void signBlocksWhenRequiredFieldIsMissing() {
         String token = 'page-required-field-token';
@@ -7,7 +7,7 @@ private class PDFESignaturePageControllerTest {
         insertRequiredField(env.Id, 'Required Text');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
         controller.continueAfterDisclosure();
         controller.typedName = 'Derek Hawley';
         controller.signerTitle = 'President';
@@ -26,7 +26,7 @@ private class PDFESignaturePageControllerTest {
         ESignature_Field__c field = insertRequiredField(env.Id, 'Required Text');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
         System.assertEquals(true, controller.getCanSign(), 'Envelope should be available for signing.');
         System.assert(controller.getFieldsJson().contains('Required Text'), 'Prepared fields should be exposed to the page.');
 
@@ -51,7 +51,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Viewed');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         Test.startTest();
         controller.declineDisclosure();
@@ -67,7 +67,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Viewed');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         controller.decline();
         System.assertEquals(false, controller.submitted, 'Decline should not submit without a reason.');
@@ -94,7 +94,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Viewed');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         controller.delegateAgreement();
         System.assertEquals(false, controller.submitted, 'Delegate should not submit without an email.');
@@ -116,7 +116,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Viewed');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
         controller.delegateEmail = 'delegate@example.com';
         controller.delegateName = 'Delegate Signer';
         controller.delegateMessage = 'Please sign this for me.';
@@ -134,7 +134,7 @@ private class PDFESignaturePageControllerTest {
     static void invalidTokenShowsError() {
         setSigningPageToken('not-a-real-token');
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.hasError, 'Invalid token should show an error.');
         System.assertEquals(false, controller.getCanSign(), 'Invalid token should not be signable.');
@@ -150,7 +150,7 @@ private class PDFESignaturePageControllerTest {
         update env;
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
         controller.initializePage();
 
         System.assertEquals(true, controller.hasError, 'Expired token should show an error.');
@@ -164,7 +164,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Signed');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.submitted, 'Already signed envelope should render as submitted.');
         System.assertEquals('This document has already been completed.', controller.pageMessage);
@@ -179,7 +179,7 @@ private class PDFESignaturePageControllerTest {
         update env;
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.submitted, 'Signed envelopes should stay closed even if finalization is in Error.');
         System.assertEquals('This document has already been completed.', controller.pageMessage);
@@ -192,7 +192,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Completed');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.submitted, 'Completed envelopes should render as submitted.');
         System.assertEquals('This document has already been completed.', controller.pageMessage);
@@ -211,7 +211,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Declined');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.submitted, 'Declined envelopes should render as submitted.');
         System.assertEquals('This document has already been declined.', controller.pageMessage);
@@ -226,7 +226,7 @@ private class PDFESignaturePageControllerTest {
         update env;
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.submitted, 'Envelope with a decline reason should render as declined.');
         System.assertEquals('This document has already been declined.', controller.pageMessage);
@@ -241,7 +241,7 @@ private class PDFESignaturePageControllerTest {
         update env;
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals('Customer Agreement Final.pdf', controller.getDocumentDownloadFileName());
         System.assertEquals('Customer Agreement Final', controller.getDocumentTitle());
@@ -255,7 +255,7 @@ private class PDFESignaturePageControllerTest {
         update env;
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(UserInfo.getName(), controller.getSenderDisplayName(), 'Sender panel should show the Salesforce user who sent the envelope.');
         System.assert(controller.getSignerIntroText().contains(UserInfo.getName()), 'Intro text should include the sender name.');
@@ -268,7 +268,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, 'Viewed');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
         controller.sign();
         System.assert(hasMessageContaining('agree to sign electronically'), 'Consent should be required first.');
 
@@ -292,7 +292,7 @@ private class PDFESignaturePageControllerTest {
         ESignature_Field__c field = insertRequiredTitleField(env.Id, 'Signer Title');
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
         controller.continueAfterDisclosure();
         controller.typedName = 'Derek Hawley';
         controller.signerTitle = '';
@@ -310,7 +310,7 @@ private class PDFESignaturePageControllerTest {
     private static ESignature_Envelope__c createEnvelope(String token, String status) {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = status,
-            Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
+            Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Name__c = 'Derek Hawley',
             Signer_Email__c = 'signer@example.com',
             Signer_Title__c = 'President',
@@ -324,7 +324,7 @@ private class PDFESignaturePageControllerTest {
         createEnvelope(token, status);
         setSigningPageToken(token);
 
-        PDFESignaturePageController controller = new PDFESignaturePageController();
+        ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.submitted, status + ' envelopes should render as submitted.');
         System.assertEquals('This document has already been cancelled.', controller.pageMessage);
@@ -358,7 +358,7 @@ private class PDFESignaturePageControllerTest {
     }
 
     private static void setSigningPageToken(String token) {
-        Test.setCurrentPage(Page.PDFESignaturePage);
+        Test.setCurrentPage(Page.ESignaturePage);
         ApexPages.currentPage().getParameters().put('t', token);
     }
 

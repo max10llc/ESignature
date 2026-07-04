@@ -1,4 +1,4 @@
-public without sharing class PDFESignatureAuditReportBuilder {
+public without sharing class ESignatureAuditReportBuilder {
     private static final Decimal PAGE_WIDTH = 612;
     private static final Decimal PAGE_HEIGHT = 792;
     private static final String AUDIT_DATE_FORMAT = 'MM-dd-yyyy';
@@ -68,7 +68,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
 
     public static Blob buildAuditReportPdf(Id envelopeId, String sourceTitle) {
         if (envelopeId == null) {
-            throw new PDFESignatureUtil.AppException('Envelope Id is required to build the final audit report.');
+            throw new ESignatureUtil.AppException('Envelope Id is required to build the final audit report.');
         }
         ESignature_Envelope__c env = loadEnvelope(envelopeId);
         List<ESignature_Audit_Event__c> events = loadAuditEvents(envelopeId);
@@ -90,7 +90,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
             LIMIT 1
         ];
         if (rows.isEmpty()) {
-            throw new PDFESignatureUtil.AppException('Envelope not found for final audit report.');
+            throw new ESignatureUtil.AppException('Envelope not found for final audit report.');
         }
         return rows[0];
     }
@@ -145,7 +145,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
             'Document created',
             'Created by ' + nullToBlank(senderEmail),
             formatDateTime(env.CreatedDate, auditTimeZoneSid),
-            'Source: Salesforce PDF E-Signature'
+            'Source: Salesforce E-Signature'
         );
         addEventRows(
             rows,
@@ -359,7 +359,7 @@ public without sharing class PDFESignatureAuditReportBuilder {
 
     private static Boolean isFinalPdfSecured() {
         try {
-            ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+            ESignature_Setting__mdt settings = ESignatureUtil.getSettings();
             return settings != null
                 && (settings.Restrict_Editing__c == true
                     || settings.Restrict_Copying__c == true

@@ -1,7 +1,7 @@
-public without sharing class PDFESignatureFinalizeQueueable implements Queueable, Database.AllowsCallouts {
+public without sharing class ESignatureFinalizeQueueable implements Queueable, Database.AllowsCallouts {
     private Id envelopeId;
 
-    public PDFESignatureFinalizeQueueable(Id envelopeId) {
+    public ESignatureFinalizeQueueable(Id envelopeId) {
         this.envelopeId = envelopeId;
     }
 
@@ -16,17 +16,17 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
             LIMIT 1
         ];
         try {
-            ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+            ESignature_Setting__mdt settings = ESignatureUtil.getSettings();
             String namedCredential = String.isBlank(settings.Finalizer_Named_Credential__c)
-                ? 'PDFESign_PowerAutomateFinalizer'
+                ? 'ESignature_PowerAutomateFinalizer'
                 : settings.Finalizer_Named_Credential__c.trim();
-            ContentVersion source = PDFESignatureUtil.getLatestSourceVersion(env, true);
+            ContentVersion source = ESignatureUtil.getLatestSourceVersion(env, true);
             if (source == null) {
-                throw new PDFESignatureUtil.AppException('Source PDF not found for envelope ' + env.Id + '.');
+                throw new ESignatureUtil.AppException('Source PDF not found for envelope ' + env.Id + '.');
             }
             Map<String, Object> payload = buildPayload(env, source, settings);
-            finalizerDebugContext = PDFESignatureUtil.stringValue(payload.get('finalizerDebugText'));
-            System.debug(LoggingLevel.INFO, 'PDF E-Signature finalizer request for envelope ' + env.Id + ': ' + finalizerDebugContext);
+            finalizerDebugContext = ESignatureUtil.stringValue(payload.get('finalizerDebugText'));
+            System.debug(LoggingLevel.INFO, 'E-Signature finalizer request for envelope ' + env.Id + ': ' + finalizerDebugContext);
 
             HttpRequest request = new HttpRequest();
             request.setMethod('POST');
@@ -38,36 +38,36 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
             HttpResponse response = new Http().send(request);
             Integer statusCode = response.getStatusCode();
             if (statusCode < 200 || statusCode >= 300) {
-                throw new PDFESignatureUtil.AppException('Power Automate finalizer returned HTTP ' + statusCode + ': ' + response.getBody());
+                throw new ESignatureUtil.AppException('Power Automate finalizer returned HTTP ' + statusCode + ': ' + response.getBody());
             }
 
             Map<String, Object> body = parseResponseBody(response.getBody());
-            Boolean success = PDFESignatureUtil.boolValue(body.get('success'), true);
+            Boolean success = ESignatureUtil.boolValue(body.get('success'), true);
             if (!success) {
-                throw new PDFESignatureUtil.AppException(PDFESignatureUtil.firstNonBlank(new List<String>{
-                    PDFESignatureUtil.stringValue(body.get('message')),
+                throw new ESignatureUtil.AppException(ESignatureUtil.firstNonBlank(new List<String>{
+                    ESignatureUtil.stringValue(body.get('message')),
                     'Power Automate finalizer reported success=false.'
                 }));
             }
 
-            String finalPdfBase64 = normalizeReturnedPdfBase64(PDFESignatureUtil.stringValue(body.get('finalPdfBase64')));
+            String finalPdfBase64 = normalizeReturnedPdfBase64(ESignatureUtil.stringValue(body.get('finalPdfBase64')));
             if (String.isBlank(finalPdfBase64)) {
-                throw new PDFESignatureUtil.AppException(
+                throw new ESignatureUtil.AppException(
                     'Power Automate synchronous finalizer response did not include finalPdfBase64. '
                     + 'The PDF-first finalizer requires finalPdfBase64 in the initial HTTP response. '
                     + responseKeySummary(body)
                 );
             }
 
-            String completionMessage = PDFESignatureUtil.firstNonBlank(new List<String>{
-                PDFESignatureUtil.stringValue(body.get('message')),
+            String completionMessage = ESignatureUtil.firstNonBlank(new List<String>{
+                ESignatureUtil.stringValue(body.get('message')),
                 'Final signed PDF was created.'
             });
             completionMessage = appendDebugSummary(completionMessage, finalizerDebugContext);
-            PDFESignatureFinalizerService.completeWithBase64(
+            ESignatureFinalizerService.completeWithBase64(
                 env.Id,
                 finalPdfBase64,
-                PDFESignatureUtil.stringValue(body.get('fileName')),
+                ESignatureUtil.stringValue(body.get('fileName')),
                 completionMessage
             );
         } catch (Exception e) {
@@ -75,7 +75,7 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
             if (!String.isBlank(finalizerDebugContext)) {
                 errorMessage += '\nFinalizer debug: ' + finalizerDebugContext;
             }
-            PDFESignatureFinalizerService.markError(env.Id, errorMessage);
+            ESignatureFinalizerService.markError(env.Id, errorMessage);
         }
     }
 
@@ -92,7 +92,7 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
             payload.put('sourcePdfBase64', EncodingUtil.base64Encode(source.VersionData));
         }
         payload.put('finalFileName', source.Title + ' - signed.pdf');
-        String auditReportPdfBase64 = PDFESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, source.Title);
+        String auditReportPdfBase64 = ESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, source.Title);
         payload.put('appendAuditReport', true);
         payload.put('auditReportPdfBase64', auditReportPdfBase64);
         payload.put('certificatePdfBase64', auditReportPdfBase64);
@@ -107,12 +107,12 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
         payload.put('pageWidth', 612);
         payload.put('pageHeight', 792);
 
-        List<Map<String, Object>> stampOverlays = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
-        Map<String, Object> overlayDebug = PDFESignatureOverlayBuilder.buildOverlayDebugInfo(stampOverlays);
+        List<Map<String, Object>> stampOverlays = ESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        Map<String, Object> overlayDebug = ESignatureOverlayBuilder.buildOverlayDebugInfo(stampOverlays);
         overlayDebug.put('auditReportIncluded', true);
         overlayDebug.put('auditReportBase64Length', auditReportPdfBase64 == null ? 0 : auditReportPdfBase64.length());
         String overlayDebugText = 'stampOverlays=' + String.valueOf(overlayDebug.get('stampOverlayCount'))
-            + '; pages=' + PDFESignatureUtil.stringValue(overlayDebug.get('stampOverlayPagesText'))
+            + '; pages=' + ESignatureUtil.stringValue(overlayDebug.get('stampOverlayPagesText'))
             + '; sourceContentVersionId=' + String.valueOf(source.Id)
             + '; sourceContentDocumentId=' + String.valueOf(source.ContentDocumentId)
             + '; auditReport=true';
@@ -124,7 +124,7 @@ public without sharing class PDFESignatureFinalizeQueueable implements Queueable
         payload.put('finalizerDebugText', overlayDebugText);
 
         Map<String, Object> callback = new Map<String, Object>();
-        callback.put('url', PDFESignatureUtil.buildFinalizerCallbackUrl(settings));
+        callback.put('url', ESignatureUtil.buildFinalizerCallbackUrl(settings));
         callback.put('secret', settings.Finalizer_Callback_Secret__c);
         callback.put('headerName', 'X-PDF-ESignature-Secret');
         callback.put('mode', String.isBlank(settings.Finalizer_Mode__c) ? 'PowerAutomateSync' : settings.Finalizer_Mode__c);

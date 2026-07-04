@@ -5,7 +5,7 @@
       "default": true
     }
   ],
-  "name": "pdf-first-esignature-powerautomate-finalizer",
+  "name": "esignature-powerautomate-finalizer",
   "namespace": "",
   "sfdcLoginUrl": "https://login.salesforce.com",
   "sourceApiVersion": "67.0"

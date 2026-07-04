@@ -159,8 +159,8 @@
         <allowFinish>true</allowFinish>
         <allowPause>true</allowPause>
         <fields>
-            <name>PDF_ESignature_Prepare_Document</name>
-            <extensionName>c:pdfESignPrepareDocument</extensionName>
+            <name>ESignature_Prepare_Document</name>
+            <extensionName>c:eSignaturePrepareDocument</extensionName>
             <fieldType>ComponentInstance</fieldType>
             <inputParameters>
                 <name>contentDocumentId</name>

@@ -1,11 +1,11 @@
 @IsTest
-private class PDFESignaturePdfResourceTest {
+private class ESignaturePdfResourceTest {
     @IsTest
     static void getPdfUsesSalesforceDocumentTitleAsFilename() {
         String token = 'pdf-resource-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
-            Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
+            Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Name__c = 'Derek Hawley',
             Signer_Email__c = 'signer@example.com',
             Signer_Title__c = 'President'
@@ -38,13 +38,13 @@ private class PDFESignaturePdfResourceTest {
         );
 
         RestRequest request = new RestRequest();
-        request.requestUri = '/services/apexrest/PDFESign/v1/pdf';
+        request.requestUri = '/services/apexrest/ESignature/v1/pdf';
         request.httpMethod = 'GET';
         request.params.put('t', token);
         RestContext.request = request;
         RestContext.response = new RestResponse();
 
-        PDFESignaturePdfResource.getPdf();
+        ESignaturePdfResource.getPdf();
 
         System.assertEquals(200, RestContext.response.statusCode);
         System.assertEquals('inline; filename="Salesforce Saved Document.pdf"', RestContext.response.headers.get('Content-Disposition'));
@@ -56,7 +56,7 @@ private class PDFESignaturePdfResourceTest {
     static void getPdfReturnsNotFoundForInvalidToken() {
         setRestRequest('missing-token');
 
-        PDFESignaturePdfResource.getPdf();
+        ESignaturePdfResource.getPdf();
 
         System.assertEquals(404, RestContext.response.statusCode);
         System.assertEquals('Document not found.', RestContext.response.responseBody.toString());
@@ -67,14 +67,14 @@ private class PDFESignaturePdfResourceTest {
         String token = 'pdf-resource-expired-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
-            Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
+            Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com',
             Expires_At__c = System.now().addMinutes(-5)
         );
         insert env;
         setRestRequest(token);
 
-        PDFESignaturePdfResource.getPdf();
+        ESignaturePdfResource.getPdf();
 
         System.assertEquals(403, RestContext.response.statusCode);
         System.assertEquals('This signing link has expired.', RestContext.response.responseBody.toString());
@@ -85,14 +85,14 @@ private class PDFESignaturePdfResourceTest {
         String token = 'pdf-resource-completed-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Signed',
-            Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
+            Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com',
             Signed_At__c = System.now()
         );
         insert env;
         setRestRequest(token);
 
-        PDFESignaturePdfResource.getPdf();
+        ESignaturePdfResource.getPdf();
 
         System.assertEquals(410, RestContext.response.statusCode);
         System.assertEquals('text/plain; charset=UTF-8', RestContext.response.headers.get('Content-Type'));
@@ -104,13 +104,13 @@ private class PDFESignaturePdfResourceTest {
         String token = 'pdf-resource-cancelled-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Canceled',
-            Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
+            Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com'
         );
         insert env;
         setRestRequest(token);
 
-        PDFESignaturePdfResource.getPdf();
+        ESignaturePdfResource.getPdf();
 
         System.assertEquals(410, RestContext.response.statusCode);
         System.assertEquals('text/plain; charset=UTF-8', RestContext.response.headers.get('Content-Type'));
@@ -122,14 +122,14 @@ private class PDFESignaturePdfResourceTest {
         String token = 'pdf-resource-declined-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
-            Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
+            Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com',
             Decline_Reason__c = 'Signer declined from prompt.'
         );
         insert env;
         setRestRequest(token);
 
-        PDFESignaturePdfResource.getPdf();
+        ESignaturePdfResource.getPdf();
 
         System.assertEquals(410, RestContext.response.statusCode);
         System.assertEquals('text/plain; charset=UTF-8', RestContext.response.headers.get('Content-Type'));
@@ -141,13 +141,13 @@ private class PDFESignaturePdfResourceTest {
         String token = 'pdf-resource-no-source-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
-            Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token),
+            Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com'
         );
         insert env;
         setRestRequest(token);
 
-        PDFESignaturePdfResource.getPdf();
+        ESignaturePdfResource.getPdf();
 
         System.assertEquals(404, RestContext.response.statusCode);
         System.assertEquals('text/plain; charset=UTF-8', RestContext.response.headers.get('Content-Type'));
@@ -156,7 +156,7 @@ private class PDFESignaturePdfResourceTest {
 
     private static void setRestRequest(String token) {
         RestRequest request = new RestRequest();
-        request.requestUri = '/services/apexrest/PDFESign/v1/pdf';
+        request.requestUri = '/services/apexrest/ESignature/v1/pdf';
         request.httpMethod = 'GET';
         request.params.put('t', token);
         RestContext.request = request;

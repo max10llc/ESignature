@@ -1045,7 +1045,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>flowName</name>
-                    <value>Prepare_E_Signature_Document</value>
+                    <value>Prepare_ESignature_Document</value>
                 </componentInstanceProperties>
                 <componentName>flowruntime:interview</componentName>
                 <identifier>flowruntime_interview_esign</identifier>
@@ -1053,8 +1053,8 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>pdfESignSendEnvelope</componentName>
-                <identifier>c_pdfESignSendEnvelope</identifier>
+                <componentName>eSignatureSendEnvelope</componentName>
+                <identifier>c_eSignatureSendEnvelope</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
@@ -1065,7 +1065,7 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListApiName</name>
-                    <value>E_Signature_Opportunity_Envelopes__r</value>
+                    <value>ESignature_Opportunity_Envelopes__r</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>relatedListComponentOverride</name>

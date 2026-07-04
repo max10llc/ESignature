@@ -1,4 +1,4 @@
-public without sharing class PDFESignaturePageController {
+public without sharing class ESignaturePageController {
     public String token { get; private set; }
     public ESignature_Envelope__c envelope { get; private set; }
     public String typedName { get; set; }
@@ -17,7 +17,7 @@ public without sharing class PDFESignaturePageController {
     public Boolean hasError { get; private set; }
     public Boolean submitted { get; private set; }
 
-    public PDFESignaturePageController() {
+    public ESignaturePageController() {
         hasError = false;
         submitted = false;
         consent = false;
@@ -59,7 +59,7 @@ public without sharing class PDFESignaturePageController {
     }
 
     private void loadEnvelope() {
-        envelope = PDFESignatureUtil.findEnvelopeByToken(token);
+        envelope = ESignatureUtil.findEnvelopeByToken(token);
         if (envelope == null) {
             hasError = true;
             pageMessage = 'This signing link is invalid or no longer available.';
@@ -116,11 +116,11 @@ public without sharing class PDFESignaturePageController {
     }
 
     public String getDocumentTitle() {
-        return PDFESignatureUtil.getEnvelopeTitle(envelope);
+        return ESignatureUtil.getEnvelopeTitle(envelope);
     }
 
     public String getDocumentDownloadFileName() {
-        return pdfFileName(PDFESignatureUtil.getEnvelopeTitle(envelope));
+        return pdfFileName(ESignatureUtil.getEnvelopeTitle(envelope));
     }
 
     public String getSignerLabel() {
@@ -160,7 +160,7 @@ public without sharing class PDFESignaturePageController {
     }
 
     public String getPdfUrl() {
-        return PDFESignatureUtil.buildPdfResourceUrl(token);
+        return ESignatureUtil.buildPdfResourceUrl(token);
     }
 
     public String getFieldsJson() {
@@ -337,7 +337,7 @@ public without sharing class PDFESignaturePageController {
             }
         }
         if (!missing.isEmpty()) {
-            throw new PDFESignatureUtil.AppException('Complete required fields before signing: ' + String.join(missing, ', '));
+            throw new ESignatureUtil.AppException('Complete required fields before signing: ' + String.join(missing, ', '));
         }
     }
 
@@ -347,9 +347,9 @@ public without sharing class PDFESignaturePageController {
             List<Object> rows = (List<Object>) JSON.deserializeUntyped(rawJson);
             for (Object item : rows) {
                 Map<String, Object> row = (Map<String, Object>) item;
-                Id fieldId = PDFESignatureUtil.safeId(PDFESignatureUtil.stringValue(row.get('id')));
+                Id fieldId = ESignatureUtil.safeId(ESignatureUtil.stringValue(row.get('id')));
                 if (fieldId != null) {
-                    submittedValues.put(fieldId, PDFESignatureUtil.stringValue(row.get('value')));
+                    submittedValues.put(fieldId, ESignatureUtil.stringValue(row.get('value')));
                 }
             }
         }
@@ -396,7 +396,7 @@ public without sharing class PDFESignaturePageController {
         if (envelope == null) {
             return false;
         }
-        if (!String.isBlank(PDFESignatureUtil.stringValue(envelope.Decline_Reason__c))) {
+        if (!String.isBlank(ESignatureUtil.stringValue(envelope.Decline_Reason__c))) {
             return true;
         }
         String status = normalizedEnvelopeStatus();
@@ -409,7 +409,7 @@ public without sharing class PDFESignaturePageController {
         if (envelope == null) {
             return '';
         }
-        String status = PDFESignatureUtil.stringValue(envelope.Envelope_Status__c);
+        String status = ESignatureUtil.stringValue(envelope.Envelope_Status__c);
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 
@@ -418,8 +418,8 @@ public without sharing class PDFESignaturePageController {
             if (payload == null) {
                 payload = new Map<String, Object>();
             }
-            PDFESignatureUtil.addCurrentRequestContext(payload);
-            PDFESignatureUtil.publishSignerCommand(action, envelope, token, payload, required);
+            ESignatureUtil.addCurrentRequestContext(payload);
+            ESignatureUtil.publishSignerCommand(action, envelope, token, payload, required);
         } catch (Exception e) {
             if (required) {
                 throw e;

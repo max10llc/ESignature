@@ -32,7 +32,7 @@
     </values>
     <values>
         <field>Finalizer_Named_Credential__c</field>
-        <value xsi:type="xsd:string">PDFESign_PowerAutomateFinalizer</value>
+        <value xsi:type="xsd:string">ESignature_PowerAutomateFinalizer</value>
     </values>
     <values>
         <field>Include_Source_PDF_In_Finalizer_Request__c</field>

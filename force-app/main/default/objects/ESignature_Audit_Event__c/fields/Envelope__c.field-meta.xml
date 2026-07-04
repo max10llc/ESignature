@@ -5,7 +5,7 @@
     <label>Envelope</label>
     <referenceTo>ESignature_Envelope__c</referenceTo>
     <relationshipLabel>E-Signature Audit Events</relationshipLabel>
-    <relationshipName>E_Signature_Audit_Events</relationshipName>
+    <relationshipName>ESignature_Audit_Events</relationshipName>
     <required>false</required>
     <trackHistory>false</trackHistory>
     <trackTrending>false</trackTrending>

@@ -4,7 +4,7 @@
     <label>Envelope</label>
     <referenceTo>ESignature_Envelope__c</referenceTo>
     <relationshipLabel>E-Signature Source Chunks</relationshipLabel>
-    <relationshipName>E_Signature_Source_Chunks</relationshipName>
+    <relationshipName>ESignature_Source_Chunks</relationshipName>
     <relationshipOrder>0</relationshipOrder>
     <reparentableMasterDetail>false</reparentableMasterDetail>
     <trackTrending>false</trackTrending>

@@ -1,4 +1,4 @@
-public without sharing class PDFESignatureUtil {
+public without sharing class ESignatureUtil {
     private static final Integer SOURCE_PDF_CHUNK_SIZE = 100000;
     public class AppException extends Exception {}
 
@@ -329,7 +329,7 @@ public without sharing class PDFESignatureUtil {
         try {
             update new ContentVersion(
                 Id = contentVersionId,
-                E_Signature_Status__c = status
+                ESignature_Status__c = status
             );
         } catch (Exception ignore) {}
     }
@@ -475,10 +475,10 @@ public without sharing class PDFESignatureUtil {
         if (String.isBlank(output)) {
             return null;
         }
-        if (output.endsWith('/apex/PDFESignaturePage')) {
-            output = output.left(output.length() - '/apex/PDFESignaturePage'.length());
-        } else if (output.endsWith('/PDFESignaturePage')) {
-            output = output.left(output.length() - '/PDFESignaturePage'.length());
+        if (output.endsWith('/apex/ESignaturePage')) {
+            output = output.left(output.length() - '/apex/ESignaturePage'.length());
+        } else if (output.endsWith('/ESignaturePage')) {
+            output = output.left(output.length() - '/ESignaturePage'.length());
         }
         if (output.endsWith('/apex')) {
             output = output.left(output.length() - '/apex'.length());
@@ -500,7 +500,7 @@ public without sharing class PDFESignatureUtil {
         if (String.isBlank(apexBaseUrl)) {
             throw new AppException('Set ESignature_Setting.Default.Site_Base_URL__c before sending an envelope. Use the public Site URL, for example https://domain.my.site.com/signatures.');
         }
-        return apexBaseUrl + '/PDFESignaturePage?t=' + EncodingUtil.urlEncode(token, 'UTF-8');
+        return apexBaseUrl + '/ESignaturePage?t=' + EncodingUtil.urlEncode(token, 'UTF-8');
     }
 
     public static String buildPdfResourceUrl(String token) {
@@ -508,7 +508,7 @@ public without sharing class PDFESignatureUtil {
         // builds this URL with $Site.Prefix so the Site path, for example
         // /signatures, is preserved for Site Guest User REST requests.
         String encodedToken = EncodingUtil.urlEncode(token, 'UTF-8');
-        return '/services/apexrest/PDFESign/v1/pdf?t=' + encodedToken;
+        return '/services/apexrest/ESignature/v1/pdf?t=' + encodedToken;
     }
 
     public static String buildFinalizerCallbackUrl(ESignature_Setting__mdt settings) {
@@ -519,7 +519,7 @@ public without sharing class PDFESignatureUtil {
         if (String.isBlank(root)) {
             return null;
         }
-        return root + '/services/apexrest/PDFESign/v1/finalizer-callback';
+        return root + '/services/apexrest/ESignature/v1/finalizer-callback';
     }
 
     public static void addCurrentRequestContext(Map<String, Object> payload) {

@@ -1,4 +1,4 @@
-public without sharing class PDFESignatureOverlayBuilder {
+public without sharing class ESignatureOverlayBuilder {
     private static final Decimal DEFAULT_PAGE_WIDTH = 612;
     private static final Decimal DEFAULT_PAGE_HEIGHT = 792;
 

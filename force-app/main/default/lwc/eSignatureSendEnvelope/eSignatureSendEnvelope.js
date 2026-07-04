@@ -1,8 +1,8 @@
 import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
-import getDraftEnvelopes from '@salesforce/apex/PDFESignatureSendController.getDraftEnvelopes';
-import sendEnvelope from '@salesforce/apex/PDFESignatureSendController.sendEnvelope';
+import getDraftEnvelopes from '@salesforce/apex/ESignatureSendController.getDraftEnvelopes';
+import sendEnvelope from '@salesforce/apex/ESignatureSendController.sendEnvelope';
 
 export default class PdfESignSendEnvelope extends LightningElement {
     @api recordId;

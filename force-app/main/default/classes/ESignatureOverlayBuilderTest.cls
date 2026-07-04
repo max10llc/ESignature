@@ -1,5 +1,5 @@
 @IsTest
-private class PDFESignatureOverlayBuilderTest {
+private class ESignatureOverlayBuilderTest {
     @IsTest
     static void buildsOverlayForExplicitCompletedFields() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
@@ -17,7 +17,7 @@ private class PDFESignatureOverlayBuilderTest {
             field(env.Id, 'Date', '6/23/2026', 1, 100, 220, 160, 18, 4)
         };
 
-        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        List<Map<String, Object>> payloads = ESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
         System.assertEquals(1, payloads.size(), 'All explicit fields were on page 1, so only one overlay should be built.');
         System.assertEquals(1, Integer.valueOf(String.valueOf(payloads[0].get('pageNumber'))));
         System.assertEquals(612, Integer.valueOf(String.valueOf(payloads[0].get('pageWidth'))));
@@ -34,7 +34,7 @@ private class PDFESignatureOverlayBuilderTest {
             'Name overlay text should be centered within its saved field bounds.'
         );
 
-        Map<String, Object> debugInfo = PDFESignatureOverlayBuilder.buildOverlayDebugInfo(payloads);
+        Map<String, Object> debugInfo = ESignatureOverlayBuilder.buildOverlayDebugInfo(payloads);
         System.assertEquals(1, Integer.valueOf(String.valueOf(debugInfo.get('stampOverlayCount'))));
         System.assertEquals('1', (String) debugInfo.get('stampOverlayPagesText'));
     }
@@ -51,7 +51,7 @@ private class PDFESignatureOverlayBuilderTest {
 
         insert field(env.Id, 'Signature', 'Derek Hawley', 1, 100, 300, 160, 30, 1);
 
-        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        List<Map<String, Object>> payloads = ESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
         System.assertEquals(1, payloads.size(), 'Synthetic identity values should be added to the same signature page.');
 
         String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
@@ -78,7 +78,7 @@ private class PDFESignatureOverlayBuilderTest {
             field(env.Id, 'Date', '6/23/2026', 1, 100, 220, 160, 18, 4)
         };
 
-        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        List<Map<String, Object>> payloads = ESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
 
         String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
         System.assert(pdfText.contains('/Subtype /Image'), 'Overlay should embed the captured signature image.');
@@ -97,7 +97,7 @@ private class PDFESignatureOverlayBuilderTest {
 
         insert field(env.Id, 'Checkbox', 'true', 1, 100, 220, 18, 18, 1);
 
-        List<Map<String, Object>> payloads = PDFESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+        List<Map<String, Object>> payloads = ESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
         System.assertEquals(1, payloads.size(), 'Checked checkbox should create a one-page overlay.');
 
         String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();

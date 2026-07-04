@@ -1,4 +1,4 @@
-public without sharing class PDFESignatureFinalizerService {
+public without sharing class ESignatureFinalizerService {
     public static ESignature_Envelope__c loadEnvelope(Id envelopeId) {
         return [
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c,
@@ -20,12 +20,12 @@ public without sharing class PDFESignatureFinalizerService {
             ? 'Power Automate accepted the finalization request.'
             : message;
         update env;
-        PDFESignatureUtil.audit(env.Id, 'Finalizer Accepted', env.Signer_Email__c, env.Completion_Message__c);
+        ESignatureUtil.audit(env.Id, 'Finalizer Accepted', env.Signer_Email__c, env.Completion_Message__c);
     }
 
     public static void completeWithBase64(Id envelopeId, String finalPdfBase64, String fileName, String message) {
         if (String.isBlank(finalPdfBase64)) {
-            throw new PDFESignatureUtil.AppException('Finalizer callback did not include finalPdfBase64.');
+            throw new ESignatureUtil.AppException('Finalizer callback did not include finalPdfBase64.');
         }
         ESignature_Envelope__c env = loadEnvelope(envelopeId);
         String resolvedFileName = resolveFileName(env, fileName);
@@ -34,8 +34,8 @@ public without sharing class PDFESignatureFinalizerService {
         finalVersion.Title = titleFromFileName(resolvedFileName);
         finalVersion.PathOnClient = resolvedFileName;
         finalVersion.VersionData = EncodingUtil.base64Decode(finalPdfBase64);
-        finalVersion.E_Signature_Status__c = 'Completed';
-        Id parentId = PDFESignatureUtil.safeId(env.Parent_Record_Id__c);
+        finalVersion.ESignature_Status__c = 'Completed';
+        Id parentId = ESignatureUtil.safeId(env.Parent_Record_Id__c);
         if (parentId != null) {
             finalVersion.FirstPublishLocationId = parentId;
         }
@@ -66,7 +66,7 @@ public without sharing class PDFESignatureFinalizerService {
             }
         }
         if (contentVersionId == null && contentDocumentId == null) {
-            throw new PDFESignatureUtil.AppException('Finalizer callback did not include final PDF content or file ids.');
+            throw new ESignatureUtil.AppException('Finalizer callback did not include final PDF content or file ids.');
         }
         completeWithFileIds(env, contentVersionId, contentDocumentId, message);
     }
@@ -78,9 +78,9 @@ public without sharing class PDFESignatureFinalizerService {
         env.Error_Message__c = null;
         env.Completion_Message__c = String.isBlank(message) ? 'Final signed PDF was created.' : message;
         update env;
-        PDFESignatureUtil.updateSourceFileESignatureStatus(env, 'Completed');
-        PDFESignatureUtil.updateContentVersionESignatureStatus(finalContentVersionId, 'Completed');
-        PDFESignatureUtil.audit(env.Id, 'Finalized', env.Signer_Email__c, env.Completion_Message__c);
+        ESignatureUtil.updateSourceFileESignatureStatus(env, 'Completed');
+        ESignatureUtil.updateContentVersionESignatureStatus(finalContentVersionId, 'Completed');
+        ESignatureUtil.audit(env.Id, 'Finalized', env.Signer_Email__c, env.Completion_Message__c);
     }
 
     public static void markError(Id envelopeId, String message) {
@@ -88,11 +88,11 @@ public without sharing class PDFESignatureFinalizerService {
         env.Envelope_Status__c = 'Error';
         env.Error_Message__c = String.isBlank(message) ? 'Finalizer reported an unknown error.' : message;
         update env;
-        PDFESignatureUtil.audit(env.Id, 'Error', env.Signer_Email__c, env.Error_Message__c);
+        ESignatureUtil.audit(env.Id, 'Error', env.Signer_Email__c, env.Error_Message__c);
     }
 
     public static String resolveFileName(ESignature_Envelope__c env, String fileName) {
-        String resolved = String.isBlank(fileName) ? PDFESignatureUtil.getEnvelopeTitle(env) + ' - signed.pdf' : fileName.trim();
+        String resolved = String.isBlank(fileName) ? ESignatureUtil.getEnvelopeTitle(env) + ' - signed.pdf' : fileName.trim();
         if (!resolved.toLowerCase().endsWith('.pdf')) {
             resolved += '.pdf';
         }

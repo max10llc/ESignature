@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
   <classAccesses>
-    <apexClass>PDFESignatureAuditReportBuilder</apexClass>
+    <apexClass>ESignatureAuditReportBuilder</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
-    <apexClass>PDFESignatureCommandProcessor</apexClass>
+    <apexClass>ESignatureCommandProcessor</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
-    <apexClass>PDFESignatureFinalizeQueueable</apexClass>
+    <apexClass>ESignatureFinalizeQueueable</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
-    <apexClass>PDFESignatureFinalizerCallbackResource</apexClass>
+    <apexClass>ESignatureFinalizerCallbackResource</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
-    <apexClass>PDFESignatureFinalizerService</apexClass>
+    <apexClass>ESignatureFinalizerService</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
-    <apexClass>PDFESignaturePageController</apexClass>
+    <apexClass>ESignaturePageController</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
-    <apexClass>PDFESignaturePdfResource</apexClass>
+    <apexClass>ESignaturePdfResource</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
-    <apexClass>PDFESignatureUtil</apexClass>
+    <apexClass>ESignatureUtil</apexClass>
     <enabled>true</enabled>
   </classAccesses>
   <description>Public site guest access for token-protected PDF e-signature signing.</description>
@@ -381,7 +381,7 @@
     <viewAllRecords>false</viewAllRecords>
   </objectPermissions>
   <pageAccesses>
-    <apexPage>PDFESignaturePage</apexPage>
+    <apexPage>ESignaturePage</apexPage>
     <enabled>true</enabled>
   </pageAccesses>
 </PermissionSet>

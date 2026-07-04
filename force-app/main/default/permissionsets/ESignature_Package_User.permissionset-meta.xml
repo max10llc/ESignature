@@ -1,54 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <classAccesses>
-        <apexClass>PDFESignatureAuditReportBuilder</apexClass>
+        <apexClass>ESignatureAuditReportBuilder</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignatureCommandProcessor</apexClass>
+        <apexClass>ESignatureCommandProcessor</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignatureFinalizeQueueable</apexClass>
+        <apexClass>ESignatureFinalizeQueueable</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignatureFinalizerCallbackResource</apexClass>
+        <apexClass>ESignatureFinalizerCallbackResource</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignatureFinalizerService</apexClass>
+        <apexClass>ESignatureFinalizerService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignaturePageController</apexClass>
+        <apexClass>ESignaturePageController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignaturePdfResource</apexClass>
+        <apexClass>ESignaturePdfResource</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignaturePrepareController</apexClass>
+        <apexClass>ESignaturePrepareController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignatureSendController</apexClass>
+        <apexClass>ESignatureSendController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>PDFESignatureUtil</apexClass>
+        <apexClass>ESignatureUtil</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <description>Internal user access for PDF-first e-signature.</description>
     <fieldPermissions>
         <editable>true</editable>
-        <field>ContentVersion.E_Signature_File__c</field>
+        <field>ContentVersion.ESignature_File__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>ContentVersion.E_Signature_Status__c</field>
+        <field>ContentVersion.ESignature_Status__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -414,7 +414,7 @@
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
     <pageAccesses>
-        <apexPage>PDFESignaturePage</apexPage>
+        <apexPage>ESignaturePage</apexPage>
         <enabled>true</enabled>
     </pageAccesses>
 </PermissionSet>

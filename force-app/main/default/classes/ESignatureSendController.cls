@@ -1,4 +1,4 @@
-public with sharing class PDFESignatureSendController {
+public with sharing class ESignatureSendController {
     public class EnvelopeDTO {
         @AuraEnabled public String id;
         @AuraEnabled public String name;
@@ -31,19 +31,19 @@ public with sharing class PDFESignatureSendController {
         for (ESignature_Envelope__c env : envelopes) {
             envelopeIds.add(env.Id);
         }
-        Map<Id, Id> documentIdByEnvelopeId = PDFESignatureUtil.getSourceDocumentIdsByEnvelopeId(envelopeIds);
+        Map<Id, Id> documentIdByEnvelopeId = ESignatureUtil.getSourceDocumentIdsByEnvelopeId(envelopeIds);
         Set<Id> documentIds = new Set<Id>();
         for (Id documentId : documentIdByEnvelopeId.values()) {
             if (documentId != null) {
                 documentIds.add(documentId);
             }
         }
-        Map<Id, String> titleByDocumentId = PDFESignatureUtil.getContentDocumentTitles(documentIds);
+        Map<Id, String> titleByDocumentId = ESignatureUtil.getContentDocumentTitles(documentIds);
         for (ESignature_Envelope__c env : envelopes) {
             EnvelopeDTO row = new EnvelopeDTO();
             row.id = env.Id;
             row.name = env.Name;
-            row.title = PDFESignatureUtil.titleFromEnvelope(env, titleByDocumentId, documentIdByEnvelopeId);
+            row.title = ESignatureUtil.titleFromEnvelope(env, titleByDocumentId, documentIdByEnvelopeId);
             row.status = String.isBlank(env.Envelope_Status__c) ? 'Draft' : env.Envelope_Status__c;
             row.lastModifiedDate = env.LastModifiedDate;
             row.fieldCount = env.ESignature_Fields__r == null ? 0 : env.ESignature_Fields__r.size();
@@ -79,16 +79,16 @@ public with sharing class PDFESignatureSendController {
         if (fieldCount == 0) {
             throw new AuraHandledException('Add at least one field before sending the envelope.');
         }
-        ESignature_Setting__mdt settings = PDFESignatureUtil.getSettings();
+        ESignature_Setting__mdt settings = ESignatureUtil.getSettings();
         Integer days = expirationDays == null || expirationDays <= 0
             ? (settings.Default_Expiration_Days__c == null ? 365 : Integer.valueOf(settings.Default_Expiration_Days__c))
             : expirationDays;
         if (days > 365) {
             days = 365;
         }
-        String token = PDFESignatureUtil.generateToken();
-        String signingUrl = PDFESignatureUtil.buildSigningUrl(token);
-        env.Secure_Token_Hash__c = PDFESignatureUtil.hashToken(token);
+        String token = ESignatureUtil.generateToken();
+        String signingUrl = ESignatureUtil.buildSigningUrl(token);
+        env.Secure_Token_Hash__c = ESignatureUtil.hashToken(token);
         env.Signer_Name__c = signerName.trim();
         env.Signer_Email__c = signerEmail.trim();
         env.Signer_Title__c = String.isBlank(signerTitle) ? null : signerTitle.trim();
@@ -97,12 +97,12 @@ public with sharing class PDFESignatureSendController {
         env.Expires_At__c = System.now().addDays(days);
         env.Public_Signing_URL__c = signingUrl;
         env.Sender_User__c = UserInfo.getUserId();
-        PDFESignatureUtil.stampEnvelopeParent(env, env.Parent_Record_Id__c);
+        ESignatureUtil.stampEnvelopeParent(env, env.Parent_Record_Id__c);
         stampSourceFields(env);
         update env;
 
         try {
-            PDFESignatureUtil.cacheSourcePdfForEnvelope(env.Id);
+            ESignatureUtil.cacheSourcePdfForEnvelope(env.Id);
         } catch (Exception ex) {
             env.Envelope_Status__c = 'Error';
             env.Error_Message__c = 'Unable to cache source PDF for public signing: ' + ex.getMessage();
@@ -111,8 +111,8 @@ public with sharing class PDFESignatureSendController {
         }
 
         sendEmail(env, signingUrl);
-        PDFESignatureUtil.updateSourceFileESignatureStatus(env, 'Sent');
-        PDFESignatureUtil.audit(env.Id, 'Sent', UserInfo.getUserEmail(), 'Envelope sent to ' + env.Signer_Email__c + '.');
+        ESignatureUtil.updateSourceFileESignatureStatus(env, 'Sent');
+        ESignatureUtil.audit(env.Id, 'Sent', UserInfo.getUserEmail(), 'Envelope sent to ' + env.Signer_Email__c + '.');
 
         SendResultDTO result = new SendResultDTO();
         result.envelopeId = env.Id;
@@ -123,7 +123,7 @@ public with sharing class PDFESignatureSendController {
     }
 
     private static void stampSourceFields(ESignature_Envelope__c env) {
-        ContentVersion source = PDFESignatureUtil.getLatestSourceVersion(env, false);
+        ContentVersion source = ESignatureUtil.getLatestSourceVersion(env, false);
         if (source == null) {
             return;
         }
@@ -135,7 +135,7 @@ public with sharing class PDFESignatureSendController {
     private static void sendEmail(ESignature_Envelope__c env, String signingUrl) {
         Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
         message.setToAddresses(new List<String>{ env.Signer_Email__c });
-        String documentTitle = PDFESignatureUtil.getEnvelopeTitle(env);
+        String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
         message.setSubject('Signature requested: ' + documentTitle);
         message.setHtmlBody(buildSignatureRequestEmailHtml(env, signingUrl, documentTitle));
         message.setSaveAsActivity(false);
@@ -144,10 +144,10 @@ public with sharing class PDFESignatureSendController {
 
     @TestVisible
     private static String buildSignatureRequestEmailHtml(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
-        String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : PDFESignatureUtil.escapeHtml(env.Signer_Name__c);
-        String safeDocumentTitle = String.isBlank(documentTitle) ? 'Document' : PDFESignatureUtil.escapeHtml(documentTitle);
-        String safeSigningUrl = PDFESignatureUtil.escapeHtml(signingUrl);
-        String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : PDFESignatureUtil.escapeHtml(UserInfo.getName());
+        String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : ESignatureUtil.escapeHtml(env.Signer_Name__c);
+        String safeDocumentTitle = String.isBlank(documentTitle) ? 'Document' : ESignatureUtil.escapeHtml(documentTitle);
+        String safeSigningUrl = ESignatureUtil.escapeHtml(signingUrl);
+        String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : ESignatureUtil.escapeHtml(UserInfo.getName());
         String safeExpirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
 
         return emailShell(
@@ -202,7 +202,7 @@ public with sharing class PDFESignatureSendController {
             + '    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;background-color:#f7f8fa;border-left:4px solid ' + color + ';">'
             + '      <tr>'
             + '        <td style="padding:13px 16px;font-family:Arial,Helvetica,sans-serif;">'
-            + '          <div style="font-size:12px;line-height:16px;color:#64748b;Margin:0 0 6px 0;">' + PDFESignatureUtil.escapeHtml(label) + '</div>'
+            + '          <div style="font-size:12px;line-height:16px;color:#64748b;Margin:0 0 6px 0;">' + ESignatureUtil.escapeHtml(label) + '</div>'
             + '          <div style="font-size:15px;line-height:20px;font-weight:bold;color:#111827;Margin:0;">' + nullToBlank(safeTitle) + '</div>'
             + '        </td>'
             + '      </tr>'

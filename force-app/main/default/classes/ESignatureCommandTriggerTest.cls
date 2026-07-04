@@ -1,9 +1,9 @@
 @IsTest
-private class PDFESignatureCommandTriggerTest {
+private class ESignatureCommandTriggerTest {
     @IsTest
     static void viewedCommandUpdatesEnvelopeThroughTrigger() {
         String token = 'test-token';
-        String tokenHash = PDFESignatureUtil.hashToken(token);
+        String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Sent',
             Secure_Token_Hash__c = tokenHash,
@@ -40,7 +40,7 @@ private class PDFESignatureCommandTriggerTest {
     @IsTest
     static void signedCommandWithMissingRequiredFieldMarksEnvelopeError() {
         String token = 'required-field-token';
-        String tokenHash = PDFESignatureUtil.hashToken(token);
+        String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
@@ -93,7 +93,7 @@ private class PDFESignatureCommandTriggerTest {
     @IsTest
     static void declinedCommandUpdatesEnvelopeThroughTrigger() {
         String token = 'declined-token';
-        String tokenHash = PDFESignatureUtil.hashToken(token);
+        String tokenHash = ESignatureUtil.hashToken(token);
         ContentVersion source = createSourceFile('Declined Source');
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
@@ -121,14 +121,14 @@ private class PDFESignatureCommandTriggerTest {
         ];
         System.assertEquals('Declined', env.Envelope_Status__c);
         System.assertEquals('No longer needed', env.Decline_Reason__c);
-        source = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :source.Id];
-        System.assertEquals('Canceled', source.E_Signature_Status__c, 'Declining should stamp the source file status.');
+        source = [SELECT ESignature_Status__c FROM ContentVersion WHERE Id = :source.Id];
+        System.assertEquals('Canceled', source.ESignature_Status__c, 'Declining should stamp the source file status.');
     }
 
     @IsTest
     static void delegatedCommandTransfersSignerAndRotatesToken() {
         String token = 'delegated-token';
-        String tokenHash = PDFESignatureUtil.hashToken(token);
+        String tokenHash = ESignatureUtil.hashToken(token);
         ContentVersion source = createSourceFile('Delegated Source');
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
@@ -173,9 +173,9 @@ private class PDFESignatureCommandTriggerTest {
         System.assertEquals(null, env.Signer_Title__c);
         System.assertNotEquals(null, env.Sent_At__c);
         System.assertEquals(null, env.Viewed_At__c, 'The delegate should get their own viewed event.');
-        System.assert(env.Public_Signing_URL__c.contains('/PDFESignaturePage?t='), 'Delegate should receive a fresh signing URL.');
-        source = [SELECT E_Signature_Status__c FROM ContentVersion WHERE Id = :source.Id];
-        System.assertEquals('Sent', source.E_Signature_Status__c, 'Delegating should keep the source file in sent status.');
+        System.assert(env.Public_Signing_URL__c.contains('/ESignaturePage?t='), 'Delegate should receive a fresh signing URL.');
+        source = [SELECT ESignature_Status__c FROM ContentVersion WHERE Id = :source.Id];
+        System.assertEquals('Sent', source.ESignature_Status__c, 'Delegating should keep the source file in sent status.');
 
         ESignature_Audit_Event__c audit = [
             SELECT Actor_Email__c, Details__c
@@ -191,7 +191,7 @@ private class PDFESignatureCommandTriggerTest {
     @IsTest
     static void signedCommandWithoutTypedNameMarksEnvelopeError() {
         String token = 'missing-name-token';
-        String tokenHash = PDFESignatureUtil.hashToken(token);
+        String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
@@ -223,7 +223,7 @@ private class PDFESignatureCommandTriggerTest {
             Title = title,
             PathOnClient = title + '.pdf',
             VersionData = Blob.valueOf('%PDF-1.4\n%source\n%%EOF'),
-            E_Signature_File__c = true
+            ESignature_File__c = true
         );
         insert source;
         return [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :source.Id];
