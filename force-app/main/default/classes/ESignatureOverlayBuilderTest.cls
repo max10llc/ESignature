@@ -84,6 +84,8 @@ private class ESignatureOverlayBuilderTest {
         System.assert(pdfText.contains('/Subtype /Image'), 'Overlay should embed the captured signature image.');
         System.assert(pdfText.contains('/DCTDecode'), 'Captured signature image should be embedded as a JPEG XObject.');
         System.assert(pdfText.contains('/Sig1 Do'), 'Signature field should draw the embedded signature image.');
+        System.assert(pdfText.contains('/BM /Multiply'), 'Signature image overlay should make the JPEG white background visually transparent.');
+        System.assert(pdfText.contains('/SignatureMultiply gs'), 'Signature image draw should use the transparent blend mode.');
     }
 
     @IsTest

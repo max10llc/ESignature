@@ -261,7 +261,7 @@ public without sharing class ESignatureOverlayBuilder {
         List<String> objects = new List<String>();
         objects.add('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
         objects.add('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
-        objects.add('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + fmt(pageWidth) + ' ' + fmt(pageHeight) + '] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> ' + buildXObjectResourceDictionary(images) + ' >> /Contents ' + String.valueOf(contentObjectNumber) + ' 0 R >>\nendobj\n');
+        objects.add('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + fmt(pageWidth) + ' ' + fmt(pageHeight) + '] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> ' + buildExtGStateResourceDictionary(images) + buildXObjectResourceDictionary(images) + ' >> /Contents ' + String.valueOf(contentObjectNumber) + ' 0 R >>\nendobj\n');
         objects.add('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
         objects.add('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>\nendobj\n');
         for (SignatureImageResource image : images) {
@@ -319,7 +319,7 @@ public without sharing class ESignatureOverlayBuilder {
         }
         Decimal drawX = x + ((width - drawWidth) / 2);
         Decimal drawY = y + ((height - drawHeight) / 2);
-        return 'q ' + fmt(drawWidth) + ' 0 0 ' + fmt(drawHeight) + ' ' + fmt(drawX) + ' ' + fmt(drawY) + ' cm /' + image.pdfName + ' Do Q';
+        return 'q /SignatureMultiply gs ' + fmt(drawWidth) + ' 0 0 ' + fmt(drawHeight) + ' ' + fmt(drawX) + ' ' + fmt(drawY) + ' cm /' + image.pdfName + ' Do Q';
     }
 
     private static Decimal fontSizeFor(String typeValue, Decimal width, Decimal height, String value) {
@@ -449,6 +449,13 @@ public without sharing class ESignatureOverlayBuilder {
             value += '/' + image.pdfName + ' ' + image.objectNumber + ' 0 R ';
         }
         return value + '>>';
+    }
+
+    private static String buildExtGStateResourceDictionary(List<SignatureImageResource> images) {
+        if (images == null || images.isEmpty()) {
+            return '';
+        }
+        return '/ExtGState << /SignatureMultiply << /BM /Multiply /ca 1 /CA 1 >> >> ';
     }
 
     private static List<Integer> getJpegDimensions(String hexData) {
