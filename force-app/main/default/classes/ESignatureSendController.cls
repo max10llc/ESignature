@@ -165,8 +165,9 @@ public with sharing class ESignatureSendController {
         Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
         message.setToAddresses(new List<String>{ env.Signer_Email__c });
         String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
-        message.setSubject('Signature requested: ' + documentTitle);
-        message.setHtmlBody(buildSignatureRequestEmailHtml(env, signingUrl, documentTitle));
+        ESignatureUtil.EmailContent content = buildSignatureRequestEmailContent(env, signingUrl, documentTitle);
+        message.setSubject(content.subject);
+        message.setHtmlBody(content.htmlBody);
         message.setSaveAsActivity(false);
         ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
         Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
@@ -174,20 +175,48 @@ public with sharing class ESignatureSendController {
 
     @TestVisible
     private static String buildSignatureRequestEmailHtml(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
-        String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : ESignatureUtil.escapeHtml(env.Signer_Name__c);
-        String safeDocumentTitle = String.isBlank(documentTitle) ? 'Document' : ESignatureUtil.escapeHtml(documentTitle);
-        String safeSigningUrl = ESignatureUtil.escapeHtml(signingUrl);
-        String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : ESignatureUtil.escapeHtml(UserInfo.getName());
-        String safeExpirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
+        return buildSignatureRequestEmailContent(env, signingUrl, documentTitle).htmlBody;
+    }
 
-        return ESignatureUtil.emailShell(
+    private static ESignatureUtil.EmailContent buildSignatureRequestEmailContent(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
+        String signerName = String.isBlank(env.Signer_Name__c) ? 'there' : env.Signer_Name__c;
+        String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : ESignatureUtil.escapeHtml(env.Signer_Name__c);
+        String resolvedDocumentTitle = String.isBlank(documentTitle) ? 'Document' : documentTitle;
+        String safeDocumentTitle = ESignatureUtil.escapeHtml(resolvedDocumentTitle);
+        String safeSigningUrl = ESignatureUtil.escapeHtml(signingUrl);
+        String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : UserInfo.getName();
+        String safeSenderName = ESignatureUtil.escapeHtml(senderName);
+        String expirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
+
+        String fallbackSubject = 'Signature requested: ' + resolvedDocumentTitle;
+        String fallbackHtml = ESignatureUtil.emailShell(
             ESignatureUtil.emailParagraphRow('Hi ' + safeSignerName + ',')
-            + ESignatureUtil.emailParagraphRow(senderName + ' has sent you a document that requires your signature:')
+            + ESignatureUtil.emailParagraphRow(safeSenderName + ' has sent you a document that requires your signature:')
             + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
             + ESignatureUtil.emailParagraphRow('Please review and sign the agreement.')
             + ESignatureUtil.emailButtonRow('Review &amp; Sign Document', safeSigningUrl, '#0176d3')
-            + ESignatureUtil.emailSubtleRow('This link is unique to you and will expire on ' + safeExpirationDate + '.')
+            + ESignatureUtil.emailSubtleRow('This link is unique to you and will expire on ' + expirationDate + '.')
             + ESignatureUtil.emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
+        );
+        return ESignatureUtil.renderEmailTemplate(
+            'ESignature_Signature_Request',
+            fallbackSubject,
+            fallbackHtml,
+            new Map<String, String>{
+                'SignerName' => signerName,
+                'SenderName' => senderName,
+                'DocumentTitle' => resolvedDocumentTitle,
+                'SigningUrl' => signingUrl,
+                'ExpirationDate' => expirationDate
+            },
+            new Map<String, String>{
+                'LogoHtml' => ESignatureUtil.emailLogoHtml(),
+                'SignerName' => safeSignerName,
+                'SenderName' => safeSenderName,
+                'DocumentTitle' => safeDocumentTitle,
+                'SigningUrl' => safeSigningUrl,
+                'ExpirationDate' => expirationDate
+            }
         );
     }
 

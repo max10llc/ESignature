@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EmailTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <available>true</available>
+    <encodingKey>UTF-8</encodingKey>
+    <name>ESignature Salesforce User Delegated</name>
+    <style>none</style>
+    <subject>Signature request delegated: {{DocumentTitle}}</subject>
+    <textOnly>{{OriginalSigner}} delegated the signature request to {{Delegate}}.
+
+Document: {{DocumentTitle}}
+
+Delegate message:
+{{DelegateMessage}}
+
+The original signer link is no longer active. The delegated signer received a new signing link.</textOnly>
+    <type>custom</type>
+    <uiType>Aloha</uiType>
+</EmailTemplate>

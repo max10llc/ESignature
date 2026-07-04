@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EmailTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <available>true</available>
+    <encodingKey>UTF-8</encodingKey>
+    <name>ESignature Completed Signer</name>
+    <style>none</style>
+    <subject>Signature request completed: {{DocumentTitle}}</subject>
+    <textOnly>Hi {{SignerName}},
+
+The signature process is complete.
+
+Document: {{DocumentTitle}}
+Status: Completed
+
+{{CompletionMessage}}
+
+The completed signed PDF has been returned to the sender in Salesforce.</textOnly>
+    <type>custom</type>
+    <uiType>Aloha</uiType>
+</EmailTemplate>

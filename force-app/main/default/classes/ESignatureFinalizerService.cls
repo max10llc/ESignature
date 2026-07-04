@@ -116,20 +116,25 @@ public without sharing class ESignatureFinalizerService {
             addCompletionEmailMessage(
                 messages,
                 env == null ? null : env.Signer_Email__c,
-                'Signature request completed: ' + documentTitle,
-                buildSignerCompletionEmailHtml(env)
+                buildSignerCompletionEmailContent(env)
             );
             addCompletionEmailMessage(
                 messages,
                 ESignatureUtil.senderEmail(env == null ? null : env.Sender_User__c),
-                'Signature request completed: ' + documentTitle,
-                buildSalesforceUserCompletionEmailHtml(env)
+                buildSalesforceUserCompletionEmailContent(env)
             );
             if (messages.isEmpty()) {
                 return;
             }
             Messaging.sendEmail(messages);
         } catch (Exception ignore) {}
+    }
+
+    private static void addCompletionEmailMessage(List<Messaging.SingleEmailMessage> messages, String recipientEmail, ESignatureUtil.EmailContent content) {
+        if (content == null) {
+            return;
+        }
+        addCompletionEmailMessage(messages, recipientEmail, content.subject, content.htmlBody);
     }
 
     private static void addCompletionEmailMessage(List<Messaging.SingleEmailMessage> messages, String recipientEmail, String subject, String htmlBody) {
@@ -147,36 +152,86 @@ public without sharing class ESignatureFinalizerService {
 
     @TestVisible
     private static String buildSignerCompletionEmailHtml(ESignature_Envelope__c env) {
-        String signerName = env == null || String.isBlank(env.Signer_Name__c) ? 'there' : ESignatureUtil.escapeHtml(env.Signer_Name__c);
-        String documentTitle = ESignatureUtil.escapeHtml(ESignatureUtil.getEnvelopeTitle(env));
+        return buildSignerCompletionEmailContent(env).htmlBody;
+    }
+
+    private static ESignatureUtil.EmailContent buildSignerCompletionEmailContent(ESignature_Envelope__c env) {
+        String signerName = env == null || String.isBlank(env.Signer_Name__c) ? 'there' : env.Signer_Name__c;
+        String safeSignerName = ESignatureUtil.escapeHtml(signerName);
+        String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
+        String safeDocumentTitle = ESignatureUtil.escapeHtml(documentTitle);
         String message = completionMessage(env);
 
-        return ESignatureUtil.emailShell(
-            ESignatureUtil.emailParagraphRow('Hi ' + signerName + ',')
+        String fallbackSubject = 'Signature request completed: ' + documentTitle;
+        String fallbackHtml = ESignatureUtil.emailShell(
+            ESignatureUtil.emailParagraphRow('Hi ' + safeSignerName + ',')
             + ESignatureUtil.emailParagraphRow('The signature process is complete.')
-            + ESignatureUtil.emailDocumentBlockRow('Document', documentTitle, '#0176d3')
+            + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
             + ESignatureUtil.emailParagraphRow('<strong>Status:</strong> Completed')
             + ESignatureUtil.emailParagraphRow(ESignatureUtil.escapeHtml(message))
             + ESignatureUtil.emailSubtleRow('The completed signed PDF has been returned to the sender in Salesforce.')
+        );
+        return ESignatureUtil.renderEmailTemplate(
+            'ESignature_Completed_Signer',
+            fallbackSubject,
+            fallbackHtml,
+            new Map<String, String>{
+                'SignerName' => signerName,
+                'DocumentTitle' => documentTitle,
+                'CompletionMessage' => message
+            },
+            new Map<String, String>{
+                'LogoHtml' => ESignatureUtil.emailLogoHtml(),
+                'SignerName' => safeSignerName,
+                'DocumentTitle' => safeDocumentTitle,
+                'CompletionMessage' => ESignatureUtil.escapeHtml(message)
+            }
         );
     }
 
     @TestVisible
     private static String buildSalesforceUserCompletionEmailHtml(ESignature_Envelope__c env) {
+        return buildSalesforceUserCompletionEmailContent(env).htmlBody;
+    }
+
+    private static ESignatureUtil.EmailContent buildSalesforceUserCompletionEmailContent(ESignature_Envelope__c env) {
         String signerName = env == null || String.isBlank(env.Signer_Name__c) ? 'The signer' : env.Signer_Name__c;
         String signerEmail = env == null ? null : env.Signer_Email__c;
-        String documentTitle = ESignatureUtil.escapeHtml(ESignatureUtil.getEnvelopeTitle(env));
+        String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
+        String safeDocumentTitle = ESignatureUtil.escapeHtml(documentTitle);
         String message = completionMessage(env);
         String signer = ESignatureUtil.escapeHtml(signerName)
             + (String.isBlank(signerEmail) ? '' : ' (' + ESignatureUtil.escapeHtml(signerEmail) + ')');
+        String signerText = signerName + (String.isBlank(signerEmail) ? '' : ' (' + signerEmail + ')');
 
-        return ESignatureUtil.emailShell(
+        String fallbackSubject = 'Signature request completed: ' + documentTitle;
+        String fallbackHtml = ESignatureUtil.emailShell(
             ESignatureUtil.emailParagraphRow('The signature request has been completed.')
-            + ESignatureUtil.emailDocumentBlockRow('Document', documentTitle, '#0176d3')
+            + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
             + ESignatureUtil.emailParagraphRow('<strong>Signer:</strong> ' + signer)
             + ESignatureUtil.emailParagraphRow('<strong>Status:</strong> Completed')
             + ESignatureUtil.emailParagraphRow(ESignatureUtil.escapeHtml(message))
             + ESignatureUtil.emailSubtleRow('The completed signed PDF has been attached in Salesforce.')
+        );
+        return ESignatureUtil.renderEmailTemplate(
+            'ESignature_Completed_Salesforce_User',
+            fallbackSubject,
+            fallbackHtml,
+            new Map<String, String>{
+                'SignerName' => signerName,
+                'SignerEmail' => signerEmail,
+                'Signer' => signerText,
+                'DocumentTitle' => documentTitle,
+                'CompletionMessage' => message
+            },
+            new Map<String, String>{
+                'LogoHtml' => ESignatureUtil.emailLogoHtml(),
+                'SignerName' => ESignatureUtil.escapeHtml(signerName),
+                'SignerEmail' => ESignatureUtil.escapeHtml(signerEmail),
+                'Signer' => signer,
+                'DocumentTitle' => safeDocumentTitle,
+                'CompletionMessage' => ESignatureUtil.escapeHtml(message)
+            }
         );
     }
 

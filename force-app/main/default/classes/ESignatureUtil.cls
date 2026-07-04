@@ -1,6 +1,17 @@
 public without sharing class ESignatureUtil {
     private static final Integer SOURCE_PDF_CHUNK_SIZE = 100000;
     public class AppException extends Exception {}
+    public class EmailContent {
+        public String subject;
+        public String htmlBody;
+        public String textBody;
+
+        public EmailContent(String subject, String htmlBody, String textBody) {
+            this.subject = subject;
+            this.htmlBody = htmlBody;
+            this.textBody = textBody;
+        }
+    }
 
     public static ESignature_Setting__mdt getSettings() {
         List<ESignature_Setting__mdt> rows = [
@@ -568,11 +579,78 @@ public without sharing class ESignatureUtil {
         }
     }
 
+    public static EmailContent renderEmailTemplate(
+        String templateDeveloperName,
+        String fallbackSubject,
+        String fallbackHtmlBody,
+        Map<String, String> textTokens,
+        Map<String, String> htmlTokens
+    ) {
+        EmailContent content = new EmailContent(fallbackSubject, fallbackHtmlBody, null);
+        try {
+            if (!String.isBlank(templateDeveloperName)) {
+                List<EmailTemplate> templates = [
+                    SELECT Subject, HtmlValue, Body
+                    FROM EmailTemplate
+                    WHERE DeveloperName = :templateDeveloperName
+                    AND IsActive = true
+                    LIMIT 1
+                ];
+                if (!templates.isEmpty()) {
+                    EmailTemplate template = templates[0];
+                    content.subject = String.isBlank(template.Subject) ? fallbackSubject : template.Subject;
+                    content.htmlBody = String.isBlank(template.HtmlValue)
+                        ? plainTextToHtml(template.Body)
+                        : template.HtmlValue;
+                    content.textBody = template.Body;
+                }
+            }
+        } catch (Exception ignore) {}
+
+        content.subject = replaceEmailTemplateTokens(content.subject, textTokens);
+        content.htmlBody = replaceEmailTemplateTokens(content.htmlBody, htmlTokens);
+        content.textBody = replaceEmailTemplateTokens(content.textBody, textTokens);
+        return content;
+    }
+
+    public static String replaceEmailTemplateTokens(String value, Map<String, String> tokens) {
+        if (value == null) {
+            return '';
+        }
+        String output = value;
+        if (tokens == null) {
+            return output;
+        }
+        for (String key : tokens.keySet()) {
+            output = output.replace('{{' + key + '}}', tokens.get(key) == null ? '' : tokens.get(key));
+        }
+        return output;
+    }
+
+    private static String plainTextToHtml(String textBody) {
+        if (String.isBlank(textBody)) {
+            return '';
+        }
+        return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;">'
+            + escapeHtml(textBody)
+                .replace('\r\n', '<br/>')
+                .replace('\n', '<br/>')
+                .replace('\r', '<br/>')
+            + '</div>';
+    }
+
     @TestVisible
     private static String configuredEmailLogoUrl(ESignature_Setting__mdt settings) {
         return settings == null || String.isBlank(settings.Email_Logo_URL__c)
             ? null
             : settings.Email_Logo_URL__c.trim();
+    }
+
+    public static String emailLogoHtml() {
+        String logoUrl = configuredEmailLogoUrl();
+        return String.isBlank(logoUrl)
+            ? 'E-Signature'
+            : '<img src="' + escapeHtml(logoUrl) + '" width="180" alt="Kaizon Solutions" style="display:block;width:180px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />';
     }
 
     public static String emailShell(String contentHtml) {
@@ -590,14 +668,10 @@ public without sharing class ESignatureUtil {
     }
 
     private static String emailHeaderRow() {
-        String logoUrl = configuredEmailLogoUrl();
-        String content = String.isBlank(logoUrl)
-            ? 'E-Signature'
-            : '<img src="' + escapeHtml(logoUrl) + '" width="180" alt="Kaizon Solutions" style="display:block;width:180px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />';
         return ''
             + '        <tr>'
             + '          <td bgcolor="#0176d3" align="left" style="padding:16px 24px;background-color:#0176d3;font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:24px;font-weight:bold;color:#ffffff;">'
-            +              content
+            +              emailLogoHtml()
             + '          </td>'
             + '        </tr>';
     }

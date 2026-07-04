@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EmailTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <available>true</available>
+    <encodingKey>UTF-8</encodingKey>
+    <name>ESignature Signature Request</name>
+    <style>none</style>
+    <subject>Signature requested: {{DocumentTitle}}</subject>
+    <textOnly>Hi {{SignerName}},
+
+{{SenderName}} has sent you a document that requires your signature:
+
+Document: {{DocumentTitle}}
+
+Please review and sign the agreement.
+
+{{SigningUrl}}
+
+This link is unique to you and will expire on {{ExpirationDate}}.</textOnly>
+    <type>custom</type>
+    <uiType>Aloha</uiType>
+</EmailTemplate>
