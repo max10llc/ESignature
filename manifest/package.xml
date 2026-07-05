@@ -72,6 +72,7 @@
         <members>ESignature_Envelope__c.Parent_Object_Api_Name__c</members>
         <members>ESignature_Envelope__c.Parent_Record_Id__c</members>
         <members>ESignature_Envelope__c.Public_Signing_URL__c</members>
+        <members>ESignature_Envelope__c.Request_Message__c</members>
         <members>ESignature_Envelope__c.Secure_Token_Hash__c</members>
         <members>ESignature_Envelope__c.Sender_User__c</members>
         <members>ESignature_Envelope__c.Sent_At__c</members>

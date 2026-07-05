@@ -157,6 +157,9 @@ public without sharing class ESignaturePageController {
     }
 
     public String getEnvelopeMessage() {
+        if (envelope != null && !String.isBlank(envelope.Request_Message__c)) {
+            return envelope.Request_Message__c;
+        }
         return 'Please review and sign the agreement.';
     }
 

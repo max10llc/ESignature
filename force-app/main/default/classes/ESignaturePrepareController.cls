@@ -193,6 +193,13 @@ public with sharing class ESignaturePrepareController {
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
+        List<Object> rows = String.isBlank(placementsJson)
+            ? new List<Object>()
+            : (List<Object>) JSON.deserializeUntyped(placementsJson);
+        if (rows.isEmpty()) {
+            throw new AuraHandledException('There are no fields to save.');
+        }
+
         ESignature_Envelope__c envelope;
         Boolean created = false;
         if (envelopes.isEmpty()) {
@@ -209,13 +216,11 @@ public with sharing class ESignaturePrepareController {
         envelope.Source_ContentDocument_Id__c = String.valueOf(version.ContentDocumentId);
         envelope.Source_File_Title__c = version.Title;
         upsert envelope;
+        cancelPriorOpenEnvelopes(envelope);
 
         delete [SELECT Id FROM ESignature_Field__c WHERE Envelope__c = :envelope.Id];
 
         List<ESignature_Field__c> fieldsToInsert = new List<ESignature_Field__c>();
-        List<Object> rows = String.isBlank(placementsJson)
-            ? new List<Object>()
-            : (List<Object>) JSON.deserializeUntyped(placementsJson);
         Integer sequence = 1;
         for (Object item : rows) {
             Map<String, Object> row = (Map<String, Object>) item;
@@ -250,7 +255,42 @@ public with sharing class ESignaturePrepareController {
 
         SaveResultDTO result = new SaveResultDTO();
         result.envelopeId = envelope.Id;
-        result.message = 'Saved ' + fieldsToInsert.size() + ' field placement' + (fieldsToInsert.size() == 1 ? '' : 's') + ' to draft envelope ' + envelope.Name + '.';
+        ESignature_Envelope__c savedEnvelope = [
+            SELECT Name
+            FROM ESignature_Envelope__c
+            WHERE Id = :envelope.Id
+            LIMIT 1
+        ];
+        String envelopeLabel = String.isBlank(savedEnvelope.Name) ? String.valueOf(envelope.Id) : savedEnvelope.Name;
+        result.message = 'Saved ' + fieldsToInsert.size() + ' field placement' + (fieldsToInsert.size() == 1 ? '' : 's') + ' to draft envelope ' + envelopeLabel + '.';
         return result;
+    }
+
+    private static void cancelPriorOpenEnvelopes(ESignature_Envelope__c currentEnv) {
+        if (currentEnv == null || currentEnv.Id == null || String.isBlank(currentEnv.Parent_Record_Id__c)) {
+            return;
+        }
+        List<ESignature_Envelope__c> priorOpenEnvelopes = [
+            SELECT Id, Envelope_Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+            FROM ESignature_Envelope__c
+            WHERE Parent_Record_Id__c = :currentEnv.Parent_Record_Id__c
+            AND Id != :currentEnv.Id
+            AND (Envelope_Status__c = null OR Envelope_Status__c IN ('Draft', 'Sent', 'Viewed'))
+            FOR UPDATE
+        ];
+        if (priorOpenEnvelopes.isEmpty()) {
+            return;
+        }
+
+        for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
+            prior.Envelope_Status__c = 'Canceled';
+        }
+        update priorOpenEnvelopes;
+
+        String details = 'Envelope canceled because a newer e-signature draft was saved for this record.';
+        for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
+            ESignatureUtil.updateSourceFileESignatureStatus(prior, 'Canceled');
+            ESignatureUtil.audit(prior.Id, 'Canceled', UserInfo.getUserEmail(), details);
+        }
     }
 }

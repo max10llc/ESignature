@@ -150,6 +150,9 @@ private class ESignatureUtilTest {
         );
         System.assertEquals('orgwide@example.com', ESignatureUtil.configuredOrgWideEmailAddress(settings));
         System.assertEquals('https://example.com/logo.png', ESignatureUtil.configuredEmailLogoUrl(settings));
+        String logoHtml = ESignatureUtil.emailLogoHtml();
+        System.assert(logoHtml.contains('width="252"'), 'Email logo should render at its native width.');
+        System.assert(logoHtml.contains('height="73"'), 'Email logo should render at its native height.');
 
         settings.Org_Wide_Email_Address__c = null;
         System.assertEquals('default@example.com', ESignatureUtil.configuredOrgWideEmailAddress(settings));

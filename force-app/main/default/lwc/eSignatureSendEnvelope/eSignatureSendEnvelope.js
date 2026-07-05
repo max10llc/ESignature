@@ -13,6 +13,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
     signerName = '';
     signerEmail = '';
     signerTitle = '';
+    requestMessage = 'Please review and sign the agreement.';
     expirationDays = 365;
     isLoading = true;
     isSending = false;
@@ -28,15 +29,26 @@ export default class PdfESignSendEnvelope extends LightningElement {
         return this.parentRecordId || this.recordId;
     }
 
-    get envelopeOptions() {
-        return this.envelopes.map((env) => ({
-            label: `${env.title || env.name} (${env.fieldCount} fields)`,
-            value: env.id
-        }));
-    }
-
     get hasDrafts() {
         return this.envelopes.length > 0;
+    }
+
+    get currentDraft() {
+        return this.envelopes.length ? this.envelopes[0] : null;
+    }
+
+    get currentDraftTitle() {
+        const draft = this.currentDraft;
+        return draft ? draft.title || draft.name : '';
+    }
+
+    get currentDraftFieldSummary() {
+        const draft = this.currentDraft;
+        if (!draft) {
+            return '';
+        }
+        const count = draft.fieldCount || 0;
+        return `${count} field${count === 1 ? '' : 's'}`;
     }
 
     get disableSend() {
@@ -54,11 +66,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
                 parentRecordId: this.effectiveParentRecordId,
                 refreshKey: this.draftRefreshKey
             });
-            if (this.envelopes.length === 1) {
-                this.selectedEnvelopeId = this.envelopes[0].id;
-            } else if (!this.envelopes.some((env) => env.id === this.selectedEnvelopeId)) {
-                this.selectedEnvelopeId = null;
-            }
+            this.selectedEnvelopeId = this.currentDraft ? this.currentDraft.id : null;
         } catch (error) {
             this.errorMessage = this.normalizeError(error);
         } finally {
@@ -68,10 +76,6 @@ export default class PdfESignSendEnvelope extends LightningElement {
 
     handleRefresh() {
         this.loadDrafts(true);
-    }
-
-    handleEnvelopeChange(event) {
-        this.selectedEnvelopeId = event.detail.value;
     }
 
     handleSignerNameChange(event) {
@@ -84,6 +88,10 @@ export default class PdfESignSendEnvelope extends LightningElement {
 
     handleSignerTitleChange(event) {
         this.signerTitle = event.detail.value;
+    }
+
+    handleRequestMessageChange(event) {
+        this.requestMessage = event.detail.value;
     }
 
     handleExpirationChange(event) {
@@ -100,6 +108,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
                 signerName: this.signerName,
                 signerEmail: this.signerEmail,
                 signerTitle: this.signerTitle,
+                requestMessage: this.requestMessage,
                 expirationDays: this.expirationDays
             });
             this.lastSigningUrl = result.signingUrl;

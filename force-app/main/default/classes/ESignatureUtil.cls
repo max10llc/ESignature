@@ -63,7 +63,8 @@ public without sharing class ESignatureUtil {
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c,
                    Sent_At__c, Viewed_At__c, Signed_At__c, Expires_At__c, Page_Count__c,
                    Public_Signing_URL__c, Signature_Method__c, Signature_Image_Data_Url__c,
-                   Completed_Fields_JSON__c, Completion_Message__c, Decline_Reason__c, Error_Message__c
+                   Completed_Fields_JSON__c, Completion_Message__c, Request_Message__c,
+                   Decline_Reason__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Secure_Token_Hash__c = :hashValue
             LIMIT 1
@@ -650,7 +651,7 @@ public without sharing class ESignatureUtil {
         String logoUrl = configuredEmailLogoUrl();
         return String.isBlank(logoUrl)
             ? 'E-Signature'
-            : '<img src="' + escapeHtml(logoUrl) + '" width="180" alt="Kaizon Solutions" style="display:block;width:180px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />';
+            : '<img src="' + escapeHtml(logoUrl) + '" width="252" height="73" alt="Kaizon Solutions" style="display:block;width:252px;max-width:252px;height:73px;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />';
     }
 
     public static String emailShell(String contentHtml) {
@@ -670,7 +671,10 @@ public without sharing class ESignatureUtil {
     private static String emailHeaderRow() {
         return ''
             + '        <tr>'
-            + '          <td bgcolor="#0176d3" align="left" style="padding:16px 24px;background-color:#0176d3;font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:24px;font-weight:bold;color:#ffffff;">'
+            + '          <td bgcolor="#0176d3" height="44" style="height:44px;background-color:#0176d3;font-size:0;line-height:44px;mso-line-height-rule:exactly;">&nbsp;</td>'
+            + '        </tr>'
+            + '        <tr>'
+            + '          <td align="left" style="padding:18px 24px 14px 24px;border-bottom:1px solid #e5e7eb;">'
             +              emailLogoHtml()
             + '          </td>'
             + '        </tr>';

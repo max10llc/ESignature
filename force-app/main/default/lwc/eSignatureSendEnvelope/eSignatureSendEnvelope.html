@@ -16,16 +16,15 @@
                 </div>
 
                 <template if:true={hasDrafts}>
-                    <lightning-combobox
-                        label="Draft Envelope"
-                        value={selectedEnvelopeId}
-                        options={envelopeOptions}
-                        onchange={handleEnvelopeChange}
-                        required>
-                    </lightning-combobox>
+                    <div class="current-draft slds-m-bottom_small">
+                        <div class="slds-text-title_caps">Draft Envelope</div>
+                        <div class="draft-title">{currentDraftTitle}</div>
+                        <div class="draft-fields">{currentDraftFieldSummary}</div>
+                    </div>
                     <lightning-input label="Signer Name" value={signerName} onchange={handleSignerNameChange} required></lightning-input>
                     <lightning-input type="email" label="Signer Email" value={signerEmail} onchange={handleSignerEmailChange} required></lightning-input>
                     <lightning-input label="Signer Title" value={signerTitle} onchange={handleSignerTitleChange}></lightning-input>
+                    <lightning-textarea label="Message" value={requestMessage} onchange={handleRequestMessageChange}></lightning-textarea>
                     <lightning-input type="number" label="Expiration Days" min="1" max="365" value={expirationDays} onchange={handleExpirationChange}></lightning-input>
                     <div class="slds-m-top_medium">
                         <lightning-button variant="brand" label="Send for E-Signature" onclick={handleSend} disabled={disableSend}></lightning-button>

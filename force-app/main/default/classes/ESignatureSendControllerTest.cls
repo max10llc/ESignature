@@ -30,7 +30,8 @@ private class ESignatureSendControllerTest {
             'Derek Hawley',
             'signer@example.com',
             'President',
-            30
+            30,
+            'Please review the attached proposal before signing.'
         );
         Test.stopTest();
 
@@ -41,6 +42,7 @@ private class ESignatureSendControllerTest {
         ESignature_Envelope__c env = [
             SELECT Envelope_Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
                    Sent_At__c, Expires_At__c, Public_Signing_URL__c,
+                   Request_Message__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Id = :fixture.envelope.Id
@@ -49,6 +51,7 @@ private class ESignatureSendControllerTest {
         System.assertEquals('Derek Hawley', env.Signer_Name__c);
         System.assertEquals('signer@example.com', env.Signer_Email__c);
         System.assertEquals('President', env.Signer_Title__c);
+        System.assertEquals('Please review the attached proposal before signing.', env.Request_Message__c);
         System.assertNotEquals(null, env.Sent_At__c);
         System.assertNotEquals(null, env.Expires_At__c);
         System.assertNotEquals(null, env.Public_Signing_URL__c);
@@ -103,6 +106,7 @@ private class ESignatureSendControllerTest {
     @IsTest
     static void sendEnvelopeCancelsPriorOpenEnvelopesForSameParent() {
         DraftFixture fixture = createDraftFixture();
+        ContentVersion draftSource = createSourceFile('Prior Draft Source');
         ContentVersion sentSource = createSourceFile('Prior Sent Source');
         ContentVersion viewedSource = createSourceFile('Prior Viewed Source');
 
@@ -110,11 +114,12 @@ private class ESignatureSendControllerTest {
         insert otherParent;
         ContentVersion otherSource = createSourceFile('Other Parent Source');
 
+        ESignature_Envelope__c priorDraft = activeEnvelope(fixture.parentId, 'Draft', draftSource);
         ESignature_Envelope__c priorSent = activeEnvelope(fixture.parentId, 'Sent', sentSource);
         ESignature_Envelope__c priorViewed = activeEnvelope(fixture.parentId, 'Viewed', viewedSource);
         ESignature_Envelope__c sameParentSigned = activeEnvelope(fixture.parentId, 'Signed', createSourceFile('Signed Source'));
         ESignature_Envelope__c otherParentSent = activeEnvelope(otherParent.Id, 'Sent', otherSource);
-        insert new List<ESignature_Envelope__c>{ priorSent, priorViewed, sameParentSigned, otherParentSent };
+        insert new List<ESignature_Envelope__c>{ priorDraft, priorSent, priorViewed, sameParentSigned, otherParentSent };
 
         Test.startTest();
         ESignatureSendController.sendEnvelope(
@@ -122,16 +127,18 @@ private class ESignatureSendControllerTest {
             'Derek Hawley',
             'signer@example.com',
             'President',
-            30
+            30,
+            null
         );
         Test.stopTest();
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
             SELECT Envelope_Status__c
             FROM ESignature_Envelope__c
-            WHERE Id IN :new Set<Id>{ fixture.envelope.Id, priorSent.Id, priorViewed.Id, sameParentSigned.Id, otherParentSent.Id }
+            WHERE Id IN :new Set<Id>{ fixture.envelope.Id, priorDraft.Id, priorSent.Id, priorViewed.Id, sameParentSigned.Id, otherParentSent.Id }
         ]);
         System.assertEquals('Sent', envelopes.get(fixture.envelope.Id).Envelope_Status__c, 'The newly sent envelope should stay active.');
+        System.assertEquals('Canceled', envelopes.get(priorDraft.Id).Envelope_Status__c, 'Prior draft envelope on the same parent should be canceled.');
         System.assertEquals('Canceled', envelopes.get(priorSent.Id).Envelope_Status__c, 'Prior sent envelope on the same parent should be canceled.');
         System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Envelope_Status__c, 'Prior viewed envelope on the same parent should be canceled.');
         System.assertEquals('Signed', envelopes.get(sameParentSigned.Id).Envelope_Status__c, 'Completed envelopes should not be changed.');
@@ -142,20 +149,22 @@ private class ESignatureSendControllerTest {
             FROM ContentVersion
             WHERE Id IN :new Set<Id>{
                 ESignatureUtil.safeId(fixture.field.Content_Version_Id__c),
+                draftSource.Id,
                 sentSource.Id,
                 viewedSource.Id,
                 otherSource.Id
             }
         ]);
         System.assertEquals('Sent', sources.get(ESignatureUtil.safeId(fixture.field.Content_Version_Id__c)).ESignature_Status__c);
+        System.assertEquals('Canceled', sources.get(draftSource.Id).ESignature_Status__c);
         System.assertEquals('Canceled', sources.get(sentSource.Id).ESignature_Status__c);
         System.assertEquals('Canceled', sources.get(viewedSource.Id).ESignature_Status__c);
         System.assertNotEquals('Canceled', sources.get(otherSource.Id).ESignature_Status__c);
 
-        System.assertEquals(2, [
+        System.assertEquals(3, [
             SELECT COUNT()
             FROM ESignature_Audit_Event__c
-            WHERE Envelope__c IN :new Set<Id>{ priorSent.Id, priorViewed.Id }
+            WHERE Envelope__c IN :new Set<Id>{ priorDraft.Id, priorSent.Id, priorViewed.Id }
             AND Event_Type__c = 'Canceled'
         ], 'Each automatically canceled envelope should receive a cancel audit event.');
     }
@@ -172,7 +181,7 @@ private class ESignatureSendControllerTest {
         insert env;
 
         try {
-            ESignatureSendController.sendEnvelope(String.valueOf(env.Id), 'Derek Hawley', 'signer@example.com', null, 30);
+            ESignatureSendController.sendEnvelope(String.valueOf(env.Id), 'Derek Hawley', 'signer@example.com', null, 30, null);
             System.assert(false, 'Expected sendEnvelope to reject a draft without fields.');
         } catch (AuraHandledException ex) {
             System.assertNotEquals(null, ex.getMessage(), 'An AuraHandledException should be thrown.');
@@ -189,7 +198,8 @@ private class ESignatureSendControllerTest {
         String html = ESignatureSendController.buildSignatureRequestEmailHtml(
             env,
             'https://example.com/signatures/apex/ESignaturePage?t=abc123',
-            'Special Services Agreement'
+            'Special Services Agreement',
+            'Please review the revised scope.\nCall me with any questions.'
         );
 
         System.assert(html.contains('<table role="presentation" width="100%"'), 'Email should use the original table-based shell.');
@@ -197,10 +207,19 @@ private class ESignatureSendControllerTest {
         System.assert(html.contains('alt="Kaizon Solutions"'), 'Email logo should include accessible alt text.');
         System.assert(html.contains('has sent you a document that requires your signature'), 'Email should include the original request language.');
         System.assert(html.contains('Special Services Agreement'), 'Email should include the document title block.');
+        System.assert(html.contains('Please review the revised scope.<br/>Call me with any questions.'), 'Email should include the sender-entered request message with line breaks preserved.');
+        System.assert(!html.contains('Please review and sign the agreement.'), 'Custom messages should replace the generic request message.');
         System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');
         System.assert(html.contains('This link is unique to you and will expire on'), 'Email should include the expiration notice.');
         System.assert(html.contains('https://example.com/signatures/apex/ESignaturePage?t=abc123'), 'Email should include the fallback signing URL.');
         System.assert(html.contains('/services/apexrest/ESignature/v1/email-open?t=abc123'), 'Email should include the hidden email-open tracking pixel.');
+
+        String defaultHtml = ESignatureSendController.buildSignatureRequestEmailHtml(
+            env,
+            'https://example.com/signatures/apex/ESignaturePage?t=abc123',
+            'Special Services Agreement'
+        );
+        System.assert(defaultHtml.contains('Please review and sign the agreement.'), 'Blank custom messages should fall back to the default request message.');
     }
 
     @IsTest

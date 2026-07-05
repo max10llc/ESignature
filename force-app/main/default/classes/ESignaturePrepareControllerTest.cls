@@ -93,6 +93,8 @@ private class ESignaturePrepareControllerTest {
             FROM ESignature_Field__c
             WHERE Envelope__c = :env.Id
         ]);
+        System.assert(result.message.contains('Saved 1 field placement to draft envelope '), 'Success message should identify the saved field count and envelope.');
+        System.assert(!result.message.endsWith(' null.'), 'Success message should not render a null envelope name.');
 
         List<ESignaturePrepareController.PlacementDTO> placements =
             ESignaturePrepareController.getPlacements(String.valueOf(parent.Id), String.valueOf(source.ContentDocumentId));
@@ -119,7 +121,7 @@ private class ESignaturePrepareControllerTest {
             String.valueOf(parent.Id),
             String.valueOf(source.ContentDocumentId),
             String.valueOf(source.Id),
-            '[]'
+            placementJson()
         );
 
         ESignature_Envelope__c env = [
@@ -132,6 +134,99 @@ private class ESignaturePrepareControllerTest {
         System.assertEquals(null, env.Account__c);
         System.assertEquals(parent.Id, env.Opportunity__c);
         System.assertEquals(null, env.Work_Order__c);
+    }
+
+    @IsTest
+    static void savePlacementsCancelsPriorOpenEnvelopesForSameParent() {
+        Account parent = new Account(Name = 'Prepare Controller Cancellation Parent');
+        insert parent;
+        ContentVersion newSource = createPdfFile(parent.Id, 'Current Prepared E-Signature File', true);
+        ContentVersion draftSource = createPdfFile(parent.Id, 'Prior Draft E-Signature File', true);
+        ContentVersion sentSource = createPdfFile(parent.Id, 'Prior Sent E-Signature File', true);
+        ContentVersion viewedSource = createPdfFile(parent.Id, 'Prior Viewed E-Signature File', true);
+        ContentVersion blankSource = createPdfFile(parent.Id, 'Prior Blank E-Signature File', true);
+        ContentVersion signedSource = createPdfFile(parent.Id, 'Prior Signed E-Signature File', true);
+
+        Account otherParent = new Account(Name = 'Prepare Controller Other Parent');
+        insert otherParent;
+        ContentVersion otherSource = createPdfFile(otherParent.Id, 'Other Parent E-Signature File', true);
+
+        ESignature_Envelope__c priorDraft = envelope(parent.Id, 'Draft', draftSource);
+        ESignature_Envelope__c priorSent = envelope(parent.Id, 'Sent', sentSource);
+        ESignature_Envelope__c priorViewed = envelope(parent.Id, 'Viewed', viewedSource);
+        ESignature_Envelope__c priorBlank = envelope(parent.Id, null, blankSource);
+        ESignature_Envelope__c priorSigned = envelope(parent.Id, 'Signed', signedSource);
+        ESignature_Envelope__c otherSent = envelope(otherParent.Id, 'Sent', otherSource);
+        insert new List<ESignature_Envelope__c>{ priorDraft, priorSent, priorViewed, priorBlank, priorSigned, otherSent };
+
+        ESignaturePrepareController.SaveResultDTO result = ESignaturePrepareController.savePlacements(
+            String.valueOf(parent.Id),
+            String.valueOf(newSource.ContentDocumentId),
+            String.valueOf(newSource.Id),
+            placementJson()
+        );
+
+        Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
+            SELECT Envelope_Status__c
+            FROM ESignature_Envelope__c
+            WHERE Id IN :new Set<Id>{ ESignatureUtil.safeId(result.envelopeId), priorDraft.Id, priorSent.Id, priorViewed.Id, priorBlank.Id, priorSigned.Id, otherSent.Id }
+        ]);
+        System.assertEquals('Draft', envelopes.get(ESignatureUtil.safeId(result.envelopeId)).Envelope_Status__c, 'The current draft should stay active.');
+        System.assertEquals('Canceled', envelopes.get(priorDraft.Id).Envelope_Status__c, 'Prior draft envelope should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorSent.Id).Envelope_Status__c, 'Prior sent envelope should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Envelope_Status__c, 'Prior viewed envelope should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorBlank.Id).Envelope_Status__c, 'Prior blank-status envelope should be canceled.');
+        System.assertEquals('Signed', envelopes.get(priorSigned.Id).Envelope_Status__c, 'Completed envelopes should not be changed.');
+        System.assertEquals('Sent', envelopes.get(otherSent.Id).Envelope_Status__c, 'Other parent envelopes should not be changed.');
+
+        System.assertEquals(4, [
+            SELECT COUNT()
+            FROM ESignature_Audit_Event__c
+            WHERE Envelope__c IN :new Set<Id>{ priorDraft.Id, priorSent.Id, priorViewed.Id, priorBlank.Id }
+            AND Event_Type__c = 'Canceled'
+        ], 'Each automatically canceled envelope should receive a cancel audit event.');
+    }
+
+    @IsTest
+    static void savePlacementsRejectsEmptyPlacementList() {
+        Account parent = new Account(Name = 'Prepare Controller Empty Save Parent');
+        insert parent;
+        ContentVersion source = createPdfFile(parent.Id, 'Empty Save E-Signature File', true);
+
+        try {
+            ESignaturePrepareController.savePlacements(
+                String.valueOf(parent.Id),
+                String.valueOf(source.ContentDocumentId),
+                String.valueOf(source.Id),
+                '[]'
+            );
+            System.assert(false, 'Expected empty placement saves to be rejected.');
+        } catch (AuraHandledException ex) {
+            System.assertNotEquals(null, ex.getMessage(), 'The caller should receive a clear no-fields error.');
+        }
+
+        String parentId = String.valueOf(parent.Id);
+        System.assertEquals(0, [
+            SELECT COUNT()
+            FROM ESignature_Envelope__c
+            WHERE Parent_Record_Id__c = :parentId
+        ], 'Empty saves should not create draft envelopes.');
+    }
+
+    private static String placementJson() {
+        return JSON.serialize(new List<Object>{
+            new Map<String, Object>{
+                'fieldType' => 'Signature',
+                'pageNumber' => 1,
+                'xPercent' => 0.10,
+                'yPercent' => 0.20,
+                'widthPercent' => 0.25,
+                'heightPercent' => 0.05,
+                'signerNumber' => 1,
+                'required' => true,
+                'label' => 'Signature'
+            }
+        });
     }
 
     private static ContentVersion createPdfFile(Id parentId, String title, Boolean eSignatureFile) {
@@ -148,5 +243,15 @@ private class ESignaturePrepareControllerTest {
             FROM ContentVersion
             WHERE Id = :source.Id
         ];
+    }
+
+    private static ESignature_Envelope__c envelope(Id parentId, String status, ContentVersion source) {
+        return new ESignature_Envelope__c(
+            Envelope_Status__c = status,
+            Parent_Record_Id__c = String.valueOf(parentId),
+            Parent_Object_Api_Name__c = 'Account',
+            Source_ContentVersion_Id__c = String.valueOf(source.Id),
+            Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
+        );
     }
 }

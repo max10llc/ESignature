@@ -1,2 +1,5 @@
 .refresh-row { display:flex; justify-content:flex-end; }
+.current-draft { border:1px solid #dddbda; border-radius:4px; padding:0.75rem; background:#ffffff; }
+.draft-title { color:#080707; font-weight:600; margin-top:0.25rem; }
+.draft-fields { color:#5f6368; font-size:0.85rem; margin-top:0.125rem; }
 .empty-state { color:#5f6368; font-size:0.9rem; padding:1rem; text-align:center; }

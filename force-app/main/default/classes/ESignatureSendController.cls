@@ -25,7 +25,7 @@ public with sharing class ESignatureSendController {
             WHERE Parent_Record_Id__c = :parentRecordId
             AND (Envelope_Status__c = 'Draft' OR Envelope_Status__c = null)
             ORDER BY LastModifiedDate DESC
-            LIMIT 50
+            LIMIT 1
         ];
         Set<Id> envelopeIds = new Set<Id>();
         for (ESignature_Envelope__c env : envelopes) {
@@ -53,7 +53,7 @@ public with sharing class ESignatureSendController {
     }
 
     @AuraEnabled
-    public static SendResultDTO sendEnvelope(String envelopeId, String signerName, String signerEmail, String signerTitle, Integer expirationDays) {
+    public static SendResultDTO sendEnvelope(String envelopeId, String signerName, String signerEmail, String signerTitle, Integer expirationDays, String requestMessage) {
         if (String.isBlank(envelopeId)) {
             throw new AuraHandledException('Select a draft envelope to send.');
         }
@@ -67,7 +67,7 @@ public with sharing class ESignatureSendController {
             SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sent_At__c,
                    Expires_At__c, Public_Signing_URL__c, Sender_User__c,
-                   Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+                   Request_Message__c, Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
@@ -92,6 +92,7 @@ public with sharing class ESignatureSendController {
         env.Signer_Name__c = signerName.trim();
         env.Signer_Email__c = signerEmail.trim();
         env.Signer_Title__c = String.isBlank(signerTitle) ? null : signerTitle.trim();
+        env.Request_Message__c = normalizedRequestMessage(requestMessage);
         env.Envelope_Status__c = 'Sent';
         env.Sent_At__c = System.now();
         env.Expires_At__c = System.now().addDays(days);
@@ -143,7 +144,7 @@ public with sharing class ESignatureSendController {
             FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :currentEnv.Parent_Record_Id__c
             AND Id != :currentEnv.Id
-            AND Envelope_Status__c IN ('Sent', 'Viewed')
+            AND (Envelope_Status__c = null OR Envelope_Status__c IN ('Draft', 'Sent', 'Viewed'))
             FOR UPDATE
         ];
         if (priorOpenEnvelopes.isEmpty()) {
@@ -225,7 +226,21 @@ public with sharing class ESignatureSendController {
         emailLog.Incoming = false;
         emailLog.Status = '3';
         emailLog.MessageDate = System.now();
-        insert emailLog;
+        insertEmailLogWithoutBlockingSend(emailLog);
+    }
+
+    private static void insertEmailLogWithoutBlockingSend(EmailMessage emailLog) {
+        try {
+            insert emailLog;
+        } catch (DmlException firstFailure) {
+            String fallbackFrom = UserInfo.getUserEmail();
+            if (!String.isBlank(fallbackFrom) && fallbackFrom != emailLog.FromAddress) {
+                try {
+                    emailLog.FromAddress = fallbackFrom;
+                    insert emailLog;
+                } catch (DmlException retryFailure) {}
+            }
+        }
     }
 
     private static String loggedFromAddress() {
@@ -243,10 +258,19 @@ public with sharing class ESignatureSendController {
 
     @TestVisible
     private static String buildSignatureRequestEmailHtml(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
-        return buildSignatureRequestEmailContent(env, signingUrl, documentTitle).htmlBody;
+        return buildSignatureRequestEmailContent(env, signingUrl, documentTitle, null).htmlBody;
+    }
+
+    @TestVisible
+    private static String buildSignatureRequestEmailHtml(ESignature_Envelope__c env, String signingUrl, String documentTitle, String requestMessage) {
+        return buildSignatureRequestEmailContent(env, signingUrl, documentTitle, requestMessage).htmlBody;
     }
 
     private static ESignatureUtil.EmailContent buildSignatureRequestEmailContent(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
+        return buildSignatureRequestEmailContent(env, signingUrl, documentTitle, null);
+    }
+
+    private static ESignatureUtil.EmailContent buildSignatureRequestEmailContent(ESignature_Envelope__c env, String signingUrl, String documentTitle, String requestMessageOverride) {
         String signerName = String.isBlank(env.Signer_Name__c) ? 'there' : env.Signer_Name__c;
         String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : ESignatureUtil.escapeHtml(env.Signer_Name__c);
         String resolvedDocumentTitle = String.isBlank(documentTitle) ? 'Document' : documentTitle;
@@ -254,6 +278,8 @@ public with sharing class ESignatureSendController {
         String safeSigningUrl = ESignatureUtil.escapeHtml(signingUrl);
         String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : UserInfo.getName();
         String safeSenderName = ESignatureUtil.escapeHtml(senderName);
+        String requestMessage = resolvedRequestMessage(env, requestMessageOverride);
+        String safeRequestMessage = multilineSafeHtml(requestMessage);
         String expirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
         String emailOpenTrackingUrl = emailOpenTrackingUrl(signingUrl);
         String safeEmailOpenTrackingUrl = ESignatureUtil.escapeHtml(emailOpenTrackingUrl);
@@ -264,7 +290,7 @@ public with sharing class ESignatureSendController {
             ESignatureUtil.emailParagraphRow('Hi ' + safeSignerName + ',')
             + ESignatureUtil.emailParagraphRow(safeSenderName + ' has sent you a document that requires your signature:')
             + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
-            + ESignatureUtil.emailParagraphRow('Please review and sign the agreement.')
+            + ESignatureUtil.emailParagraphRow(safeRequestMessage)
             + ESignatureUtil.emailButtonRow('Review &amp; Sign Document', safeSigningUrl, '#0176d3')
             + ESignatureUtil.emailSubtleRow('This link is unique to you and will expire on ' + expirationDate + '.')
             + ESignatureUtil.emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
@@ -278,6 +304,7 @@ public with sharing class ESignatureSendController {
                 'SignerName' => signerName,
                 'SenderName' => senderName,
                 'DocumentTitle' => resolvedDocumentTitle,
+                'RequestMessage' => requestMessage,
                 'SigningUrl' => signingUrl,
                 'ExpirationDate' => expirationDate,
                 'EmailOpenTrackingUrl' => emailOpenTrackingUrl
@@ -287,12 +314,47 @@ public with sharing class ESignatureSendController {
                 'SignerName' => safeSignerName,
                 'SenderName' => safeSenderName,
                 'DocumentTitle' => safeDocumentTitle,
+                'RequestMessage' => safeRequestMessage,
+                'RequestMessageHtml' => safeRequestMessage,
                 'SigningUrl' => safeSigningUrl,
                 'ExpirationDate' => expirationDate,
                 'EmailOpenTrackingUrl' => safeEmailOpenTrackingUrl,
                 'EmailOpenTrackingPixel' => emailOpenTrackingPixel
             }
         );
+    }
+
+    private static String resolvedRequestMessage(ESignature_Envelope__c env, String requestMessageOverride) {
+        if (!String.isBlank(requestMessageOverride)) {
+            return normalizedRequestMessage(requestMessageOverride);
+        }
+        return normalizedRequestMessage(envelopeRequestMessage(env));
+    }
+
+    private static String envelopeRequestMessage(ESignature_Envelope__c env) {
+        if (env == null) {
+            return null;
+        }
+        try {
+            return env.Request_Message__c;
+        } catch (SObjectException ex) {
+            return null;
+        }
+    }
+
+    private static String normalizedRequestMessage(String requestMessage) {
+        return String.isBlank(requestMessage) ? defaultRequestMessage() : requestMessage.trim();
+    }
+
+    private static String defaultRequestMessage() {
+        return 'Please review and sign the agreement.';
+    }
+
+    private static String multilineSafeHtml(String value) {
+        return ESignatureUtil.escapeHtml(String.isBlank(value) ? '' : value)
+            .replace('\r\n', '<br/>')
+            .replace('\n', '<br/>')
+            .replace('\r', '<br/>');
     }
 
     private static String emailOpenTrackingPixelHtml(String safeEmailOpenTrackingUrl) {

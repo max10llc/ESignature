@@ -11,7 +11,7 @@
 
 Document: {{DocumentTitle}}
 
-Please review and sign the agreement.
+{{RequestMessage}}
 
 {{SigningUrl}}
 

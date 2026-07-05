@@ -263,6 +263,19 @@ private class ESignaturePageControllerTest {
     }
 
     @IsTest
+    static void senderPanelUsesEnvelopeRequestMessage() {
+        String token = 'page-custom-message-token';
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        env.Request_Message__c = 'Please review the revised scope.\nCall me with questions.';
+        update env;
+        setSigningPageToken(token);
+
+        ESignaturePageController controller = new ESignaturePageController();
+
+        System.assertEquals('Please review the revised scope.\nCall me with questions.', controller.getEnvelopeMessage());
+    }
+
+    @IsTest
     static void signUsesEnvelopeSignerNameWithoutSignerInput() {
         String token = 'page-basic-validation-token';
         createEnvelope(token, 'Viewed');

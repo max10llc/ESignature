@@ -683,6 +683,15 @@ export default class PdfESignPrepareDocument extends LightningElement {
     }
 
     async handleSave() {
+        if (!this.fields.length) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'No fields to save',
+                message: 'There are no fields to save.',
+                variant: 'warning'
+            }));
+            return;
+        }
+
         this.isSaving = true;
         try {
             const placements = this.fields.map((field) => this.toPlacementPayload(field));
