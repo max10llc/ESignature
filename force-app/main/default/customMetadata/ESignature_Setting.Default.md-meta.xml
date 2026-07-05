@@ -16,7 +16,7 @@
     </values>
     <values>
         <field>Email_Logo_URL__c</field>
-        <value xsi:type="xsd:string">https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png</value>
+        <value xsi:type="xsd:string">https://tpbrass--partial.sandbox.my.salesforce-sites.com/signatures/resource/Kaizon_Solutions_Logo</value>
     </values>
     <values>
         <field>Final_Pdf_Owner_Password__c</field>

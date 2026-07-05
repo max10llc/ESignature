@@ -50,7 +50,8 @@ public without sharing class ESignaturePageController {
             }, false);
             return null;
         }
-        if (envelope.Envelope_Status__c == 'Sent') {
+        String status = normalizedEnvelopeStatus();
+        if (status == 'sent' || status == 'viewed' || status == 'error') {
             publishCommand('Viewed', new Map<String, Object>{
                 'message' => 'Signer opened the envelope.'
             }, false);

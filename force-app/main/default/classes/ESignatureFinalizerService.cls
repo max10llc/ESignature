@@ -112,16 +112,18 @@ public without sharing class ESignatureFinalizerService {
     private static void sendCompletionNotificationEmail(ESignature_Envelope__c env) {
         try {
             List<Messaging.SingleEmailMessage> messages = new List<Messaging.SingleEmailMessage>();
-            String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
+            List<Messaging.EmailFileAttachment> attachments = completionEmailAttachments(env);
             addCompletionEmailMessage(
                 messages,
                 env == null ? null : env.Signer_Email__c,
-                buildSignerCompletionEmailContent(env)
+                buildSignerCompletionEmailContent(env),
+                attachments
             );
             addCompletionEmailMessage(
                 messages,
                 ESignatureUtil.senderEmail(env == null ? null : env.Sender_User__c),
-                buildSalesforceUserCompletionEmailContent(env)
+                buildSalesforceUserCompletionEmailContent(env),
+                attachments
             );
             if (messages.isEmpty()) {
                 return;
@@ -130,14 +132,25 @@ public without sharing class ESignatureFinalizerService {
         } catch (Exception ignore) {}
     }
 
-    private static void addCompletionEmailMessage(List<Messaging.SingleEmailMessage> messages, String recipientEmail, ESignatureUtil.EmailContent content) {
+    private static void addCompletionEmailMessage(
+        List<Messaging.SingleEmailMessage> messages,
+        String recipientEmail,
+        ESignatureUtil.EmailContent content,
+        List<Messaging.EmailFileAttachment> attachments
+    ) {
         if (content == null) {
             return;
         }
-        addCompletionEmailMessage(messages, recipientEmail, content.subject, content.htmlBody);
+        addCompletionEmailMessage(messages, recipientEmail, content.subject, content.htmlBody, attachments);
     }
 
-    private static void addCompletionEmailMessage(List<Messaging.SingleEmailMessage> messages, String recipientEmail, String subject, String htmlBody) {
+    private static void addCompletionEmailMessage(
+        List<Messaging.SingleEmailMessage> messages,
+        String recipientEmail,
+        String subject,
+        String htmlBody,
+        List<Messaging.EmailFileAttachment> attachments
+    ) {
         if (messages == null || !isValidEmail(recipientEmail)) {
             return;
         }
@@ -145,9 +158,80 @@ public without sharing class ESignatureFinalizerService {
         message.setToAddresses(new List<String>{ recipientEmail.trim() });
         message.setSubject(subject);
         message.setHtmlBody(htmlBody);
+        if (attachments != null && !attachments.isEmpty()) {
+            message.setFileAttachments(attachments);
+        }
         message.setSaveAsActivity(false);
         ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
         messages.add(message);
+    }
+
+    @TestVisible
+    private static List<Messaging.EmailFileAttachment> completionEmailAttachments(ESignature_Envelope__c env) {
+        List<Messaging.EmailFileAttachment> attachments = new List<Messaging.EmailFileAttachment>();
+        ContentVersion finalVersion = loadFinalContentVersion(env);
+        if (finalVersion == null || finalVersion.VersionData == null) {
+            return attachments;
+        }
+
+        Messaging.EmailFileAttachment attachment = new Messaging.EmailFileAttachment();
+        attachment.setFileName(finalPdfFileName(finalVersion));
+        attachment.setBody(finalVersion.VersionData);
+        attachment.setContentType('application/pdf');
+        attachments.add(attachment);
+        return attachments;
+    }
+
+    private static ContentVersion loadFinalContentVersion(ESignature_Envelope__c env) {
+        if (env == null) {
+            return null;
+        }
+
+        Id versionId = ESignatureUtil.safeId(env.Final_ContentVersion_Id__c);
+        if (versionId != null) {
+            List<ContentVersion> versions = [
+                SELECT Id, Title, FileExtension, PathOnClient, VersionData
+                FROM ContentVersion
+                WHERE Id = :versionId
+                LIMIT 1
+            ];
+            if (!versions.isEmpty()) {
+                return versions[0];
+            }
+        }
+
+        Id documentId = ESignatureUtil.safeId(env.Final_ContentDocument_Id__c);
+        if (documentId == null) {
+            return null;
+        }
+        List<ContentVersion> latestVersions = [
+            SELECT Id, Title, FileExtension, PathOnClient, VersionData
+            FROM ContentVersion
+            WHERE ContentDocumentId = :documentId
+            AND IsLatest = true
+            LIMIT 1
+        ];
+        return latestVersions.isEmpty() ? null : latestVersions[0];
+    }
+
+    private static String finalPdfFileName(ContentVersion version) {
+        String fileName = version == null ? null : version.PathOnClient;
+        if (String.isBlank(fileName)) {
+            fileName = version == null ? null : version.Title;
+            if (String.isBlank(fileName)) {
+                fileName = 'Signed Document';
+            }
+            if (version != null && !String.isBlank(version.FileExtension) && !fileName.toLowerCase().endsWith('.' + version.FileExtension.toLowerCase())) {
+                fileName += '.' + version.FileExtension;
+            }
+        }
+        if (String.isBlank(fileName)) {
+            fileName = 'Signed Document.pdf';
+        }
+        if (!fileName.toLowerCase().endsWith('.pdf')) {
+            fileName += '.pdf';
+        }
+        return fileName;
     }
 
     @TestVisible

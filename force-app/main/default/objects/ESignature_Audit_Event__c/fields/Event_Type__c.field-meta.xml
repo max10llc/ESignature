@@ -31,6 +31,16 @@
                 <label>Viewed</label>
             </value>
             <value>
+                <fullName>Email Opened</fullName>
+                <default>false</default>
+                <label>Email Opened</label>
+            </value>
+            <value>
+                <fullName>Document Opened</fullName>
+                <default>false</default>
+                <label>Document Opened</label>
+            </value>
+            <value>
                 <fullName>Delegated</fullName>
                 <default>false</default>
                 <label>Delegated</label>

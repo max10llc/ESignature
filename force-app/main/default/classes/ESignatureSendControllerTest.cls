@@ -74,6 +74,30 @@ private class ESignatureSendControllerTest {
             WHERE Envelope__c = :fixture.envelope.Id
             AND Event_Type__c = 'Sent'
         ], 'Sent audit event should be written.');
+        Task activity = [
+            SELECT WhatId, OwnerId, Subject, Status, Description
+            FROM Task
+            WHERE WhatId = :fixture.parentId
+            AND Subject = 'Email: Signature request sent'
+            LIMIT 1
+        ];
+        System.assertEquals(fixture.parentId, activity.WhatId, 'Sender confirmation email should be logged to the parent record.');
+        System.assertEquals(UserInfo.getUserId(), activity.OwnerId, 'Logged activity should belong to the Salesforce sender.');
+        System.assertEquals('Completed', activity.Status, 'Logged activity should be completed.');
+        System.assert(activity.Description.contains('Send Controller Source'), 'Logged activity should identify the document.');
+        System.assert(activity.Description.contains('signer@example.com'), 'Logged activity should identify the signer.');
+        EmailMessage emailLog = [
+            SELECT RelatedToId, Subject, ToAddress, Incoming, Status, TextBody
+            FROM EmailMessage
+            WHERE RelatedToId = :fixture.parentId
+            AND Subject = 'Signature request sent: Send Controller Source'
+            LIMIT 1
+        ];
+        System.assertEquals(fixture.parentId, emailLog.RelatedToId, 'Sender confirmation should be logged as an email on the parent record.');
+        System.assertEquals(UserInfo.getUserEmail(), emailLog.ToAddress, 'Email log should be addressed to the Salesforce sender.');
+        System.assertEquals(false, emailLog.Incoming, 'Email log should be outbound.');
+        System.assertEquals('3', emailLog.Status, 'Email log should be marked sent.');
+        System.assert(emailLog.TextBody.contains('signer@example.com'), 'Email log should identify the signer.');
     }
 
     @IsTest
@@ -169,13 +193,47 @@ private class ESignatureSendControllerTest {
         );
 
         System.assert(html.contains('<table role="presentation" width="100%"'), 'Email should use the original table-based shell.');
-        System.assert(html.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Email should render the configured company logo.');
+        System.assert(html.contains('/resource/Kaizon_Solutions_Logo'), 'Email should render the configured company logo.');
         System.assert(html.contains('alt="Kaizon Solutions"'), 'Email logo should include accessible alt text.');
         System.assert(html.contains('has sent you a document that requires your signature'), 'Email should include the original request language.');
         System.assert(html.contains('Special Services Agreement'), 'Email should include the document title block.');
         System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');
         System.assert(html.contains('This link is unique to you and will expire on'), 'Email should include the expiration notice.');
         System.assert(html.contains('https://example.com/signatures/apex/ESignaturePage?t=abc123'), 'Email should include the fallback signing URL.');
+        System.assert(html.contains('/services/apexrest/ESignature/v1/email-open?t=abc123'), 'Email should include the hidden email-open tracking pixel.');
+    }
+
+    @IsTest
+    static void sentConfirmationEmailUsesEditableTemplateFormat() {
+        Account parent = new Account(Name = 'Sent Confirmation Parent');
+        insert parent;
+
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Signer_Name__c = 'Derek Hawley',
+            Signer_Email__c = 'signer@example.com',
+            Expires_At__c = Datetime.newInstance(2026, 7, 27, 12, 0, 0),
+            Parent_Record_Id__c = String.valueOf(parent.Id),
+            Parent_Object_Api_Name__c = 'Account'
+        );
+
+        String html = ESignatureSendController.buildSalesforceUserSentConfirmationEmailHtml(
+            env,
+            'https://example.com/signatures/apex/ESignaturePage?t=abc123',
+            'Special Services Agreement'
+        );
+
+        System.assert(html.contains('<table role="presentation" width="100%"'), 'Sender confirmation email should use the branded shell.');
+        System.assert(html.contains('/resource/Kaizon_Solutions_Logo'), 'Sender confirmation email should render the configured company logo.');
+        System.assert(html.contains('The signature request was sent.'), 'Sender confirmation email should confirm the send action.');
+        System.assert(html.contains('Special Services Agreement'), 'Sender confirmation email should include the document title.');
+        System.assert(html.contains('Derek Hawley'), 'Sender confirmation email should include the signer name.');
+        System.assert(html.contains('signer@example.com'), 'Sender confirmation email should include the signer email.');
+        System.assert(html.contains('Status:</strong> Sent') || html.contains('Status: Sent'), 'Sender confirmation email should include sent status.');
+        System.assert(html.contains(String.valueOf(parent.Id)), 'Sender confirmation email should include the envelope parent record id.');
+        System.assert(html.contains('href="https://'), 'Sender confirmation record link should use an absolute Salesforce URL.');
+        System.assert(html.contains('/lightning/r/Account/' + String.valueOf(parent.Id) + '/view'), 'Sender confirmation record link should point to the Lightning parent record route.');
+        System.assert(!html.contains('/lightning/r/EmailMessage/'), 'Sender confirmation record link should not be relative to the EmailMessage route.');
+        System.assert(!html.contains('{!Opportunity.Id}'), 'Sender confirmation email should not use an Opportunity-only merge field.');
     }
 
     private static DraftFixture createDraftFixture() {

@@ -10,14 +10,15 @@ import savePlacements from '@salesforce/apex/ESignaturePrepareController.savePla
 
 const FIELD_TYPES = [
     { label: 'Signature', value: 'Signature', width: 0.28, height: 0.055, defaultRequired: true },
-    { label: 'Initials', value: 'Initials', width: 0.12, height: 0.045, defaultRequired: true },
-    { label: 'Date', value: 'Date', width: 0.16, height: 0.04, defaultRequired: true },
     { label: 'Name', value: 'Name', width: 0.22, height: 0.04, defaultRequired: true },
     { label: 'Title', value: 'Title', width: 0.22, height: 0.04, defaultRequired: true },
-    { label: 'Text', value: 'Text', width: 0.24, height: 0.04, defaultRequired: true },
-    { label: 'Checkbox', value: 'Checkbox', width: 0.045, height: 0.04, defaultRequired: false }
+    { label: 'Date', value: 'Date', width: 0.16, height: 0.04, defaultRequired: true },
+    { label: 'Initials', value: 'Initials', width: 0.12, height: 0.045, defaultRequired: true },
+    { label: 'Checkbox', value: 'Checkbox', width: 0.045, height: 0.04, defaultRequired: false },
+    { label: 'Text', value: 'Text', width: 0.24, height: 0.04, defaultRequired: true }
 ];
 
+const PALETTE_FIELD_TYPES = FIELD_TYPES.filter((fieldType) => fieldType.value !== 'Initials');
 const MIN_FIELD_WIDTH = 0.025;
 const MIN_FIELD_HEIGHT = 0.025;
 const DRAG_THRESHOLD_PIXELS = 6;
@@ -40,7 +41,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
 
     selectedContentDocumentId;
     selectedContentVersionId;
-    fieldTypes = FIELD_TYPES;
+    fieldTypes = PALETTE_FIELD_TYPES;
     pdfInfo;
     loadError;
     warningMessage;

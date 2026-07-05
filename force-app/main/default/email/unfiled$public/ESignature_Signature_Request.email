@@ -13,6 +13,7 @@
         <tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;"><p style="Margin:0;">This link is unique to you and will expire on {{ExpirationDate}}.</p></td></tr>
         <tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;"><p style="Margin:0;">If the button above does not work, copy and paste this URL into your browser:<br/><a href="{{SigningUrl}}" style="color:#0176d3;text-decoration:underline;word-break:break-all;">{{SigningUrl}}</a></p></td></tr>
       </table>
+      {{EmailOpenTrackingPixel}}
     </td>
   </tr>
 </table>

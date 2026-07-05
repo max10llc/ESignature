@@ -112,6 +112,7 @@ public with sharing class ESignatureSendController {
 
         cancelPriorOpenEnvelopes(env);
         sendEmail(env, signingUrl);
+        sendSalesforceUserSentConfirmation(env, signingUrl);
         ESignatureUtil.updateSourceFileESignatureStatus(env, 'Sent');
         ESignatureUtil.audit(env.Id, 'Sent', UserInfo.getUserEmail(), 'Envelope sent to ' + env.Signer_Email__c + '.');
 
@@ -173,6 +174,73 @@ public with sharing class ESignatureSendController {
         Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
     }
 
+    private static void sendSalesforceUserSentConfirmation(ESignature_Envelope__c env, String signingUrl) {
+        String senderEmail = ESignatureUtil.senderEmail(env == null ? null : env.Sender_User__c);
+        if (String.isBlank(senderEmail)) {
+            return;
+        }
+        String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
+        ESignatureUtil.EmailContent content = buildSalesforceUserSentConfirmationEmailContent(env, signingUrl, documentTitle);
+        Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+        message.setToAddresses(new List<String>{ senderEmail });
+        message.setSubject(content.subject);
+        message.setHtmlBody(content.htmlBody);
+        message.setSaveAsActivity(false);
+        ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
+        Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
+        logSentConfirmationActivityAndEmail(env, documentTitle, content, senderEmail);
+    }
+
+    private static void logSentConfirmationActivityAndEmail(
+        ESignature_Envelope__c env,
+        String documentTitle,
+        ESignatureUtil.EmailContent content,
+        String recipientEmail
+    ) {
+        Id parentId = ESignatureUtil.safeId(env == null ? null : env.Parent_Record_Id__c);
+        if (parentId == null) {
+            return;
+        }
+        String signerDisplay = String.isBlank(env.Signer_Name__c)
+            ? env.Signer_Email__c
+            : env.Signer_Name__c + ' (' + env.Signer_Email__c + ')';
+        Task activity = new Task();
+        activity.WhatId = parentId;
+        activity.OwnerId = env.Sender_User__c == null ? UserInfo.getUserId() : env.Sender_User__c;
+        activity.Subject = 'Email: Signature request sent';
+        activity.Status = 'Completed';
+        activity.Priority = 'Normal';
+        activity.ActivityDate = Date.today();
+        activity.Description = 'Signature request sent for ' + (String.isBlank(documentTitle) ? 'Document' : documentTitle)
+            + ' to ' + signerDisplay + '.';
+        insert activity;
+
+        EmailMessage emailLog = new EmailMessage();
+        emailLog.RelatedToId = parentId;
+        emailLog.Subject = content == null ? activity.Subject : content.subject;
+        emailLog.HtmlBody = content == null ? null : content.htmlBody;
+        emailLog.TextBody = activity.Description;
+        emailLog.FromAddress = loggedFromAddress();
+        emailLog.ToAddress = recipientEmail;
+        emailLog.Incoming = false;
+        emailLog.Status = '3';
+        emailLog.MessageDate = System.now();
+        insert emailLog;
+    }
+
+    private static String loggedFromAddress() {
+        try {
+            ESignature_Setting__mdt settings = ESignatureUtil.getSettings();
+            return ESignatureUtil.firstNonBlank(new List<String>{
+                settings.Org_Wide_Email_Address__c,
+                settings.Default_From_Email__c,
+                UserInfo.getUserEmail()
+            });
+        } catch (Exception ignore) {
+            return UserInfo.getUserEmail();
+        }
+    }
+
     @TestVisible
     private static String buildSignatureRequestEmailHtml(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
         return buildSignatureRequestEmailContent(env, signingUrl, documentTitle).htmlBody;
@@ -187,6 +255,9 @@ public with sharing class ESignatureSendController {
         String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : UserInfo.getName();
         String safeSenderName = ESignatureUtil.escapeHtml(senderName);
         String expirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
+        String emailOpenTrackingUrl = emailOpenTrackingUrl(signingUrl);
+        String safeEmailOpenTrackingUrl = ESignatureUtil.escapeHtml(emailOpenTrackingUrl);
+        String emailOpenTrackingPixel = emailOpenTrackingPixelHtml(safeEmailOpenTrackingUrl);
 
         String fallbackSubject = 'Signature requested: ' + resolvedDocumentTitle;
         String fallbackHtml = ESignatureUtil.emailShell(
@@ -197,6 +268,7 @@ public with sharing class ESignatureSendController {
             + ESignatureUtil.emailButtonRow('Review &amp; Sign Document', safeSigningUrl, '#0176d3')
             + ESignatureUtil.emailSubtleRow('This link is unique to you and will expire on ' + expirationDate + '.')
             + ESignatureUtil.emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
+            + emailOpenTrackingPixel
         );
         return ESignatureUtil.renderEmailTemplate(
             'ESignature_Signature_Request',
@@ -207,7 +279,8 @@ public with sharing class ESignatureSendController {
                 'SenderName' => senderName,
                 'DocumentTitle' => resolvedDocumentTitle,
                 'SigningUrl' => signingUrl,
-                'ExpirationDate' => expirationDate
+                'ExpirationDate' => expirationDate,
+                'EmailOpenTrackingUrl' => emailOpenTrackingUrl
             },
             new Map<String, String>{
                 'LogoHtml' => ESignatureUtil.emailLogoHtml(),
@@ -215,9 +288,133 @@ public with sharing class ESignatureSendController {
                 'SenderName' => safeSenderName,
                 'DocumentTitle' => safeDocumentTitle,
                 'SigningUrl' => safeSigningUrl,
-                'ExpirationDate' => expirationDate
+                'ExpirationDate' => expirationDate,
+                'EmailOpenTrackingUrl' => safeEmailOpenTrackingUrl,
+                'EmailOpenTrackingPixel' => emailOpenTrackingPixel
             }
         );
+    }
+
+    private static String emailOpenTrackingPixelHtml(String safeEmailOpenTrackingUrl) {
+        if (String.isBlank(safeEmailOpenTrackingUrl)) {
+            return '';
+        }
+        return '<img src="' + safeEmailOpenTrackingUrl + '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;outline:none;text-decoration:none;" />';
+    }
+
+    private static String emailOpenTrackingUrl(String signingUrl) {
+        String token = tokenFromSigningUrl(signingUrl);
+        String siteRoot = ESignatureUtil.siteRootUrl(urlWithoutQuery(signingUrl));
+        if (String.isBlank(token) || String.isBlank(siteRoot)) {
+            return '';
+        }
+        return siteRoot + '/services/apexrest/ESignature/v1/email-open?t=' + EncodingUtil.urlEncode(token, 'UTF-8');
+    }
+
+    private static String urlWithoutQuery(String url) {
+        if (String.isBlank(url)) {
+            return url;
+        }
+        Integer queryIndex = url.indexOf('?');
+        return queryIndex < 0 ? url : url.substring(0, queryIndex);
+    }
+
+    private static String tokenFromSigningUrl(String signingUrl) {
+        if (String.isBlank(signingUrl)) {
+            return null;
+        }
+        Integer queryIndex = signingUrl.indexOf('?');
+        if (queryIndex < 0 || queryIndex == signingUrl.length() - 1) {
+            return null;
+        }
+        String query = signingUrl.substring(queryIndex + 1);
+        for (String pair : query.split('&')) {
+            Integer equalsIndex = pair.indexOf('=');
+            String key = equalsIndex < 0 ? pair : pair.substring(0, equalsIndex);
+            if (key == 't') {
+                String value = equalsIndex < 0 ? '' : pair.substring(equalsIndex + 1);
+                return EncodingUtil.urlDecode(value, 'UTF-8');
+            }
+        }
+        return null;
+    }
+
+    @TestVisible
+    private static String buildSalesforceUserSentConfirmationEmailHtml(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
+        return buildSalesforceUserSentConfirmationEmailContent(env, signingUrl, documentTitle).htmlBody;
+    }
+
+    private static ESignatureUtil.EmailContent buildSalesforceUserSentConfirmationEmailContent(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
+        String signerName = env == null || String.isBlank(env.Signer_Name__c) ? 'The signer' : env.Signer_Name__c;
+        String signerEmail = env == null ? null : env.Signer_Email__c;
+        String signer = ESignatureUtil.escapeHtml(signerName)
+            + (String.isBlank(signerEmail) ? '' : ' (' + ESignatureUtil.escapeHtml(signerEmail) + ')');
+        String signerText = signerName + (String.isBlank(signerEmail) ? '' : ' (' + signerEmail + ')');
+        String resolvedDocumentTitle = String.isBlank(documentTitle) ? 'Document' : documentTitle;
+        String safeDocumentTitle = ESignatureUtil.escapeHtml(resolvedDocumentTitle);
+        String safeSigningUrl = ESignatureUtil.escapeHtml(signingUrl);
+        String expirationDate = formatDateForEmail(env == null || env.Expires_At__c == null ? null : env.Expires_At__c);
+        String recordId = env == null ? '' : env.Parent_Record_Id__c;
+        String recordObject = env == null ? '' : env.Parent_Object_Api_Name__c;
+        String recordUrl = recordUrl(recordId, recordObject);
+        String safeRecordId = ESignatureUtil.escapeHtml(recordId);
+        String safeRecordUrl = ESignatureUtil.escapeHtml(recordUrl);
+        String recordRow = String.isBlank(recordId)
+            ? ''
+            : ESignatureUtil.emailParagraphRow('<strong>Record:</strong> <a href="' + safeRecordUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeRecordId + '</a>');
+
+        String fallbackSubject = 'Signature request sent: ' + resolvedDocumentTitle;
+        String fallbackHtml = ESignatureUtil.emailShell(
+            ESignatureUtil.emailParagraphRow('The signature request was sent.')
+            + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
+            + ESignatureUtil.emailParagraphRow('<strong>Signer:</strong> ' + signer)
+            + ESignatureUtil.emailParagraphRow('<strong>Status:</strong> Sent')
+            + recordRow
+            + ESignatureUtil.emailSubtleRow(String.isBlank(expirationDate) ? '' : 'This link is unique to the signer and will expire on ' + expirationDate + '.')
+            + ESignatureUtil.emailSubtleRow('Signing URL:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
+        );
+        return ESignatureUtil.renderEmailTemplate(
+            'ESignature_Sent_Salesforce_User',
+            fallbackSubject,
+            fallbackHtml,
+            new Map<String, String>{
+                'SignerName' => signerName,
+                'SignerEmail' => signerEmail,
+                'Signer' => signerText,
+                'DocumentTitle' => resolvedDocumentTitle,
+                'RecordId' => recordId,
+                'Record' => recordUrl,
+                'RecordUrl' => recordUrl,
+                'RecordObject' => recordObject,
+                'SigningUrl' => signingUrl,
+                'ExpirationDate' => expirationDate
+            },
+            new Map<String, String>{
+                'LogoHtml' => ESignatureUtil.emailLogoHtml(),
+                'SignerName' => ESignatureUtil.escapeHtml(signerName),
+                'SignerEmail' => ESignatureUtil.escapeHtml(signerEmail),
+                'Signer' => signer,
+                'DocumentTitle' => safeDocumentTitle,
+                'RecordId' => safeRecordId,
+                'Record' => safeRecordUrl,
+                'RecordUrl' => safeRecordUrl,
+                'RecordObject' => ESignatureUtil.escapeHtml(recordObject),
+                'SigningUrl' => safeSigningUrl,
+                'ExpirationDate' => ESignatureUtil.escapeHtml(expirationDate)
+            }
+        );
+    }
+
+    private static String recordUrl(String recordId, String recordObject) {
+        if (String.isBlank(recordId)) {
+            return '';
+        }
+        String baseUrl = URL.getOrgDomainUrl().toExternalForm();
+        String root = baseUrl.endsWith('/') ? baseUrl.left(baseUrl.length() - 1) : baseUrl;
+        if (String.isBlank(recordObject)) {
+            return root + '/' + recordId;
+        }
+        return root + '/lightning/r/' + EncodingUtil.urlEncode(recordObject.trim(), 'UTF-8') + '/' + recordId.trim() + '/view';
     }
 
     private static String formatDateForEmail(Datetime expirationDate) {

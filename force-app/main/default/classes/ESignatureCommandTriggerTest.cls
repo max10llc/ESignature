@@ -7,7 +7,8 @@ private class ESignatureCommandTriggerTest {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Envelope_Status__c = 'Sent',
             Secure_Token_Hash__c = tokenHash,
-            Signer_Email__c = 'signer@example.com'
+            Signer_Email__c = 'signer@example.com',
+            Sender_User__c = UserInfo.getUserId()
         );
         insert env;
 
@@ -35,6 +36,62 @@ private class ESignatureCommandTriggerTest {
             WHERE Envelope__c = :env.Id
             AND Event_Type__c = 'Viewed'
         ]);
+    }
+
+    @IsTest
+    static void viewedCommandNotifiesSenderEveryDocumentOpen() {
+        Account parent = new Account(Name = 'Viewed Notification Parent');
+        insert parent;
+        String token = 'repeat-view-token';
+        String tokenHash = ESignatureUtil.hashToken(token);
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Envelope_Status__c = 'Viewed',
+            Viewed_At__c = System.now().addMinutes(-5),
+            Secure_Token_Hash__c = tokenHash,
+            Signer_Name__c = 'Viewing Signer',
+            Signer_Email__c = 'viewer@example.com',
+            Sender_User__c = UserInfo.getUserId(),
+            Parent_Record_Id__c = String.valueOf(parent.Id),
+            Parent_Object_Api_Name__c = 'Account',
+            Source_File_Title__c = 'Viewed Notification Agreement'
+        );
+        insert env;
+
+        Map<String, Object> payload = new Map<String, Object>{
+            'userAgent' => 'Unit Test Browser',
+            'ipAddress' => '203.0.113.44'
+        };
+
+        String documentHtml = ESignatureCommandProcessor.buildDocumentOpenedNotificationEmailHtml(env, payload);
+        System.assert(documentHtml.contains('Viewed Notification Agreement'), 'Document opened notification should identify the document.');
+        System.assert(documentHtml.contains('Viewing Signer'), 'Document opened notification should identify the signer.');
+        System.assert(documentHtml.contains('/lightning/r/Account/' + String.valueOf(parent.Id) + '/view'), 'Document opened notification should link to the Salesforce record.');
+
+        String emailHtml = ESignatureCommandProcessor.buildEmailOpenedNotificationEmailHtml(env, payload);
+        System.assert(emailHtml.contains('initial signature request email'), 'Email opened notification should describe the email-open event.');
+        System.assert(!emailHtml.contains('{{IPAddress}}'), 'Email opened notification should replace request context tokens when present.');
+
+        Test.startTest();
+        Database.SaveResult open = EventBus.publish(new ESignature_Command__e(
+            Action__c = 'viewed',
+            Token_Hash__c = tokenHash,
+            Payload_JSON__c = JSON.serialize(payload)
+        ));
+        System.assert(open.isSuccess(), 'Repeat view command should publish successfully.');
+        Test.getEventBus().deliver();
+        Test.stopTest();
+
+        Map<String, Integer> countsByType = new Map<String, Integer>();
+        for (AggregateResult result : [
+            SELECT Event_Type__c eventType, COUNT(Id) eventCount
+            FROM ESignature_Audit_Event__c
+            WHERE Envelope__c = :env.Id
+            GROUP BY Event_Type__c
+        ]) {
+            countsByType.put((String) result.get('eventType'), (Integer) result.get('eventCount'));
+        }
+        System.assertEquals(null, countsByType.get('Viewed'), 'Repeat document opens should not create another Viewed audit.');
+        System.assertEquals(1, countsByType.get('Document Opened'), 'Repeat document opens should be audited separately.');
     }
 
     @IsTest
@@ -144,7 +201,7 @@ private class ESignatureCommandTriggerTest {
 
         String html = ESignatureCommandProcessor.buildDeclineNotificationEmailHtml(env);
         System.assert(html.contains('<table role="presentation" width="100%"'), 'Decline email should use the same table-based shell as the request email.');
-        System.assert(html.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Decline email should render the configured company logo.');
+        System.assert(html.contains('/resource/Kaizon_Solutions_Logo'), 'Decline email should render the configured company logo.');
         System.assert(html.contains('Declined Agreement'), 'Notification should identify the document.');
         System.assert(html.contains('Declining Signer'), 'Notification should identify the signer.');
         System.assert(html.contains('No longer needed'), 'Notification should include the decline reason.');
@@ -245,7 +302,7 @@ private class ESignatureCommandTriggerTest {
         );
 
         System.assert(delegateHtml.contains('<table role="presentation" width="100%"'), 'Delegate email should use the branded shell.');
-        System.assert(delegateHtml.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Delegate email should render the configured company logo.');
+        System.assert(delegateHtml.contains('/resource/Kaizon_Solutions_Logo'), 'Delegate email should render the configured company logo.');
         System.assert(delegateHtml.contains('Review &amp; Sign Document'), 'Delegate email should include the signing call to action.');
         System.assert(delegateHtml.contains('https://example.com/signatures/apex/ESignaturePage?t=newtoken'), 'Delegate email should include the fresh signing URL.');
         System.assert(delegateHtml.contains('Original Signer'), 'Delegate email should identify the original signer.');

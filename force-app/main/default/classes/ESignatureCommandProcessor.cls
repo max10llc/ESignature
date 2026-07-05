@@ -43,6 +43,8 @@ public without sharing class ESignatureCommandProcessor {
                 String action = String.isBlank(command.Action__c) ? '' : command.Action__c.trim().toLowerCase();
                 if (action == 'viewed') {
                     handleViewed(env, payload);
+                } else if (action == 'email opened' || action == 'email-opened') {
+                    handleEmailOpened(env, payload);
                 } else if (action == 'expired') {
                     handleExpired(env, payload);
                 } else if (action == 'signed') {
@@ -63,12 +65,39 @@ public without sharing class ESignatureCommandProcessor {
             handleExpired(env, payload);
             return;
         }
-        if (env.Envelope_Status__c == 'Sent') {
+        String status = normalizedEnvelopeStatus(env);
+        if (!(status == 'sent' || status == 'viewed' || status == 'error')) {
+            return;
+        }
+        if (status == 'sent') {
             env.Envelope_Status__c = 'Viewed';
             env.Viewed_At__c = System.now();
             update env;
             audit(env, 'Viewed', payload, 'Signer opened the envelope.');
+        } else {
+            audit(env, 'Document Opened', payload, 'Signer opened the document signing page.');
         }
+        sendSenderEventNotificationEmail(
+            env,
+            payload,
+            'Document Opened',
+            'ESignature_Salesforce_User_Document_Opened',
+            'Signer opened the document signing page.'
+        );
+    }
+
+    private static void handleEmailOpened(ESignature_Envelope__c env, Map<String, Object> payload) {
+        if (isTerminalEnvelope(env)) {
+            return;
+        }
+        audit(env, 'Email Opened', payload, 'Signer opened the initial signature request email.');
+        sendSenderEventNotificationEmail(
+            env,
+            payload,
+            'Email Opened',
+            'ESignature_Salesforce_User_Email_Opened',
+            'Signer opened the initial signature request email.'
+        );
     }
 
     private static void handleExpired(ESignature_Envelope__c env, Map<String, Object> payload) {
@@ -192,6 +221,14 @@ public without sharing class ESignatureCommandProcessor {
         }.contains(status)
             || status.contains('cancel')
             || status.contains('void');
+    }
+
+    private static String normalizedEnvelopeStatus(ESignature_Envelope__c env) {
+        if (env == null) {
+            return '';
+        }
+        String status = ESignatureUtil.stringValue(env.Envelope_Status__c);
+        return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 
     private static SubmittedFieldResult applySubmittedFields(ESignature_Envelope__c env, String signerFieldsJson) {
@@ -535,6 +572,149 @@ public without sharing class ESignatureCommandProcessor {
         );
     }
 
+    private static void sendSenderEventNotificationEmail(
+        ESignature_Envelope__c env,
+        Map<String, Object> payload,
+        String eventName,
+        String templateDeveloperName,
+        String details
+    ) {
+        try {
+            String senderEmail = ESignatureUtil.senderEmail(env == null ? null : env.Sender_User__c);
+            if (!isValidEmail(senderEmail)) {
+                return;
+            }
+            ESignatureUtil.EmailContent content = buildSenderEventNotificationEmailContent(
+                env,
+                payload,
+                eventName,
+                templateDeveloperName,
+                details
+            );
+            Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+            message.setToAddresses(new List<String>{ senderEmail.trim() });
+            message.setSubject(content.subject);
+            message.setHtmlBody(content.htmlBody);
+            message.setSaveAsActivity(false);
+            ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
+            Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
+        } catch (Exception ignore) {}
+    }
+
+    @TestVisible
+    private static String buildEmailOpenedNotificationEmailHtml(ESignature_Envelope__c env, Map<String, Object> payload) {
+        return buildSenderEventNotificationEmailContent(
+            env,
+            payload,
+            'Email Opened',
+            'ESignature_Salesforce_User_Email_Opened',
+            'Signer opened the initial signature request email.'
+        ).htmlBody;
+    }
+
+    @TestVisible
+    private static String buildDocumentOpenedNotificationEmailHtml(ESignature_Envelope__c env, Map<String, Object> payload) {
+        return buildSenderEventNotificationEmailContent(
+            env,
+            payload,
+            'Document Opened',
+            'ESignature_Salesforce_User_Document_Opened',
+            'Signer opened the document signing page.'
+        ).htmlBody;
+    }
+
+    private static ESignatureUtil.EmailContent buildSenderEventNotificationEmailContent(
+        ESignature_Envelope__c env,
+        Map<String, Object> payload,
+        String eventName,
+        String templateDeveloperName,
+        String details
+    ) {
+        String documentTitle = ESignatureUtil.getEnvelopeTitle(env);
+        String signerName = env == null || String.isBlank(env.Signer_Name__c) ? 'The signer' : env.Signer_Name__c;
+        String signerEmail = env == null ? null : env.Signer_Email__c;
+        String signer = displayNameWithEmail(signerName, signerEmail);
+        String signerText = displayNameWithEmailText(signerName, signerEmail);
+        String eventTime = formatDateTimeForEmail(System.now());
+        String ipAddress = ESignatureUtil.stringValue(payload == null ? null : payload.get('ipAddress'));
+        String userAgent = ESignatureUtil.stringValue(payload == null ? null : payload.get('userAgent'));
+        String recordId = env == null ? null : env.Parent_Record_Id__c;
+        String recordObject = env == null ? null : env.Parent_Object_Api_Name__c;
+        String recordUrl = recordUrl(recordId, recordObject);
+        String safeRecordUrl = ESignatureUtil.escapeHtml(recordUrl);
+        String safeRecordRow = String.isBlank(recordUrl)
+            ? ''
+            : ESignatureUtil.emailParagraphRow('<a href="' + safeRecordUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;"><strong>Salesforce Record</strong></a>');
+
+        String fallbackSubject = eventName + ': ' + documentTitle;
+        String fallbackHtml = ESignatureUtil.emailShell(
+            ESignatureUtil.emailParagraphRow(ESignatureUtil.escapeHtml(details))
+            + ESignatureUtil.emailDocumentBlockRow('Document', ESignatureUtil.escapeHtml(documentTitle), '#0176d3')
+            + ESignatureUtil.emailParagraphRow('<strong>Signer:</strong> ' + signer)
+            + ESignatureUtil.emailParagraphRow('<strong>Event:</strong> ' + ESignatureUtil.escapeHtml(eventName))
+            + ESignatureUtil.emailParagraphRow('<strong>Time:</strong> ' + ESignatureUtil.escapeHtml(eventTime))
+            + safeRecordRow
+            + optionalDetailRow('IP Address', ipAddress)
+            + optionalDetailRow('User Agent', userAgent)
+        );
+
+        return ESignatureUtil.renderEmailTemplate(
+            templateDeveloperName,
+            fallbackSubject,
+            fallbackHtml,
+            new Map<String, String>{
+                'EventName' => eventName,
+                'EventTime' => eventTime,
+                'SignerName' => signerName,
+                'SignerEmail' => signerEmail,
+                'Signer' => signerText,
+                'DocumentTitle' => documentTitle,
+                'Details' => details,
+                'IPAddress' => ipAddress,
+                'UserAgent' => userAgent,
+                'RecordId' => recordId,
+                'RecordUrl' => recordUrl,
+                'Record' => recordUrl,
+                'RecordObject' => recordObject
+            },
+            new Map<String, String>{
+                'LogoHtml' => ESignatureUtil.emailLogoHtml(),
+                'EventName' => ESignatureUtil.escapeHtml(eventName),
+                'EventTime' => ESignatureUtil.escapeHtml(eventTime),
+                'SignerName' => ESignatureUtil.escapeHtml(signerName),
+                'SignerEmail' => ESignatureUtil.escapeHtml(signerEmail),
+                'Signer' => signer,
+                'DocumentTitle' => ESignatureUtil.escapeHtml(documentTitle),
+                'Details' => ESignatureUtil.escapeHtml(details),
+                'IPAddress' => ESignatureUtil.escapeHtml(ipAddress),
+                'UserAgent' => ESignatureUtil.escapeHtml(userAgent),
+                'RecordId' => ESignatureUtil.escapeHtml(recordId),
+                'RecordUrl' => safeRecordUrl,
+                'Record' => safeRecordUrl,
+                'RecordObject' => ESignatureUtil.escapeHtml(recordObject)
+            }
+        );
+    }
+
+    private static String optionalDetailRow(String label, String value) {
+        if (String.isBlank(value)) {
+            return '';
+        }
+        return ESignatureUtil.emailSubtleRow('<strong>' + ESignatureUtil.escapeHtml(label) + ':</strong> ' + ESignatureUtil.escapeHtml(value));
+    }
+
+    private static String recordUrl(String recordId, String recordObject) {
+        if (String.isBlank(recordId)) {
+            return '';
+        }
+        String baseUrl = URL.getOrgDomainUrl().toExternalForm();
+        String root = baseUrl.endsWith('/') ? baseUrl.left(baseUrl.length() - 1) : baseUrl;
+        if (String.isBlank(recordObject)) {
+            return root + '/' + recordId.trim();
+        }
+        return root + '/lightning/r/' + EncodingUtil.urlEncode(recordObject.trim(), 'UTF-8') + '/' + recordId.trim() + '/view';
+    }
+
     private static String displayNameWithEmail(String name, String email) {
         if (String.isBlank(name)) {
             return ESignatureUtil.escapeHtml(email);
@@ -567,6 +747,13 @@ public without sharing class ESignatureCommandProcessor {
             return '';
         }
         return expirationDate.format('MMMM d, yyyy');
+    }
+
+    private static String formatDateTimeForEmail(Datetime value) {
+        if (value == null) {
+            return '';
+        }
+        return value.format('MM-dd-yyyy h:mm a');
     }
 
     private static void sendDeclineNotificationEmail(ESignature_Envelope__c env) {

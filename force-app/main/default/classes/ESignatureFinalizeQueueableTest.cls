@@ -171,28 +171,50 @@ private class ESignatureFinalizeQueueableTest {
 
     @IsTest
     static void completionNotificationIdentifiesDocumentAndSigner() {
+        Blob finalPdfBody = Blob.valueOf('%PDF-1.4\n%completed\n%%EOF');
+        ContentVersion finalFile = new ContentVersion(
+            Title = 'Completed Agreement Signed',
+            PathOnClient = 'Completed Agreement Signed.pdf',
+            VersionData = finalPdfBody
+        );
+        insert finalFile;
+        finalFile = [
+            SELECT Id, ContentDocumentId, VersionData
+            FROM ContentVersion
+            WHERE Id = :finalFile.Id
+        ];
+
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Signer_Name__c = 'Completed Signer',
             Signer_Email__c = 'completed-signer@example.com',
             Sender_User__c = UserInfo.getUserId(),
             Source_File_Title__c = 'Completed Agreement',
-            Completion_Message__c = 'Final signed PDF was created.'
+            Completion_Message__c = 'Final signed PDF was created.',
+            Final_ContentVersion_Id__c = String.valueOf(finalFile.Id),
+            Final_ContentDocument_Id__c = String.valueOf(finalFile.ContentDocumentId)
+        );
+
+        List<Messaging.EmailFileAttachment> attachments = ESignatureFinalizerService.completionEmailAttachments(env);
+        System.assertEquals(1, attachments.size(), 'Completion emails should include the completed PDF.');
+        System.assertEquals('Completed Agreement Signed.pdf', attachments[0].getFileName(), 'Completion attachment should use the final PDF file name.');
+        System.assertEquals('application/pdf', attachments[0].getContentType(), 'Completion attachment should be marked as a PDF.');
+        System.assertEquals(
+            EncodingUtil.base64Encode(finalPdfBody),
+            EncodingUtil.base64Encode(attachments[0].getBody()),
+            'Completion attachment should use the final PDF bytes.'
         );
 
         String signerHtml = ESignatureFinalizerService.buildSignerCompletionEmailHtml(env);
         System.assert(signerHtml.contains('<table role="presentation" width="100%"'), 'Signer completion email should use the branded shell.');
-        System.assert(signerHtml.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Signer completion email should render the configured company logo.');
+        System.assert(signerHtml.contains('/resource/Kaizon_Solutions_Logo'), 'Signer completion email should render the configured company logo.');
         System.assert(signerHtml.contains('Hi Completed Signer'), 'Signer completion email should greet the signer.');
         System.assert(signerHtml.contains('Completed Agreement'), 'Signer completion email should identify the document.');
-        System.assert(signerHtml.contains('The completed signed PDF has been returned to the sender in Salesforce.'), 'Signer completion email should explain where the final PDF went.');
 
         String salesforceUserHtml = ESignatureFinalizerService.buildSalesforceUserCompletionEmailHtml(env);
         System.assert(salesforceUserHtml.contains('<table role="presentation" width="100%"'), 'Salesforce user completion email should use the branded shell.');
-        System.assert(salesforceUserHtml.contains('<img src="https://kaizonsolutions.com/wp-content/uploads/2019/08/KaizonSolutions_Reversed.png"'), 'Salesforce user completion email should render the configured company logo.');
+        System.assert(salesforceUserHtml.contains('/resource/Kaizon_Solutions_Logo'), 'Salesforce user completion email should render the configured company logo.');
         System.assert(salesforceUserHtml.contains('Completed Agreement'), 'Salesforce user completion email should identify the document.');
         System.assert(salesforceUserHtml.contains('Completed Signer'), 'Salesforce user completion email should identify the signer.');
-        System.assert(salesforceUserHtml.contains('Final signed PDF was created.'), 'Salesforce user completion email should include the completion message.');
-        System.assert(salesforceUserHtml.contains('The completed signed PDF has been attached in Salesforce.'), 'Salesforce user completion email should explain where the final PDF is stored.');
     }
 
     private static Id createEnvelopeWithSourceAndSignatureField() {

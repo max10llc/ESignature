@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EmailTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <available>true</available>
+    <encodingKey>UTF-8</encodingKey>
+    <name>ESignature Sent Salesforce User</name>
+    <style>none</style>
+    <subject>Signature request sent: {{DocumentTitle}}</subject>
+    <textOnly>The signature request was sent.
+
+Document: {{DocumentTitle}}
+Signer: {{Signer}}
+Status: Sent
+Record: {{RecordId}}
+Record URL:
+{{RecordUrl}}
+
+This link is unique to the signer and will expire on {{ExpirationDate}}.
+
+Signing URL:
+{{SigningUrl}}</textOnly>
+    <type>custom</type>
+    <uiType>Aloha</uiType>
+</EmailTemplate>

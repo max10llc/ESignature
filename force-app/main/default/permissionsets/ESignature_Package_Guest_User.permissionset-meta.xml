@@ -9,6 +9,10 @@
     <enabled>true</enabled>
   </classAccesses>
   <classAccesses>
+    <apexClass>ESignatureEmailOpenResource</apexClass>
+    <enabled>true</enabled>
+  </classAccesses>
+  <classAccesses>
     <apexClass>ESignatureFinalizeQueueable</apexClass>
     <enabled>true</enabled>
   </classAccesses>

@@ -3,6 +3,8 @@
     <types>
         <members>ESignatureAuditReportBuilder</members>
         <members>ESignatureAuditReportBuilderTest</members>
+        <members>ESignatureEmailOpenResource</members>
+        <members>ESignatureEmailOpenResourceTest</members>
         <members>ESignatureFinalizeQueueable</members>
         <members>ESignatureFinalizeQueueableTest</members>
         <members>ESignatureFinalizerCallbackResource</members>
@@ -139,7 +141,10 @@
         <members>unfiled$public/ESignature_Declined</members>
         <members>unfiled$public/ESignature_Delegate_Signer_Request</members>
         <members>unfiled$public/ESignature_Original_Signer_Delegated</members>
+        <members>unfiled$public/ESignature_Salesforce_User_Document_Opened</members>
         <members>unfiled$public/ESignature_Salesforce_User_Delegated</members>
+        <members>unfiled$public/ESignature_Salesforce_User_Email_Opened</members>
+        <members>unfiled$public/ESignature_Sent_Salesforce_User</members>
         <members>unfiled$public/ESignature_Signature_Request</members>
         <name>EmailTemplate</name>
     </types>
@@ -163,6 +168,7 @@
         <members>Document_Signed_Icon</members>
         <members>Document_Completed_Icon</members>
         <members>Document_Locked_Icon</members>
+        <members>Kaizon_Solutions_Logo</members>
         <members>Options_Button</members>
         <members>ESignature_PdfJs</members>
         <name>StaticResource</name>
