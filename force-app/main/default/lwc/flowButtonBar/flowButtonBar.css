@@ -1,0 +1,8 @@
+.notToggle lightning-button + lightning-button {
+    padding-left: 0.25em;
+}
+
+lightning-button[disabled] {
+    opacity: 0.6;
+    pointer-events: none;
+}
