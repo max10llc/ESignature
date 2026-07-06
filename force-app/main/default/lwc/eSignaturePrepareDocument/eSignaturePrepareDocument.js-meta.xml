@@ -11,10 +11,14 @@
         <targetConfig targets="lightning__FlowScreen">
             <property name="recordId" type="String" label="Parent Record Id" />
             <property name="contentDocumentId" type="String" label="Content Document Id" />
-            <property name="height" type="Integer" label="Viewer Height" default="760" />
+            <property name="height" type="Integer" label="Minimum Viewer Height" default="525" />
+            <property name="isEnvelopeReady" type="Boolean" label="Envelope Ready" role="outputOnly" />
+            <property name="preparedEnvelopeId" type="String" label="Prepared Envelope Id" role="outputOnly" />
+            <property name="prepareValidationMessage" type="String" label="Prepare Validation Message" role="outputOnly" />
+            <property name="missingRequiredFields" type="String" label="Missing Required Fields" role="outputOnly" />
         </targetConfig>
         <targetConfig targets="lightning__RecordPage">
-            <property name="height" type="Integer" label="Viewer Height" default="760" />
+            <property name="height" type="Integer" label="Minimum Viewer Height" default="525" />
         </targetConfig>
     </targetConfigs>
 </LightningComponentBundle>

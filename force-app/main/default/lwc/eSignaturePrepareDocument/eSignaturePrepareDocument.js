@@ -1,9 +1,9 @@
 import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { FlowAttributeChangeEvent } from 'lightning/flowSupport';
 import { loadScript } from 'lightning/platformResourceLoader';
 import PDF_JS from '@salesforce/resourceUrl/ESignature_PdfJs';
 
-import getRecordPdfFiles from '@salesforce/apex/ESignaturePrepareController.getRecordPdfFiles';
 import getPdfDocumentInfo from '@salesforce/apex/ESignaturePrepareController.getPdfDocumentInfo';
 import getPlacements from '@salesforce/apex/ESignaturePrepareController.getPlacements';
 import savePlacements from '@salesforce/apex/ESignaturePrepareController.savePlacements';
@@ -28,23 +28,29 @@ const LINE_MIN_WIDTH_PERCENT = 0.05;
 const LINE_MAX_GAP_PERCENT = 0.01;
 const LINE_START_GAP_PERCENT = 0.018;
 const LINE_LUMA_THRESHOLD = 220;
+const DEFAULT_VIEWER_HEIGHT = 525;
+const MIN_VIEWER_HEIGHT = 448;
+const VIEWPORT_BOTTOM_PADDING = 96;
+const REQUIRED_FLOW_FIELD_TYPES = ['Signature', 'Name', 'Title', 'Date'];
 
 export default class PdfESignPrepareDocument extends LightningElement {
     @api recordId;
     @api parentRecordId;
     @api contentDocumentId;
-    @api height = 760;
+    @api height = DEFAULT_VIEWER_HEIGHT;
+    @api isEnvelopeReady = false;
+    @api preparedEnvelopeId;
+    @api prepareValidationMessage = 'Add Signature, Name, Title, and Date fields, then click Save Envelope.';
+    @api missingRequiredFields = REQUIRED_FLOW_FIELD_TYPES.join(', ');
 
     @track pages = [];
     @track fields = [];
-    @track fileOptions = [];
 
     selectedContentDocumentId;
     selectedContentVersionId;
     fieldTypes = PALETTE_FIELD_TYPES;
     pdfInfo;
     loadError;
-    warningMessage;
     selectedFieldId;
     pendingFieldType;
     draggedFieldType;
@@ -58,14 +64,25 @@ export default class PdfESignPrepareDocument extends LightningElement {
     hasInitialized = false;
     pdfJsLoadPromise;
     pageImageDataCache = new Map();
+    saveNotice;
+    saveNoticeTimeoutId;
+    responsiveViewerHeight = DEFAULT_VIEWER_HEIGHT;
+    viewportResizeFrameId;
+    lastSavedPlacementSignature;
 
     connectedCallback() {
         this.boundHandlePointerMove = this.handlePointerMove.bind(this);
         this.boundHandlePointerUp = this.handlePointerUp.bind(this);
         this.boundHandlePointerCancel = this.handlePointerUp.bind(this);
+        this.boundHandleViewportResize = this.handleViewportResize.bind(this);
+        window.addEventListener('resize', this.boundHandleViewportResize);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', this.boundHandleViewportResize);
+        }
     }
 
     renderedCallback() {
+        this.updateResponsiveHeight();
         if (this.hasInitialized) {
             return;
         }
@@ -75,6 +92,15 @@ export default class PdfESignPrepareDocument extends LightningElement {
 
     disconnectedCallback() {
         this.removePointerListeners();
+        window.removeEventListener('resize', this.boundHandleViewportResize);
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', this.boundHandleViewportResize);
+        }
+        if (this.viewportResizeFrameId) {
+            window.cancelAnimationFrame(this.viewportResizeFrameId);
+            this.viewportResizeFrameId = null;
+        }
+        this.clearSaveNotice(false);
     }
 
     get effectiveParentRecordId() {
@@ -85,8 +111,14 @@ export default class PdfESignPrepareDocument extends LightningElement {
         return this.contentDocumentId || this.selectedContentDocumentId;
     }
 
-    get documentShellStyle() {
-        return `max-height: ${this.height}px;`;
+    get configuredViewerHeight() {
+        const parsedHeight = Number(this.height);
+        return Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : DEFAULT_VIEWER_HEIGHT;
+    }
+
+    get workspaceStyle() {
+        const viewerHeight = this.responsiveViewerHeight || this.configuredViewerHeight;
+        return `height: ${viewerHeight}px; max-height: ${viewerHeight}px;`;
     }
 
     get zoomPercent() {
@@ -112,6 +144,115 @@ export default class PdfESignPrepareDocument extends LightningElement {
 
     get hasSelectedPdf() {
         return !!this.pdfInfo;
+    }
+
+    get hasSaveNotice() {
+        return !!this.saveNotice;
+    }
+
+    get saveNoticeClass() {
+        const variant = this.saveNotice?.variant || 'info';
+        const allowedVariants = ['error', 'info', 'success', 'warning'];
+        const normalizedVariant = allowedVariants.includes(variant) ? variant : 'info';
+        return `save-notice save-notice_${normalizedVariant} slds-m-bottom_small`;
+    }
+
+    get saveNoticeRole() {
+        return this.saveNotice?.variant === 'error' ? 'alert' : 'status';
+    }
+
+    @api
+    validate() {
+        const state = this.syncFlowValidationOutputs();
+        if (!state.isValid) {
+            this.showSaveMessage('Envelope is not ready', state.message, 'error', 'sticky');
+        }
+        return {
+            isValid: state.isValid,
+            errorMessage: state.isValid ? null : state.message
+        };
+    }
+
+    syncFlowValidationOutputs() {
+        const state = this.getFlowValidationState();
+        this.isEnvelopeReady = state.isValid;
+        this.prepareValidationMessage = state.message;
+        this.missingRequiredFields = state.missingFields.join(', ');
+        this.dispatchFlowAttributeChange('isEnvelopeReady', this.isEnvelopeReady);
+        this.dispatchFlowAttributeChange('preparedEnvelopeId', this.preparedEnvelopeId || null);
+        this.dispatchFlowAttributeChange('prepareValidationMessage', this.prepareValidationMessage);
+        this.dispatchFlowAttributeChange('missingRequiredFields', this.missingRequiredFields);
+        return state;
+    }
+
+    getFlowValidationState() {
+        const missingFields = this.getMissingRequiredFieldTypes();
+        if (this.isLoading) {
+            return { isValid: false, missingFields, message: 'Wait for the PDF to finish loading before continuing.' };
+        }
+        if (this.isSaving) {
+            return { isValid: false, missingFields, message: 'Wait for Save Envelope to finish before continuing.' };
+        }
+        if (this.loadError) {
+            return { isValid: false, missingFields, message: this.loadError };
+        }
+        if (!this.hasSelectedPdf) {
+            return { isValid: false, missingFields, message: 'A PDF must be loaded before continuing.' };
+        }
+        if (missingFields.length) {
+            return {
+                isValid: false,
+                missingFields,
+                message: `Add these required fields before continuing: ${missingFields.join(', ')}.`
+            };
+        }
+        if (!this.preparedEnvelopeId || !this.lastSavedPlacementSignature) {
+            return { isValid: false, missingFields, message: 'Click Save Envelope before continuing.' };
+        }
+        if (this.getPlacementSignature() !== this.lastSavedPlacementSignature) {
+            return { isValid: false, missingFields, message: 'Click Save Envelope again to save the latest field changes before continuing.' };
+        }
+        return { isValid: true, missingFields, message: 'Envelope is ready.' };
+    }
+
+    getMissingRequiredFieldTypes() {
+        const presentFieldTypes = new Set(this.fields.map((field) => field.fieldType));
+        return REQUIRED_FLOW_FIELD_TYPES.filter((fieldType) => !presentFieldTypes.has(fieldType));
+    }
+
+    getPlacementSignature() {
+        return JSON.stringify(this.fields.map((field) => this.toPlacementPayload(field)));
+    }
+
+    dispatchFlowAttributeChange(name, value) {
+        try {
+            this.dispatchEvent(new FlowAttributeChangeEvent(name, value));
+        } catch (error) {
+            // Flow output events are only consumed when this runs on a Flow screen.
+        }
+    }
+
+    handleViewportResize() {
+        if (this.viewportResizeFrameId) {
+            window.cancelAnimationFrame(this.viewportResizeFrameId);
+        }
+        this.viewportResizeFrameId = window.requestAnimationFrame(() => {
+            this.viewportResizeFrameId = null;
+            this.updateResponsiveHeight();
+        });
+    }
+
+    updateResponsiveHeight() {
+        const configuredHeight = this.configuredViewerHeight;
+        const viewportHeight = window.visualViewport?.height || window.innerHeight || configuredHeight;
+        const workspace = this.template.querySelector('.prepare-workspace');
+        const anchorElement = workspace || this.template.host;
+        const anchorRect = anchorElement?.getBoundingClientRect ? anchorElement.getBoundingClientRect() : null;
+        const availableHeight = anchorRect ? viewportHeight - anchorRect.top - VIEWPORT_BOTTOM_PADDING : configuredHeight;
+        const nextHeight = Math.round(Math.max(configuredHeight, MIN_VIEWER_HEIGHT, availableHeight));
+        if (nextHeight !== this.responsiveViewerHeight) {
+            this.responsiveViewerHeight = nextHeight;
+        }
     }
 
     get pagesWithFields() {
@@ -140,7 +281,6 @@ export default class PdfESignPrepareDocument extends LightningElement {
             if (!this.effectiveParentRecordId) {
                 throw new Error('Parent Record Id is required. Put this component on a record page or pass recordId from Flow.');
             }
-            await this.loadRecordFiles();
             if (this.contentDocumentId) {
                 this.selectedContentDocumentId = this.contentDocumentId;
                 await this.loadSelectedPdf();
@@ -149,29 +289,8 @@ export default class PdfESignPrepareDocument extends LightningElement {
             this.loadError = this.normalizeError(error);
         } finally {
             this.isLoading = false;
+            this.syncFlowValidationOutputs();
         }
-    }
-
-    async loadRecordFiles() {
-        this.loadingMessage = 'Loading related PDF files...';
-        const files = await getRecordPdfFiles({ recordId: this.effectiveParentRecordId });
-        this.fileOptions = files.map((file) => ({
-            label: file.title,
-            value: file.contentDocumentId,
-            contentVersionId: file.contentVersionId
-        }));
-        if (!this.contentDocumentId && this.fileOptions.length === 1) {
-            this.selectedContentDocumentId = this.fileOptions[0].value;
-            this.selectedContentVersionId = this.fileOptions[0].contentVersionId;
-            await this.loadSelectedPdf();
-        }
-    }
-
-    async handleFileChange(event) {
-        this.selectedContentDocumentId = event.detail.value;
-        const selected = this.fileOptions.find((item) => item.value === this.selectedContentDocumentId);
-        this.selectedContentVersionId = selected ? selected.contentVersionId : null;
-        await this.loadSelectedPdf();
     }
 
     async loadSelectedPdf() {
@@ -180,6 +299,9 @@ export default class PdfESignPrepareDocument extends LightningElement {
         this.fields = [];
         this.pages = [];
         this.pageImageDataCache = new Map();
+        this.preparedEnvelopeId = null;
+        this.lastSavedPlacementSignature = null;
+        this.syncFlowValidationOutputs();
         try {
             if (!this.activeContentDocumentId) {
                 return;
@@ -203,6 +325,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
             this.loadError = this.normalizeError(error);
         } finally {
             this.isLoading = false;
+            this.syncFlowValidationOutputs();
         }
     }
 
@@ -221,11 +344,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
     async updatePageCountFromPdfJs() {
         try {
             await this.withTimeout(this.detectPdfPageCountFromPdfJs(), 12000, 'Counting PDF pages');
-        } catch (error) {
-            if (!this.warningMessage) {
-                this.warningMessage = 'Using Salesforce page count estimate because the PDF page count could not be read directly.';
-            }
-        }
+        } catch (error) {}
     }
 
     async detectPdfPageCountFromPdfJs() {
@@ -333,9 +452,6 @@ export default class PdfESignPrepareDocument extends LightningElement {
             }
             return { ...page, renditionUrl: page.fallbackRenditionUrl, hasTriedFallback: true };
         });
-        if (!this.warningMessage) {
-            this.warningMessage = 'One or more page previews are still being generated by Salesforce. If a page is blank, wait a moment and reopen this screen.';
-        }
     }
 
     handlePaletteDragStart(event) {
@@ -391,11 +507,32 @@ export default class PdfESignPrepareDocument extends LightningElement {
         }, pageShell, anchorXPercent, anchorYPercent);
         this.fields = [...this.fields, field];
         this.selectedFieldId = field.clientId;
+        this.syncFlowValidationOutputs();
     }
 
     handleFieldClick(event) {
         event.stopPropagation();
         this.selectedFieldId = event.currentTarget.dataset.clientId;
+    }
+
+    handleFieldDeletePointerDown(event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    handleFieldDeleteClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const clientId = event.currentTarget.dataset.clientId;
+        this.fields = this.fields.filter((field) => field.clientId !== clientId);
+        if (this.selectedFieldId === clientId) {
+            this.selectedFieldId = null;
+        }
+        if (this.pointerState && this.pointerState.clientId === clientId) {
+            this.pointerState = null;
+            this.removePointerListeners();
+        }
+        this.syncFlowValidationOutputs();
     }
 
     handleFieldPointerDown(event) {
@@ -462,6 +599,9 @@ export default class PdfESignPrepareDocument extends LightningElement {
         if (state && state.action === 'move' && state.hasMoved) {
             this.autoFitMovedFieldToLine(state.clientId);
         }
+        if (state && state.hasMoved) {
+            this.syncFlowValidationOutputs();
+        }
     }
 
     addPointerListeners() {
@@ -478,20 +618,8 @@ export default class PdfESignPrepareDocument extends LightningElement {
         window.removeEventListener('blur', this.boundHandlePointerCancel);
     }
 
-    handleDeleteSelected() {
-        if (!this.selectedFieldId) {
-            return;
-        }
-        this.fields = this.fields.filter((field) => field.clientId !== this.selectedFieldId);
-        this.selectedFieldId = null;
-    }
-
     handleSelectedLabelChange(event) {
         this.updateSelectedField({ label: event.detail.value });
-    }
-
-    handleSelectedSignerChange(event) {
-        this.updateSelectedField({ signerNumber: Math.max(1, Number(event.detail.value) || 1) });
     }
 
     handleSelectedRequiredChange(event) {
@@ -503,6 +631,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
             return;
         }
         this.fields = this.fields.map((field) => (field.clientId === this.selectedFieldId ? { ...field, ...changes } : field));
+        this.syncFlowValidationOutputs();
     }
 
     autoFitMovedFieldToLine(clientId) {
@@ -683,12 +812,20 @@ export default class PdfESignPrepareDocument extends LightningElement {
     }
 
     async handleSave() {
+        this.clearSaveNotice();
         if (!this.fields.length) {
-            this.dispatchEvent(new ShowToastEvent({
-                title: 'No fields to save',
-                message: 'There are no fields to save.',
-                variant: 'warning'
-            }));
+            this.syncFlowValidationOutputs();
+            this.showSaveMessage('No fields to save', 'There are no fields to save.', 'warning');
+            return;
+        }
+        const missingFields = this.getMissingRequiredFieldTypes();
+        if (missingFields.length) {
+            this.syncFlowValidationOutputs();
+            this.showSaveMessage(
+                'Required fields missing',
+                `Add these required fields before saving: ${missingFields.join(', ')}.`,
+                'warning'
+            );
             return;
         }
 
@@ -701,11 +838,46 @@ export default class PdfESignPrepareDocument extends LightningElement {
                 contentVersionId: this.pdfInfo.contentVersionId,
                 placementsJson: JSON.stringify(placements)
             });
-            this.dispatchEvent(new ShowToastEvent({ title: 'Fields saved', message: result.message, variant: 'success' }));
+            this.preparedEnvelopeId = result?.envelopeId || null;
+            this.lastSavedPlacementSignature = this.getPlacementSignature();
+            const message = result?.message || 'Envelope fields saved.';
+            this.showSaveMessage('Fields saved', message, 'success');
         } catch (error) {
-            this.dispatchEvent(new ShowToastEvent({ title: 'Unable to save fields', message: this.normalizeError(error), variant: 'error', mode: 'sticky' }));
+            this.showSaveMessage('Unable to save fields', this.normalizeError(error), 'error', 'sticky');
         } finally {
             this.isSaving = false;
+            this.syncFlowValidationOutputs();
+        }
+    }
+
+    showSaveMessage(title, message, variant = 'info', mode = 'dismissible') {
+        this.saveNotice = { title, message, variant };
+        this.handleViewportResize();
+        try {
+            this.dispatchEvent(new ShowToastEvent({ title, message, variant, mode }));
+        } catch (error) {
+            // Some Flow launch contexts do not host Salesforce toasts.
+        }
+        if (this.saveNoticeTimeoutId) {
+            window.clearTimeout(this.saveNoticeTimeoutId);
+            this.saveNoticeTimeoutId = null;
+        }
+        if (variant !== 'error' && mode !== 'sticky') {
+            this.saveNoticeTimeoutId = window.setTimeout(() => {
+                this.saveNotice = null;
+                this.saveNoticeTimeoutId = null;
+            }, 8000);
+        }
+    }
+
+    clearSaveNotice(shouldUpdateHeight = true) {
+        this.saveNotice = null;
+        if (shouldUpdateHeight !== false) {
+            this.handleViewportResize();
+        }
+        if (this.saveNoticeTimeoutId) {
+            window.clearTimeout(this.saveNoticeTimeoutId);
+            this.saveNoticeTimeoutId = null;
         }
     }
 
