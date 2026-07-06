@@ -1,5 +1,5 @@
 <template>
-    <lightning-card title="Send PDF for E-Signature" icon-name="utility:email">
+    <lightning-card>
         <div class="slds-p-around_medium">
             <template if:true={isLoading}>
                 <lightning-spinner alternative-text="Loading draft envelopes" size="small"></lightning-spinner>
@@ -11,16 +11,7 @@
                     </div>
                 </template>
 
-                <div class="slds-m-bottom_small refresh-row">
-                    <lightning-button label="Refresh Drafts" onclick={handleRefresh}></lightning-button>
-                </div>
-
                 <template if:true={hasDrafts}>
-                    <div class="current-draft slds-m-bottom_small">
-                        <div class="slds-text-title_caps">Draft Envelope</div>
-                        <div class="draft-title">{currentDraftTitle}</div>
-                        <div class="draft-fields">{currentDraftFieldSummary}</div>
-                    </div>
                     <template if:true={hasSignerContacts}>
                         <lightning-combobox
                             label="Signer Contact"
@@ -52,12 +43,6 @@
                     <div class="empty-state">No draft envelopes were found for this record. Prepare a PDF and save fields first.</div>
                 </template>
 
-                <template if:true={lastSigningUrl}>
-                    <div class="slds-box slds-theme_success slds-m-top_medium">
-                        <p>Envelope sent. Signing URL:</p>
-                        <a href={lastSigningUrl} target="_blank">{lastSigningUrl}</a>
-                    </div>
-                </template>
             </template>
         </div>
     </lightning-card>

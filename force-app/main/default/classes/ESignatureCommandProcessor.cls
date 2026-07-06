@@ -45,6 +45,8 @@ public without sharing class ESignatureCommandProcessor {
                     handleViewed(env, payload);
                 } else if (action == 'email opened' || action == 'email-opened') {
                     handleEmailOpened(env, payload);
+                } else if (action == 'disclosure accepted' || action == 'disclosure-accepted') {
+                    handleDisclosureAccepted(env, payload);
                 } else if (action == 'expired') {
                     handleExpired(env, payload);
                 } else if (action == 'signed') {
@@ -84,6 +86,24 @@ public without sharing class ESignatureCommandProcessor {
             'ESignature_Salesforce_User_Document_Opened',
             'Signer opened the document signing page.'
         );
+    }
+
+    private static void handleDisclosureAccepted(ESignature_Envelope__c env, Map<String, Object> payload) {
+        if (isTerminalEnvelope(env)) {
+            return;
+        }
+        if (env.Expires_At__c != null && env.Expires_At__c < System.now()) {
+            handleExpired(env, payload);
+            return;
+        }
+        String status = normalizedEnvelopeStatus(env);
+        if (!(status == 'sent' || status == 'viewed' || status == 'error')) {
+            return;
+        }
+        if (hasAuditEvent(env.Id, 'Disclosure Accepted')) {
+            return;
+        }
+        audit(env, 'Disclosure Accepted', payload, 'Signer accepted Consumer Disclosure and consented to use electronic signatures.');
     }
 
     private static void handleEmailOpened(ESignature_Envelope__c env, Map<String, Object> payload) {
@@ -229,6 +249,19 @@ public without sharing class ESignatureCommandProcessor {
         }
         String status = ESignatureUtil.stringValue(env.Envelope_Status__c);
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
+    }
+
+    private static Boolean hasAuditEvent(Id envelopeId, String eventType) {
+        if (envelopeId == null || String.isBlank(eventType)) {
+            return false;
+        }
+        Integer eventCount = [
+            SELECT COUNT()
+            FROM ESignature_Audit_Event__c
+            WHERE Envelope__c = :envelopeId
+            AND Event_Type__c = :eventType
+        ];
+        return eventCount > 0;
     }
 
     private static SubmittedFieldResult applySubmittedFields(ESignature_Envelope__c env, String signerFieldsJson) {

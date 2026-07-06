@@ -10,6 +10,7 @@
     <targetConfigs>
         <targetConfig targets="lightning__FlowScreen">
             <property name="recordId" type="String" label="Parent Record Id" />
+            <property name="documentSent" type="Boolean" label="Document Sent" role="outputOnly" />
         </targetConfig>
     </targetConfigs>
 </LightningComponentBundle>

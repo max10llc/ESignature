@@ -304,6 +304,9 @@ public without sharing class ESignaturePageController {
         }
         consent = true;
         disclosureAccepted = true;
+        publishCommand('Disclosure Accepted', new Map<String, Object>{
+            'message' => 'Signer accepted Consumer Disclosure and consented to use electronic signatures.'
+        }, false);
         return null;
     }
 

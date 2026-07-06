@@ -22,6 +22,7 @@ private class ESignatureAuditReportBuilderTest {
             insert new List<ESignature_Audit_Event__c>{
                 audit(env.Id, 'Sent', 'Envelope sent to derek.hawley@example.com.', DateTime.newInstanceGmt(2026, 6, 23, 14, 0, 0)),
                 audit(env.Id, 'Viewed', 'Signer opened the envelope.', DateTime.newInstanceGmt(2026, 6, 23, 14, 5, 0)),
+                audit(env.Id, 'Disclosure Accepted', 'Signer accepted Consumer Disclosure and consented to use electronic signatures.', DateTime.newInstanceGmt(2026, 6, 23, 14, 6, 0)),
                 audit(env.Id, 'Signed', 'Signer completed required fields and submitted signature.', DateTime.newInstanceGmt(2026, 6, 23, 14, 10, 0))
             };
 
@@ -33,10 +34,12 @@ private class ESignatureAuditReportBuilderTest {
             System.assert(pdfText.contains('Final Audit Report'), 'Report should include the audit heading.');
             System.assert(pdfText.contains('Audit Report Contract'), 'Report should include the document title.');
             System.assert(pdfText.contains('Derek Hawley'), 'Report should include the signer name.');
-            System.assert(pdfText.contains('Document emailed'), 'Report should include the sent event row.');
-            System.assert(pdfText.contains('Signer accessed secure link'), 'Report should include the viewed event row.');
-            System.assert(pdfText.contains('Document e-signed'), 'Report should include the signed event row.');
-            System.assert(pdfText.contains('Agreement completed'), 'Report should include the completion row.');
+            System.assert(pdfText.contains('Document Created'), 'Report should include the created event row.');
+            System.assert(pdfText.contains('Document Emailed'), 'Report should include the sent event row.');
+            System.assert(pdfText.contains('Signer Accessed Secure Link'), 'Report should include the viewed event row.');
+            System.assert(pdfText.contains('Consumer Disclosure Accepted'), 'Report should include the disclosure acceptance row.');
+            System.assert(pdfText.contains('Document E-Signed'), 'Report should include the signed event row.');
+            System.assert(pdfText.contains('Agreement Completed'), 'Report should include the completion row.');
             System.assert(pdfText.contains('06-23-2026 - 9:00:00 AM CDT'), 'Sent timestamp should use the sender Salesforce user timezone.');
             System.assert(pdfText.contains('Signature Date: 06-23-2026 - 9:10:00 AM CDT'), 'Signature timestamp should use the sender Salesforce user timezone.');
             System.assert(!pdfText.contains('2026-06-23'), 'Audit report should not use yyyy-MM-dd dates.');

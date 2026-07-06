@@ -226,6 +226,8 @@
     <apex:inputHidden value="{!signerFieldsJson}" id="signerFieldsJson" />
     <apex:inputHidden value="{!typedName}" id="typedName" />
     <apex:inputHidden value="{!signerTitle}" id="signerTitle" />
+    <apex:actionFunction name="recordDisclosureAcceptance" action="{!continueAfterDisclosure}" rerender="disclosureAuditSink" />
+    <apex:outputPanel id="disclosureAuditSink" layout="none" />
     <div class="wrap">
         <div id="terminalMessageHost">
             <apex:outputPanel rendered="{!hasError}">
@@ -516,6 +518,16 @@ function setConsentAccepted(accepted) {
     if (consent) { consent.checked = accepted === true; }
     if (disclosure) { disclosure.checked = accepted === true; }
 }
+var disclosureAcceptanceRecorded = false;
+function recordDisclosureAcceptanceFromPage() {
+    if (disclosureAcceptanceRecorded) { return; }
+    disclosureAcceptanceRecorded = true;
+    if (typeof recordDisclosureAcceptance === 'function') {
+        try {
+            recordDisclosureAcceptance();
+        } catch (e) {}
+    }
+}
 function isConsentAccepted() {
     var consent = consentInput();
     var disclosure = disclosureAcceptedInput();
@@ -541,6 +553,7 @@ function requireDisclosureOverlay() {
 }
 function acceptDisclosureOverlay() {
     setConsentAccepted(true);
+    recordDisclosureAcceptanceFromPage();
     closeConsentOptions();
     closeViewerOptions();
     var workspace = document.getElementById('signingWorkspace');

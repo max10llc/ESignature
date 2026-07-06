@@ -1,5 +1,7 @@
 import { LightningElement, api, track } from 'lwc';
+import Toast from 'lightning/toast';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { FlowAttributeChangeEvent } from 'lightning/flowSupport';
 
 import getDraftEnvelopes from '@salesforce/apex/ESignatureSendController.getDraftEnvelopes';
 import getSignerContacts from '@salesforce/apex/ESignatureSendController.getSignerContacts';
@@ -8,6 +10,8 @@ import sendEnvelope from '@salesforce/apex/ESignatureSendController.sendEnvelope
 export default class PdfESignSendEnvelope extends LightningElement {
     _recordId;
     _parentRecordId;
+
+    @api documentSent = false;
 
     @track envelopes = [];
     @track signerContacts = [];
@@ -20,7 +24,6 @@ export default class PdfESignSendEnvelope extends LightningElement {
     expirationDays = 365;
     isLoading = true;
     isSending = false;
-    lastSigningUrl;
     errorMessage;
     draftRefreshKey = 'initial';
     hasConnected = false;
@@ -62,20 +65,6 @@ export default class PdfESignSendEnvelope extends LightningElement {
 
     get currentDraft() {
         return this.envelopes.length ? this.envelopes[0] : null;
-    }
-
-    get currentDraftTitle() {
-        const draft = this.currentDraft;
-        return draft ? draft.title || draft.name : '';
-    }
-
-    get currentDraftFieldSummary() {
-        const draft = this.currentDraft;
-        if (!draft) {
-            return '';
-        }
-        const count = draft.fieldCount || 0;
-        return `${count} field${count === 1 ? '' : 's'}`;
     }
 
     get hasSignerContacts() {
@@ -173,10 +162,6 @@ export default class PdfESignSendEnvelope extends LightningElement {
         }
     }
 
-    handleRefresh() {
-        this.loadDrafts(true);
-    }
-
     handleSignerContactChange(event) {
         this.selectedContactId = event.detail.value;
         this.applySelectedContact();
@@ -219,9 +204,9 @@ export default class PdfESignSendEnvelope extends LightningElement {
     async handleSend() {
         this.isSending = true;
         this.errorMessage = null;
-        this.lastSigningUrl = null;
+        this.setDocumentSent(false);
         try {
-            const result = await sendEnvelope({
+            await sendEnvelope({
                 envelopeId: this.selectedEnvelopeId,
                 signerName: this.signerName,
                 signerEmail: this.signerEmail,
@@ -229,14 +214,31 @@ export default class PdfESignSendEnvelope extends LightningElement {
                 requestMessage: this.requestMessage,
                 expirationDays: this.expirationDays
             });
-            this.lastSigningUrl = result.signingUrl;
-            this.dispatchEvent(new ShowToastEvent({ title: 'Envelope sent', message: result.message, variant: 'success' }));
-            await this.loadDrafts(true);
+            this.setDocumentSent(true);
+            this.showToast('Document sent', 'The document has been sent for signature.', 'success');
         } catch (error) {
             this.errorMessage = this.normalizeError(error);
-            this.dispatchEvent(new ShowToastEvent({ title: 'Unable to send envelope', message: this.errorMessage, variant: 'error', mode: 'sticky' }));
+            this.showToast('Unable to send envelope', this.errorMessage, 'error', 'sticky');
         } finally {
             this.isSending = false;
+        }
+    }
+
+    setDocumentSent(value) {
+        this.documentSent = value;
+        this.dispatchEvent(new FlowAttributeChangeEvent('documentSent', this.documentSent));
+    }
+
+    showToast(title, message, variant, mode = 'dismissible') {
+        try {
+            Toast.show({
+                label: title,
+                message,
+                variant,
+                mode
+            }, this);
+        } catch (error) {
+            this.dispatchEvent(new ShowToastEvent({ title, message, variant, mode }));
         }
     }
 

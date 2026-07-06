@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
+        <members>ESignatureCancelEnvelopeAction</members>
+        <members>ESignatureCancelEnvelopeActionTest</members>
         <members>ESignatureAuditReportBuilder</members>
         <members>ESignatureAuditReportBuilderTest</members>
         <members>ESignatureEmailOpenResource</members>
         <members>ESignatureEmailOpenResourceTest</members>
+        <members>ESignatureEnvelopeCancellationService</members>
         <members>ESignatureFinalizeQueueable</members>
         <members>ESignatureFinalizeQueueableTest</members>
         <members>ESignatureFinalizerCallbackResource</members>
@@ -140,6 +143,7 @@
     <types>
         <members>unfiled$public/ESignature_Completed_Salesforce_User</members>
         <members>unfiled$public/ESignature_Completed_Signer</members>
+        <members>unfiled$public/ESignature_Canceled</members>
         <members>unfiled$public/ESignature_Declined</members>
         <members>unfiled$public/ESignature_Delegate_Signer_Request</members>
         <members>unfiled$public/ESignature_Original_Signer_Delegated</members>

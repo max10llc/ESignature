@@ -61,10 +61,6 @@
                                 </div>
                             </section>
 
-                            <div class="sidebar-actions">
-                                <lightning-button variant="brand" label="Save Envelope" onclick={handleSave} disabled={isSaving}></lightning-button>
-                            </div>
-
                             <section class="field-editor sidebar-section">
                                 <div class="sidebar-heading">Selected Field</div>
                                 <template if:true={selectedField}>
@@ -78,6 +74,10 @@
                                     <div class="no-field-selected">Select a field to edit it.</div>
                                 </template>
                             </section>
+
+                            <div class="sidebar-actions">
+                                <lightning-button variant="brand" label="Save Envelope" onclick={handleSave} disabled={isSaving}></lightning-button>
+                            </div>
                         </aside>
 
                         <div class="document-shell">

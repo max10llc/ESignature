@@ -119,6 +119,7 @@ public without sharing class ESignatureAuditReportBuilder {
         String transactionId = String.valueOf(env.Id);
         ESignature_Audit_Event__c sentEvent = firstEvent(events, new Set<String>{ 'Sent' });
         ESignature_Audit_Event__c viewedEvent = firstEvent(events, new Set<String>{ 'Viewed' });
+        ESignature_Audit_Event__c disclosureEvent = firstEvent(events, new Set<String>{ 'Disclosure Accepted' });
         ESignature_Audit_Event__c signedEvent = firstEvent(events, new Set<String>{ 'Signed' });
 
         for (String titleLine : wrapLine(documentTitle, 48)) {
@@ -142,7 +143,7 @@ public without sharing class ESignatureAuditReportBuilder {
         addEventRows(
             rows,
             'Document_Icon',
-            'Document created',
+            'Document Created',
             'Created by ' + nullToBlank(senderEmail),
             formatDateTime(env.CreatedDate, auditTimeZoneSid),
             'Source: Salesforce E-Signature'
@@ -150,7 +151,7 @@ public without sharing class ESignatureAuditReportBuilder {
         addEventRows(
             rows,
             'Document_Sent_Icon',
-            'Document emailed',
+            'Document Emailed',
             'Sent to ' + signerName + ' (' + signerEmail + ') for signature',
             firstNonBlank(new List<String>{
                 formatDateTime(sentEvent == null ? env.Sent_At__c : sentEvent.Occurred_At__c, auditTimeZoneSid),
@@ -161,7 +162,7 @@ public without sharing class ESignatureAuditReportBuilder {
         addEventRows(
             rows,
             'Document_Sent_Icon',
-            'Signer accessed secure link',
+            'Signer Accessed Secure Link',
             signerName + ' (' + signerEmail + ') accessed the secure signing link',
             firstNonBlank(new List<String>{
                 formatDateTime(viewedEvent == null ? env.Viewed_At__c : viewedEvent.Occurred_At__c, auditTimeZoneSid),
@@ -169,11 +170,21 @@ public without sharing class ESignatureAuditReportBuilder {
             }),
             ''
         );
+        if (disclosureEvent != null) {
+            addEventRows(
+                rows,
+                'Document_Signed_Icon',
+                'Consumer Disclosure Accepted',
+                signerName + ' (' + signerEmail + ') accepted the Consumer Disclosure and consented to use electronic signatures',
+                formatDateTime(disclosureEvent.Occurred_At__c, auditTimeZoneSid),
+                ''
+            );
+        }
         if (env.Signed_At__c != null) {
             addEventRows(
                 rows,
                 'Document_Signed_Icon',
-                'Document e-signed',
+                'Document E-Signed',
                 signerName + ' (' + signerEmail + ') electronically signed the document',
                 'Signature Date: ' + formatDateTime(env.Signed_At__c, auditTimeZoneSid),
                 'IP address: ' + nullToBlank(signedEvent == null ? null : signedEvent.IP_Address__c)
@@ -181,14 +192,13 @@ public without sharing class ESignatureAuditReportBuilder {
             addEventRows(
                 rows,
                 'Document_Completed_Icon',
-                'Agreement completed',
+                'Agreement Completed',
                 'All required signer actions are complete',
                 formatDateTime(env.Signed_At__c, auditTimeZoneSid),
                 'Signature Appearance Selected: ELECTRONIC'
             );
         }
         if (isFinalPdfSecured()) {
-            rows.add(new PdfRow().add('', 'F2', 8));
             rows.add(new PdfRow().icon('Document_Locked_Icon').add('Secured Document', 'F1', 10));
             for (String securedNotice : wrapLine('This completed agreement has been secured. Opening and viewing are allowed, but editing or changing the document is restricted.', 78)) {
                 rows.add(new PdfRow().offset(18).add(securedNotice, 'F2', 9));

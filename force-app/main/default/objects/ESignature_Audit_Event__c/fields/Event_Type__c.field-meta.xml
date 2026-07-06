@@ -41,6 +41,11 @@
                 <label>Document Opened</label>
             </value>
             <value>
+                <fullName>Disclosure Accepted</fullName>
+                <default>false</default>
+                <label>Disclosure Accepted</label>
+            </value>
+            <value>
                 <fullName>Delegated</fullName>
                 <default>false</default>
                 <label>Delegated</label>

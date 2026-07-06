@@ -62,6 +62,34 @@ private class ESignaturePageControllerTest {
     }
 
     @IsTest
+    static void continueAfterDisclosurePublishesDisclosureAcceptedAudit() {
+        String token = 'page-disclosure-accepted-token';
+        ESignature_Envelope__c env = createEnvelope(token, 'Viewed');
+        setSigningPageToken(token);
+
+        ESignaturePageController controller = new ESignaturePageController();
+
+        Test.startTest();
+        controller.continueAfterDisclosure();
+        Test.getEventBus().deliver();
+        Test.stopTest();
+
+        System.assertEquals(true, controller.consent, 'Continue should mark electronic signature consent on the page.');
+        System.assertEquals(true, controller.disclosureAccepted, 'Continue should mark consumer disclosure acceptance on the page.');
+
+        ESignature_Audit_Event__c audit = [
+            SELECT Event_Type__c, Details__c, Actor_Email__c
+            FROM ESignature_Audit_Event__c
+            WHERE Envelope__c = :env.Id
+            AND Event_Type__c = 'Disclosure Accepted'
+            LIMIT 1
+        ];
+        System.assertEquals('Disclosure Accepted', audit.Event_Type__c);
+        System.assertEquals('signer@example.com', audit.Actor_Email__c);
+        System.assert(audit.Details__c.contains('Consumer Disclosure'), 'Audit event should identify the accepted disclosure.');
+    }
+
+    @IsTest
     static void declineRequiresReasonAndDisclosureConfirmation() {
         String token = 'page-decline-prompt-token';
         createEnvelope(token, 'Viewed');
