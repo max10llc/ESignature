@@ -15,6 +15,15 @@ public with sharing class ESignatureSendController {
         @AuraEnabled public String message;
     }
 
+    public class SignerContactDTO {
+        @AuraEnabled public String id;
+        @AuraEnabled public String name;
+        @AuraEnabled public String email;
+        @AuraEnabled public String title;
+        @AuraEnabled public String accountId;
+        @AuraEnabled public String label;
+    }
+
     @AuraEnabled(cacheable=true)
     public static List<EnvelopeDTO> getDraftEnvelopes(String parentRecordId, String refreshKey) {
         List<EnvelopeDTO> output = new List<EnvelopeDTO>();
@@ -50,6 +59,120 @@ public with sharing class ESignatureSendController {
             output.add(row);
         }
         return output;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<SignerContactDTO> getSignerContacts(String parentRecordId, String refreshKey) {
+        Map<Id, SignerContactDTO> contactsById = new Map<Id, SignerContactDTO>();
+        Id accountId = resolveAccountId(parentRecordId);
+        if (accountId == null) {
+            return new List<SignerContactDTO>();
+        }
+        for (Contact contact : [
+            SELECT Id, Name, Email, Title, AccountId
+            FROM Contact
+            WHERE AccountId = :accountId
+            AND Email != null
+            ORDER BY LastName ASC, FirstName ASC, Name ASC
+            LIMIT 200
+        ]) {
+            addSignerContact(contactsById, contact.Id, contact.Name, contact.Email, contact.Title, contact.AccountId);
+        }
+        addAccountContactRelationshipSigners(contactsById, accountId);
+        return contactsById.values();
+    }
+
+    private static void addAccountContactRelationshipSigners(Map<Id, SignerContactDTO> contactsById, Id accountId) {
+        if (!Schema.getGlobalDescribe().containsKey('AccountContactRelation')) {
+            return;
+        }
+        String queryString =
+            'SELECT ContactId, Contact.Name, Contact.Email, Contact.Title ' +
+            'FROM AccountContactRelation ' +
+            'WHERE AccountId = :accountId ' +
+            'AND Contact.Email != null ' +
+            'AND IsActive = true ' +
+            'LIMIT 200';
+        for (SObject relation : Database.query(queryString)) {
+            SObject contact = relation.getSObject('Contact');
+            addSignerContact(
+                contactsById,
+                (Id) relation.get('ContactId'),
+                contact == null ? null : (String) contact.get('Name'),
+                contact == null ? null : (String) contact.get('Email'),
+                contact == null ? null : (String) contact.get('Title'),
+                accountId
+            );
+        }
+    }
+
+    private static void addSignerContact(Map<Id, SignerContactDTO> contactsById, Id contactId, String name, String email, String title, Id accountId) {
+        if (contactId == null || contactsById.containsKey(contactId) || String.isBlank(email)) {
+            return;
+        }
+        SignerContactDTO row = new SignerContactDTO();
+        row.id = String.valueOf(contactId);
+        row.name = name;
+        row.email = email;
+        row.title = title;
+        row.accountId = accountId == null ? null : String.valueOf(accountId);
+        row.label = name + ' (' + email + ')';
+        contactsById.put(contactId, row);
+    }
+
+    private static Id resolveAccountId(String parentRecordId) {
+        Id parentId = ESignatureUtil.safeId(parentRecordId);
+        if (parentId == null) {
+            return null;
+        }
+        Schema.DescribeSObjectResult describe = parentId.getSObjectType().getDescribe();
+        String objectApiName = describe.getName();
+        if (objectApiName == 'Account') {
+            return parentId;
+        }
+
+        Map<String, Schema.SObjectField> fields = describe.fields.getMap();
+        List<String> selectedFields = new List<String>();
+        if (fields.containsKey('AccountId')) {
+            selectedFields.add('AccountId');
+        }
+        if (fields.containsKey('ContactId')) {
+            selectedFields.add('ContactId');
+        }
+        if (selectedFields.isEmpty()) {
+            return null;
+        }
+
+        List<SObject> rows = Database.query(
+            'SELECT ' + String.join(selectedFields, ', ') +
+            ' FROM ' + objectApiName +
+            ' WHERE Id = :parentId LIMIT 1'
+        );
+        if (rows.isEmpty()) {
+            return null;
+        }
+
+        SObject parent = rows[0];
+        if (fields.containsKey('AccountId')) {
+            Id accountId = (Id) parent.get('AccountId');
+            if (accountId != null) {
+                return accountId;
+            }
+        }
+        if (fields.containsKey('ContactId')) {
+            Id contactId = (Id) parent.get('ContactId');
+            if (contactId != null) {
+                for (Contact contact : [
+                    SELECT AccountId
+                    FROM Contact
+                    WHERE Id = :contactId
+                    LIMIT 1
+                ]) {
+                    return contact.AccountId;
+                }
+            }
+        }
+        return null;
     }
 
     @AuraEnabled

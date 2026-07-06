@@ -403,6 +403,7 @@ public without sharing class ESignatureUtil {
         String parentObjectApiName = parentId == null ? null : parentId.getSObjectType().getDescribe().getName();
         env.Parent_Object_Api_Name__c = parentObjectApiName;
         env.Account__c = null;
+        env.Case__c = null;
         env.Opportunity__c = null;
         env.Work_Order__c = null;
         if (parentId == null || String.isBlank(parentObjectApiName)) {
@@ -410,6 +411,8 @@ public without sharing class ESignatureUtil {
         }
         if (parentObjectApiName == 'Account') {
             env.Account__c = parentId;
+        } else if (parentObjectApiName == 'Case') {
+            env.Case__c = parentId;
         } else if (parentObjectApiName == 'Opportunity') {
             env.Opportunity__c = parentId;
         } else if (parentObjectApiName == 'WorkOrder') {

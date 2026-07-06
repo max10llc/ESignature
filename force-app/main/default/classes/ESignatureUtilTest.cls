@@ -31,6 +31,26 @@ private class ESignatureUtilTest {
     }
 
     @IsTest
+    static void stampEnvelopeParentSetsCaseLookup() {
+        Case parent = new Case(
+            Subject = 'Case Parent',
+            Status = 'New',
+            Origin = 'Phone'
+        );
+        insert parent;
+
+        ESignature_Envelope__c env = new ESignature_Envelope__c();
+        ESignatureUtil.stampEnvelopeParent(env, String.valueOf(parent.Id));
+
+        System.assertEquals(String.valueOf(parent.Id), env.Parent_Record_Id__c);
+        System.assertEquals('Case', env.Parent_Object_Api_Name__c);
+        System.assertEquals(parent.Id, env.Case__c);
+        System.assertEquals(null, env.Account__c);
+        System.assertEquals(null, env.Opportunity__c);
+        System.assertEquals(null, env.Work_Order__c);
+    }
+
+    @IsTest
     static void sourceFileHelpersCacheAndStampStatus() {
         Account parent = new Account(Name = 'Util Source Parent');
         insert parent;

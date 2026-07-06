@@ -93,6 +93,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>ESignature_Envelope__c.Case__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>ESignature_Envelope__c.Completed_Fields_JSON__c</field>
         <readable>true</readable>
     </fieldPermissions>

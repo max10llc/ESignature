@@ -21,6 +21,102 @@ private class ESignatureSendControllerTest {
     }
 
     @IsTest
+    static void getSignerContactsReturnsAccountContactsWithEmail() {
+        Account parent = new Account(Name = 'Signer Contact Account');
+        insert parent;
+        Contact contactWithEmail = new Contact(
+            FirstName = 'Ada',
+            LastName = 'Signer',
+            Email = 'ada.signer@example.com',
+            Title = 'Director',
+            AccountId = parent.Id
+        );
+        Contact contactWithoutEmail = new Contact(
+            FirstName = 'No',
+            LastName = 'Email',
+            AccountId = parent.Id
+        );
+        insert new List<Contact>{ contactWithEmail, contactWithoutEmail };
+
+        List<ESignatureSendController.SignerContactDTO> contacts =
+            ESignatureSendController.getSignerContacts(String.valueOf(parent.Id), 'contacts-refresh');
+
+        System.assertEquals(1, contacts.size(), 'Only account contacts with email addresses should be returned.');
+        System.assertEquals(String.valueOf(contactWithEmail.Id), contacts[0].id);
+        System.assertEquals('Ada Signer', contacts[0].name);
+        System.assertEquals('ada.signer@example.com', contacts[0].email);
+        System.assertEquals('Director', contacts[0].title);
+        System.assert(contacts[0].label.contains('ada.signer@example.com'), 'The picklist label should include the email address.');
+    }
+
+    @IsTest
+    static void getSignerContactsResolvesOpportunityAccount() {
+        Account parent = new Account(Name = 'Opportunity Signer Account');
+        insert parent;
+        Opportunity opportunity = new Opportunity(
+            Name = 'Signer Opportunity',
+            StageName = 'Prospecting',
+            CloseDate = Date.today().addDays(30),
+            AccountId = parent.Id
+        );
+        insert opportunity;
+        Contact signer = new Contact(
+            FirstName = 'Olivia',
+            LastName = 'Opportunity',
+            Email = 'olivia@example.com',
+            AccountId = parent.Id
+        );
+        insert signer;
+
+        List<ESignatureSendController.SignerContactDTO> contacts =
+            ESignatureSendController.getSignerContacts(String.valueOf(opportunity.Id), 'opportunity-refresh');
+
+        System.assertEquals(1, contacts.size(), 'Opportunity records should resolve contacts from their account.');
+        System.assertEquals(String.valueOf(signer.Id), contacts[0].id);
+    }
+
+    @IsTest
+    static void getSignerContactsIncludesIndirectAccountContactRelationships() {
+        Account relatedAccount = new Account(Name = 'Relationship Signer Account');
+        Account primaryAccount = new Account(Name = 'Primary Contact Account');
+        insert new List<Account>{ relatedAccount, primaryAccount };
+
+        Contact directSigner = new Contact(
+            FirstName = 'Direct',
+            LastName = 'Signer',
+            Email = 'direct.signer@example.com',
+            AccountId = relatedAccount.Id
+        );
+        Contact indirectSigner = new Contact(
+            FirstName = 'Indirect',
+            LastName = 'Signer',
+            Email = 'indirect.signer@example.com',
+            AccountId = primaryAccount.Id
+        );
+        insert new List<Contact>{ directSigner, indirectSigner };
+
+        if (!Schema.getGlobalDescribe().containsKey('AccountContactRelation')) {
+            return;
+        }
+        SObject relation = Schema.getGlobalDescribe().get('AccountContactRelation').newSObject();
+        relation.put('AccountId', relatedAccount.Id);
+        relation.put('ContactId', indirectSigner.Id);
+        insert relation;
+
+        List<ESignatureSendController.SignerContactDTO> contacts =
+            ESignatureSendController.getSignerContacts(String.valueOf(relatedAccount.Id), 'relationship-refresh');
+        Map<String, ESignatureSendController.SignerContactDTO> contactsByEmail =
+            new Map<String, ESignatureSendController.SignerContactDTO>();
+        for (ESignatureSendController.SignerContactDTO contact : contacts) {
+            contactsByEmail.put(contact.email, contact);
+        }
+
+        System.assert(contactsByEmail.containsKey('direct.signer@example.com'), 'Direct account contacts should remain available.');
+        System.assert(contactsByEmail.containsKey('indirect.signer@example.com'), 'Indirect Account Contact Relationship contacts should be available.');
+        System.assertEquals(String.valueOf(relatedAccount.Id), contactsByEmail.get('indirect.signer@example.com').accountId);
+    }
+
+    @IsTest
     static void sendEnvelopeUpdatesDraftAndCachesSourcePdf() {
         DraftFixture fixture = createDraftFixture();
 

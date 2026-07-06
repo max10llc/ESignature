@@ -2,14 +2,17 @@ import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 import getDraftEnvelopes from '@salesforce/apex/ESignatureSendController.getDraftEnvelopes';
+import getSignerContacts from '@salesforce/apex/ESignatureSendController.getSignerContacts';
 import sendEnvelope from '@salesforce/apex/ESignatureSendController.sendEnvelope';
 
 export default class PdfESignSendEnvelope extends LightningElement {
-    @api recordId;
-    @api parentRecordId;
+    _recordId;
+    _parentRecordId;
 
     @track envelopes = [];
+    @track signerContacts = [];
     selectedEnvelopeId;
+    selectedContactId;
     signerName = '';
     signerEmail = '';
     signerTitle = '';
@@ -20,13 +23,37 @@ export default class PdfESignSendEnvelope extends LightningElement {
     lastSigningUrl;
     errorMessage;
     draftRefreshKey = 'initial';
+    hasConnected = false;
+    initialLoadQueued = false;
+    loadedParentRecordId;
 
     connectedCallback() {
-        this.loadDrafts();
+        this.hasConnected = true;
+        this.queueInitialDraftLoad();
+    }
+
+    @api
+    get recordId() {
+        return this._recordId;
+    }
+
+    set recordId(value) {
+        this._recordId = value;
+        this.queueInitialDraftLoad();
+    }
+
+    @api
+    get parentRecordId() {
+        return this._parentRecordId;
+    }
+
+    set parentRecordId(value) {
+        this._parentRecordId = value;
+        this.queueInitialDraftLoad();
     }
 
     get effectiveParentRecordId() {
-        return this.parentRecordId || this.recordId;
+        return this._parentRecordId || this._recordId;
     }
 
     get hasDrafts() {
@@ -51,22 +78,94 @@ export default class PdfESignSendEnvelope extends LightningElement {
         return `${count} field${count === 1 ? '' : 's'}`;
     }
 
+    get hasSignerContacts() {
+        return this.signerContacts.length > 0;
+    }
+
+    get contactOptions() {
+        return this.signerContacts.map((contact) => ({
+            label: contact.label || `${contact.name} (${contact.email})`,
+            value: contact.id
+        }));
+    }
+
+    get selectedContact() {
+        return this.signerContacts.find((contact) => contact.id === this.selectedContactId);
+    }
+
+    get selectedContactEmail() {
+        const contact = this.selectedContact;
+        return contact ? contact.email : '';
+    }
+
+    get selectedContactTitle() {
+        const contact = this.selectedContact;
+        return contact ? contact.title : '';
+    }
+
     get disableSend() {
-        return this.isSending || !this.selectedEnvelopeId || !this.signerName || !this.signerEmail;
+        return this.isSending || !this.selectedEnvelopeId || !this.selectedContactId || !this.signerName || !this.signerEmail;
+    }
+
+    queueInitialDraftLoad() {
+        if (!this.hasConnected || this.initialLoadQueued) {
+            return;
+        }
+        this.initialLoadQueued = true;
+        Promise.resolve().then(() => {
+            this.initialLoadQueued = false;
+            this.loadInitialDrafts();
+        });
+    }
+
+    loadInitialDrafts() {
+        const parentRecordId = this.effectiveParentRecordId;
+        if (!parentRecordId) {
+            this.envelopes = [];
+            this.signerContacts = [];
+            this.selectedEnvelopeId = null;
+            this.selectedContactId = null;
+            this.clearSigner();
+            this.isLoading = false;
+            return;
+        }
+        if (this.loadedParentRecordId === parentRecordId) {
+            return;
+        }
+        this.loadedParentRecordId = parentRecordId;
+        this.loadDrafts(true);
     }
 
     async loadDrafts(forceRefresh = false) {
         this.isLoading = true;
         this.errorMessage = null;
         try {
+            const parentRecordId = this.effectiveParentRecordId;
+            if (!parentRecordId) {
+                this.envelopes = [];
+                this.signerContacts = [];
+                this.selectedEnvelopeId = null;
+                this.selectedContactId = null;
+                this.clearSigner();
+                return;
+            }
             if (forceRefresh) {
                 this.draftRefreshKey = String(Date.now());
             }
-            this.envelopes = await getDraftEnvelopes({
-                parentRecordId: this.effectiveParentRecordId,
-                refreshKey: this.draftRefreshKey
-            });
+            const [envelopes, signerContacts] = await Promise.all([
+                getDraftEnvelopes({
+                    parentRecordId,
+                    refreshKey: this.draftRefreshKey
+                }),
+                getSignerContacts({
+                    parentRecordId,
+                    refreshKey: this.draftRefreshKey
+                })
+            ]);
+            this.envelopes = envelopes || [];
+            this.signerContacts = signerContacts || [];
             this.selectedEnvelopeId = this.currentDraft ? this.currentDraft.id : null;
+            this.syncSelectedContact();
         } catch (error) {
             this.errorMessage = this.normalizeError(error);
         } finally {
@@ -78,16 +177,9 @@ export default class PdfESignSendEnvelope extends LightningElement {
         this.loadDrafts(true);
     }
 
-    handleSignerNameChange(event) {
-        this.signerName = event.detail.value;
-    }
-
-    handleSignerEmailChange(event) {
-        this.signerEmail = event.detail.value;
-    }
-
-    handleSignerTitleChange(event) {
-        this.signerTitle = event.detail.value;
+    handleSignerContactChange(event) {
+        this.selectedContactId = event.detail.value;
+        this.applySelectedContact();
     }
 
     handleRequestMessageChange(event) {
@@ -96,6 +188,32 @@ export default class PdfESignSendEnvelope extends LightningElement {
 
     handleExpirationChange(event) {
         this.expirationDays = Number(event.detail.value) || 365;
+    }
+
+    syncSelectedContact() {
+        if (this.selectedContactId && this.selectedContact) {
+            this.applySelectedContact();
+            return;
+        }
+        this.selectedContactId = null;
+        this.clearSigner();
+    }
+
+    applySelectedContact() {
+        const contact = this.selectedContact;
+        if (!contact) {
+            this.clearSigner();
+            return;
+        }
+        this.signerName = contact.name || '';
+        this.signerEmail = contact.email || '';
+        this.signerTitle = contact.title || '';
+    }
+
+    clearSigner() {
+        this.signerName = '';
+        this.signerEmail = '';
+        this.signerTitle = '';
     }
 
     async handleSend() {
