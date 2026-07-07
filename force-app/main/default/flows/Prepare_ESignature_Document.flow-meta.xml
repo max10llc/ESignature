@@ -2,7 +2,34 @@
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>67.0</apiVersion>
     <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <decisions>
+        <name>Return_to_Record</name>
+        <label>Return to Record?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>screen3</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Document_Sent</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>ESignatureSend.documentSent</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <label>Document Sent</label>
+        </rules>
+    </decisions>
     <environments>Default</environments>
+    <formulas>
+        <name>forB_EnvelopeReady</name>
+        <dataType>Boolean</dataType>
+        <expression>{!ESignature_Prepare_Document.isEnvelopeReady}</expression>
+    </formulas>
     <interviewLabel>Prepare E-Signature Document {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Prepare E-Signature Document</label>
     <processMetadataValues>
@@ -31,7 +58,7 @@
         <locationY>0</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
-            <targetReference>tra</targetReference>
+            <targetReference>Transform_Content_Document_Links</targetReference>
         </connector>
         <filterLogic>and</filterLogic>
         <filters>
@@ -46,29 +73,36 @@
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
     <recordLookups>
-        <name>Get_Content_Versions</name>
-        <label>Get Content Versions</label>
+        <name>Get_E_Signature_Document_Content_Version</name>
+        <label>Get E-Signature Document Content Version</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
-            <targetReference>screen</targetReference>
+            <targetReference>screen1</targetReference>
         </connector>
         <filterLogic>and</filterLogic>
         <filters>
             <field>ContentDocumentId</field>
             <operator>In</operator>
             <value>
-                <elementReference>tra</elementReference>
+                <elementReference>Transform_Content_Document_Links</elementReference>
             </value>
         </filters>
-        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <filters>
+            <field>ESignature_File__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
         <object>ContentVersion</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
     <screens>
-        <name>screen</name>
-        <label>screen</label>
+        <name>screen1</name>
+        <label>screen1</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <allowBack>true</allowBack>
@@ -78,61 +112,25 @@
             <targetReference>screen2</targetReference>
         </connector>
         <fields>
-            <name>datatable</name>
-            <dataTypeMappings>
-                <typeName>T</typeName>
-                <typeValue>ContentVersion</typeValue>
-            </dataTypeMappings>
-            <extensionName>flowruntime:datatable</extensionName>
+            <name>ESignature_Prepare_Document</name>
+            <extensionName>c:eSignaturePrepareDocument</extensionName>
             <fieldType>ComponentInstance</fieldType>
             <inputParameters>
-                <name>label</name>
+                <name>contentDocumentId</name>
                 <value>
-                    <stringValue>Data Table</stringValue>
+                    <elementReference>Get_E_Signature_Document_Content_Version.ContentDocumentId</elementReference>
                 </value>
             </inputParameters>
             <inputParameters>
-                <name>selectionMode</name>
+                <name>recordId</name>
                 <value>
-                    <stringValue>SINGLE_SELECT</stringValue>
+                    <elementReference>recordId</elementReference>
                 </value>
             </inputParameters>
             <inputParameters>
-                <name>minRowSelection</name>
+                <name>height</name>
                 <value>
-                    <numberValue>1.0</numberValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>tableData</name>
-                <value>
-                    <elementReference>Get_Content_Versions</elementReference>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>keyField</name>
-                <value>
-                    <complexValue>{&quot;dataType&quot;:&quot;SObject&quot;,&quot;objectType&quot;:&quot;ContentVersion&quot;,&quot;fieldReferences&quot;:[&quot;Id&quot;],&quot;elementReference&quot;:&quot;Get_Content_Versions&quot;}</complexValue>
-                    <complexValueType>ComplexObjectFieldDetails</complexValueType>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>maxRowSelection</name>
-                <value>
-                    <numberValue>1.0</numberValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>columns</name>
-                <value>
-                    <stringValue>[{&quot;apiName&quot;:&quot;Title&quot;,&quot;guid&quot;:&quot;column-427b&quot;,&quot;editable&quot;:false,&quot;hasCustomHeaderLabel&quot;:false,&quot;customHeaderLabel&quot;:&quot;&quot;,&quot;wrapText&quot;:true,&quot;order&quot;:0,&quot;sortable&quot;:false,&quot;label&quot;:&quot;Title&quot;,&quot;type&quot;:&quot;text&quot;}]</stringValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>columnReferences</name>
-                <value>
-                    <complexValue>{&quot;dataType&quot;:&quot;SObject&quot;,&quot;objectType&quot;:&quot;ContentVersion&quot;,&quot;fieldReferences&quot;:[&quot;Title&quot;],&quot;elementReference&quot;:&quot;Get_Content_Versions&quot;}</complexValue>
-                    <complexValueType>ComplexObjectFieldDetails</complexValueType>
+                    <numberValue>525.0</numberValue>
                 </value>
             </inputParameters>
             <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
@@ -147,8 +145,60 @@
                 </width>
             </styleProperties>
         </fields>
-        <showFooter>true</showFooter>
-        <showHeader>true</showHeader>
+        <fields>
+            <name>fbb_PrepareDocument</name>
+            <extensionName>c:flowButtonBar</extensionName>
+            <fieldType>ComponentInstance</fieldType>
+            <inputParameters>
+                <name>alignment</name>
+                <value>
+                    <stringValue>right</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>orientation</name>
+                <value>
+                    <stringValue>horizontal</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>showLines</name>
+                <value>
+                    <stringValue>above</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>actionMode</name>
+                <value>
+                    <stringValue>navigation</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>buttons</name>
+                <value>
+                    <stringValue>[{&quot;label&quot;:&quot;Next&quot;,&quot;value&quot;:&quot;Next&quot;,&quot;iconPosition&quot;:&quot;left&quot;,&quot;variant&quot;:&quot;brand&quot;,&quot;index&quot;:0}]</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>enableButtons</name>
+                <value>
+                    <elementReference>forB_EnvelopeReady</elementReference>
+                </value>
+            </inputParameters>
+            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+            <isRequired>true</isRequired>
+            <storeOutputAutomatically>true</storeOutputAutomatically>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <showFooter>false</showFooter>
+        <showHeader>false</showHeader>
     </screens>
     <screens>
         <name>screen2</name>
@@ -157,17 +207,14 @@
         <locationY>0</locationY>
         <allowBack>true</allowBack>
         <allowFinish>true</allowFinish>
-        <allowPause>true</allowPause>
+        <allowPause>false</allowPause>
+        <connector>
+            <targetReference>Return_to_Record</targetReference>
+        </connector>
         <fields>
-            <name>ESignature_Prepare_Document</name>
-            <extensionName>c:eSignaturePrepareDocument</extensionName>
+            <name>ESignatureSend</name>
+            <extensionName>c:eSignatureSendEnvelope</extensionName>
             <fieldType>ComponentInstance</fieldType>
-            <inputParameters>
-                <name>contentDocumentId</name>
-                <value>
-                    <elementReference>datatable.firstSelectedRow.ContentDocumentId</elementReference>
-                </value>
-            </inputParameters>
             <inputParameters>
                 <name>recordId</name>
                 <value>
@@ -186,8 +233,85 @@
                 </width>
             </styleProperties>
         </fields>
+        <fields>
+            <name>fbb_SendDocument</name>
+            <extensionName>c:flowButtonBar</extensionName>
+            <fieldType>ComponentInstance</fieldType>
+            <inputParameters>
+                <name>alignment</name>
+                <value>
+                    <stringValue>right</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>orientation</name>
+                <value>
+                    <stringValue>horizontal</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>showLines</name>
+                <value>
+                    <stringValue>neither</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>actionMode</name>
+                <value>
+                    <stringValue>navigation</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>enableButtons</name>
+                <value>
+                    <booleanValue>true</booleanValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>buttons</name>
+                <value>
+                    <stringValue>[{&quot;label&quot;:&quot;Previous&quot;,&quot;value&quot;:&quot;Previous&quot;,&quot;iconPosition&quot;:&quot;left&quot;,&quot;variant&quot;:&quot;neutral&quot;,&quot;index&quot;:0},{&quot;label&quot;:&quot;Return to Record&quot;,&quot;value&quot;:&quot;Return to Record&quot;,&quot;iconPosition&quot;:&quot;left&quot;,&quot;variant&quot;:&quot;brand&quot;,&quot;index&quot;:1}]</stringValue>
+                </value>
+            </inputParameters>
+            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+            <isRequired>true</isRequired>
+            <storeOutputAutomatically>true</storeOutputAutomatically>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <showFooter>false</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <screens>
+        <name>screen3</name>
+        <label>screen3</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <allowBack>true</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>DT_DocumentNotSent</name>
+            <fieldText>&lt;p style=&quot;text-align: center;&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;font-size: 16px;&quot;&gt;The document was not sent for signature. If this was intentional click &quot;Return to Record&quot;. If not, click &quot;Previous&quot; to go back and send the document.&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;text-align: center;&quot;&gt;&lt;br&gt;&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <nextOrFinishButtonLabel>Return to Record</nextOrFinishButtonLabel>
         <showFooter>true</showFooter>
-        <showHeader>true</showHeader>
+        <showHeader>false</showHeader>
     </screens>
     <start>
         <locationX>0</locationX>
@@ -198,12 +322,12 @@
     </start>
     <status>Active</status>
     <transforms>
-        <name>tra</name>
-        <label>tra</label>
+        <name>Transform_Content_Document_Links</name>
+        <label>Transform Content Document Links</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <connector>
-            <targetReference>Get_Content_Versions</targetReference>
+            <targetReference>Get_E_Signature_Document_Content_Version</targetReference>
         </connector>
         <dataType>String</dataType>
         <isCollection>true</isCollection>

@@ -194,6 +194,7 @@
         <name>Layout</name>
     </types>
     <types>
+        <members>E_Signature_Cancel_Open_Envelopes</members>
         <members>Prepare_ESignature_Document</members>
         <name>Flow</name>
     </types>
