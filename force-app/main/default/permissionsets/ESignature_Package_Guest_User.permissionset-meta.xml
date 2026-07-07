@@ -89,6 +89,11 @@
   </fieldPermissions>
   <fieldPermissions>
     <editable>false</editable>
+    <field>ESignature_Envelope__c.Request_Subject__c</field>
+    <readable>true</readable>
+  </fieldPermissions>
+  <fieldPermissions>
+    <editable>false</editable>
     <field>ESignature_Envelope__c.Decline_Reason__c</field>
     <readable>true</readable>
   </fieldPermissions>

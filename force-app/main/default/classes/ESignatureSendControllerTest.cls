@@ -127,7 +127,8 @@ private class ESignatureSendControllerTest {
             'signer@example.com',
             'President',
             30,
-            'Please review the attached proposal before signing.'
+            'Please review the attached proposal before signing.',
+            'Commercial Cleaning Proposal Signature'
         );
         Test.stopTest();
 
@@ -138,7 +139,7 @@ private class ESignatureSendControllerTest {
         ESignature_Envelope__c env = [
             SELECT Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
                    Sent_At__c, Expires_At__c, Public_Signing_URL__c,
-                   Request_Message__c,
+                   Request_Message__c, Request_Subject__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Id = :fixture.envelope.Id
@@ -148,6 +149,7 @@ private class ESignatureSendControllerTest {
         System.assertEquals('signer@example.com', env.Signer_Email__c);
         System.assertEquals('President', env.Signer_Title__c);
         System.assertEquals('Please review the attached proposal before signing.', env.Request_Message__c);
+        System.assertEquals('Commercial Cleaning Proposal Signature', env.Request_Subject__c);
         System.assertNotEquals(null, env.Sent_At__c);
         System.assertNotEquals(null, env.Expires_At__c);
         System.assertNotEquals(null, env.Public_Signing_URL__c);
@@ -225,7 +227,8 @@ private class ESignatureSendControllerTest {
             'signer@example.com',
             'President',
             30,
-            null
+            null,
+            'Replacement Signature Request'
         );
         Test.stopTest();
 
@@ -281,8 +284,28 @@ private class ESignatureSendControllerTest {
         insert env;
 
         try {
-            ESignatureSendController.sendEnvelope(String.valueOf(env.Id), 'Derek Hawley', 'signer@example.com', null, 30, null);
+            ESignatureSendController.sendEnvelope(String.valueOf(env.Id), 'Derek Hawley', 'signer@example.com', null, 30, null, 'Missing Fields Subject');
             System.assert(false, 'Expected sendEnvelope to reject a draft without fields.');
+        } catch (AuraHandledException ex) {
+            System.assertNotEquals(null, ex.getMessage(), 'An AuraHandledException should be thrown.');
+        }
+    }
+
+    @IsTest
+    static void sendEnvelopeRequiresSubject() {
+        DraftFixture fixture = createDraftFixture();
+
+        try {
+            ESignatureSendController.sendEnvelope(
+                String.valueOf(fixture.envelope.Id),
+                'Derek Hawley',
+                'signer@example.com',
+                'President',
+                30,
+                'Please review the attached proposal before signing.',
+                '  '
+            );
+            System.assert(false, 'Expected sendEnvelope to reject a blank subject.');
         } catch (AuraHandledException ex) {
             System.assertNotEquals(null, ex.getMessage(), 'An AuraHandledException should be thrown.');
         }

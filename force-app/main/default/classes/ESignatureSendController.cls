@@ -195,7 +195,7 @@ public with sharing class ESignatureSendController {
     }
 
     @AuraEnabled
-    public static SendResultDTO sendEnvelope(String envelopeId, String signerName, String signerEmail, String signerTitle, Integer expirationDays, String requestMessage) {
+    public static SendResultDTO sendEnvelope(String envelopeId, String signerName, String signerEmail, String signerTitle, Integer expirationDays, String requestMessage, String requestSubject) {
         if (String.isBlank(envelopeId)) {
             throw new AuraHandledException('Select a draft envelope to send.');
         }
@@ -205,11 +205,14 @@ public with sharing class ESignatureSendController {
         if (String.isBlank(signerEmail)) {
             throw new AuraHandledException('Signer email is required.');
         }
+        if (String.isBlank(requestSubject)) {
+            throw new AuraHandledException('Subject is required.');
+        }
         ESignature_Envelope__c env = [
             SELECT Id, Name, Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sent_At__c,
                    Expires_At__c, Public_Signing_URL__c, Sender_User__c,
-                   Request_Message__c, Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+                   Request_Message__c, Request_Subject__c, Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
@@ -235,6 +238,7 @@ public with sharing class ESignatureSendController {
         env.Signer_Email__c = signerEmail.trim();
         env.Signer_Title__c = String.isBlank(signerTitle) ? null : signerTitle.trim();
         env.Request_Message__c = normalizedRequestMessage(requestMessage);
+        env.Request_Subject__c = normalizedRequestSubject(requestSubject);
         env.Status__c = 'Sent';
         env.Sent_At__c = System.now();
         env.Expires_At__c = System.now().addDays(days);
@@ -442,6 +446,7 @@ public with sharing class ESignatureSendController {
         String emailOpenTrackingUrl = emailOpenTrackingUrl(signingUrl);
         String safeEmailOpenTrackingUrl = ESignatureUtil.escapeHtml(emailOpenTrackingUrl);
         String emailOpenTrackingPixel = emailOpenTrackingPixelHtml(safeEmailOpenTrackingUrl);
+        String requestSubject = envelopeRequestSubject(env);
 
         String fallbackSubject = 'Signature requested: ' + resolvedDocumentTitle;
         String fallbackHtml = ESignatureUtil.emailShell(
@@ -454,7 +459,7 @@ public with sharing class ESignatureSendController {
             + ESignatureUtil.emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
             + emailOpenTrackingPixel
         );
-        return ESignatureUtil.renderEmailTemplate(
+        ESignatureUtil.EmailContent content = ESignatureUtil.renderEmailTemplate(
             'ESignature_Signature_Request',
             fallbackSubject,
             fallbackHtml,
@@ -480,6 +485,10 @@ public with sharing class ESignatureSendController {
                 'EmailOpenTrackingPixel' => emailOpenTrackingPixel
             }
         );
+        if (!String.isBlank(requestSubject)) {
+            content.subject = requestSubject;
+        }
+        return content;
     }
 
     private static String resolvedRequestMessage(ESignature_Envelope__c env, String requestMessageOverride) {
@@ -500,8 +509,23 @@ public with sharing class ESignatureSendController {
         }
     }
 
+    private static String envelopeRequestSubject(ESignature_Envelope__c env) {
+        if (env == null) {
+            return null;
+        }
+        try {
+            return env.Request_Subject__c;
+        } catch (SObjectException ex) {
+            return null;
+        }
+    }
+
     private static String normalizedRequestMessage(String requestMessage) {
         return String.isBlank(requestMessage) ? defaultRequestMessage() : requestMessage.trim();
+    }
+
+    private static String normalizedRequestSubject(String requestSubject) {
+        return requestSubject == null ? null : requestSubject.trim();
     }
 
     private static String defaultRequestMessage() {

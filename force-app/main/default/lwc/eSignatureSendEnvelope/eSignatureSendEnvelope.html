@@ -32,6 +32,7 @@
                     <template if:false={hasSignerContacts}>
                         <div class="empty-state signer-empty slds-m-bottom_small">No contacts with email addresses were found for this account.</div>
                     </template>
+                    <lightning-input type="text" label="Subject" value={requestSubject} onchange={handleRequestSubjectChange} required></lightning-input>
                     <lightning-textarea label="Custom Message to Signer" value={requestMessage} onchange={handleRequestMessageChange}></lightning-textarea>
                     <lightning-input type="number" label="Expiration Days" min="1" max="365" value={expirationDays} onchange={handleExpirationChange}></lightning-input>
                     <div class="slds-m-top_medium">

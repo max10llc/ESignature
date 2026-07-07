@@ -20,6 +20,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
     signerName = '';
     signerEmail = '';
     signerTitle = '';
+    requestSubject = '';
     requestMessage = 'Please review and sign the agreement.';
     expirationDays = 365;
     isLoading = true;
@@ -93,7 +94,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
     }
 
     get disableSend() {
-        return this.isSending || !this.selectedEnvelopeId || !this.selectedContactId || !this.signerName || !this.signerEmail;
+        return this.isSending || !this.selectedEnvelopeId || !this.selectedContactId || !this.signerName || !this.signerEmail || !this.requestSubject?.trim();
     }
 
     queueInitialDraftLoad() {
@@ -171,6 +172,10 @@ export default class PdfESignSendEnvelope extends LightningElement {
         this.requestMessage = event.detail.value;
     }
 
+    handleRequestSubjectChange(event) {
+        this.requestSubject = event.detail.value;
+    }
+
     handleExpirationChange(event) {
         this.expirationDays = Number(event.detail.value) || 365;
     }
@@ -211,6 +216,7 @@ export default class PdfESignSendEnvelope extends LightningElement {
                 signerName: this.signerName,
                 signerEmail: this.signerEmail,
                 signerTitle: this.signerTitle,
+                requestSubject: this.requestSubject,
                 requestMessage: this.requestMessage,
                 expirationDays: this.expirationDays
             });
