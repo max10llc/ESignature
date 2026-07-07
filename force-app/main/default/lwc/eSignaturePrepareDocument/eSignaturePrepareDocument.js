@@ -21,7 +21,7 @@ const FIELD_TYPES = [
     { label: 'Text', value: 'Text', width: DEFAULT_TEXT_FIELD_WIDTH, height: DEFAULT_TEXT_FIELD_HEIGHT, defaultRequired: true }
 ];
 
-const PALETTE_FIELD_TYPES = FIELD_TYPES.filter((fieldType) => fieldType.value !== 'Initials');
+const PALETTE_FIELD_TYPES = FIELD_TYPES;
 const MIN_FIELD_WIDTH = 0.025;
 const MIN_FIELD_HEIGHT = 0.025;
 const DRAG_THRESHOLD_PIXELS = 6;
@@ -43,7 +43,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
     @api height = DEFAULT_VIEWER_HEIGHT;
     @api isEnvelopeReady = false;
     @api preparedEnvelopeId;
-    @api prepareValidationMessage = 'Add Signature, Name, Title, and Date fields, then click Save Envelope.';
+    @api prepareValidationMessage = 'Add Signature, Name, Title, and Date fields, then click Save.';
     @api missingRequiredFields = REQUIRED_FLOW_FIELD_TYPES.join(', ');
 
     @track pages = [];
@@ -194,7 +194,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
             return { isValid: false, missingFields, message: 'Wait for the PDF to finish loading before continuing.' };
         }
         if (this.isSaving) {
-            return { isValid: false, missingFields, message: 'Wait for Save Envelope to finish before continuing.' };
+            return { isValid: false, missingFields, message: 'Wait for Save to finish before continuing.' };
         }
         if (this.loadError) {
             return { isValid: false, missingFields, message: this.loadError };
@@ -210,10 +210,10 @@ export default class PdfESignPrepareDocument extends LightningElement {
             };
         }
         if (!this.preparedEnvelopeId || !this.lastSavedPlacementSignature) {
-            return { isValid: false, missingFields, message: 'Click Save Envelope before continuing.' };
+            return { isValid: false, missingFields, message: 'Click Save before continuing.' };
         }
         if (this.getPlacementSignature() !== this.lastSavedPlacementSignature) {
-            return { isValid: false, missingFields, message: 'Click Save Envelope again to save the latest field changes before continuing.' };
+            return { isValid: false, missingFields, message: 'Click Save again to save the latest field changes before continuing.' };
         }
         return { isValid: true, missingFields, message: 'Envelope is ready.' };
     }

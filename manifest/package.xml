@@ -23,6 +23,8 @@
         <members>ESignaturePdfResourceTest</members>
         <members>ESignaturePrepareController</members>
         <members>ESignaturePrepareControllerTest</members>
+        <members>ESignatureSendEnvelopeAction</members>
+        <members>ESignatureSendEnvelopeActionTest</members>
         <members>ESignatureSendController</members>
         <members>ESignatureSendControllerTest</members>
         <members>ESignatureUtil</members>
