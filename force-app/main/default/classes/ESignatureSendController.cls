@@ -335,6 +335,7 @@ public with sharing class ESignatureSendController {
         message.setSaveAsActivity(false);
         ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
         Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
+        logSignatureRequestActivityAndEmail(env, documentTitle, content, env.Signer_Email__c);
     }
 
     private static void sendSalesforceUserSentConfirmation(ESignature_Envelope__c env, String signingUrl) {
@@ -351,10 +352,9 @@ public with sharing class ESignatureSendController {
         message.setSaveAsActivity(false);
         ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
         Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
-        logSentConfirmationActivityAndEmail(env, documentTitle, content, senderEmail);
     }
 
-    private static void logSentConfirmationActivityAndEmail(
+    private static void logSignatureRequestActivityAndEmail(
         ESignature_Envelope__c env,
         String documentTitle,
         ESignatureUtil.EmailContent content,
@@ -380,7 +380,7 @@ public with sharing class ESignatureSendController {
 
         EmailMessage emailLog = new EmailMessage();
         emailLog.RelatedToId = parentId;
-        emailLog.Subject = content == null ? activity.Subject : content.subject;
+        emailLog.Subject = loggedSentEmailSubject(env, content, activity.Subject);
         emailLog.HtmlBody = content == null ? null : content.htmlBody;
         emailLog.TextBody = activity.Description;
         emailLog.FromAddress = loggedFromAddress();
@@ -389,6 +389,21 @@ public with sharing class ESignatureSendController {
         emailLog.Status = '3';
         emailLog.MessageDate = System.now();
         insertEmailLogWithoutBlockingSend(emailLog);
+    }
+
+    private static String loggedSentEmailSubject(
+        ESignature_Envelope__c env,
+        ESignatureUtil.EmailContent content,
+        String fallbackSubject
+    ) {
+        String requestSubject = envelopeRequestSubject(env);
+        if (!String.isBlank(requestSubject)) {
+            return requestSubject;
+        }
+        if (content != null && !String.isBlank(content.subject)) {
+            return content.subject;
+        }
+        return fallbackSubject;
     }
 
     private static void insertEmailLogWithoutBlockingSend(EmailMessage emailLog) {

@@ -188,17 +188,19 @@ private class ESignatureSendControllerTest {
         System.assert(activity.Description.contains('Send Controller Source'), 'Logged activity should identify the document.');
         System.assert(activity.Description.contains('signer@example.com'), 'Logged activity should identify the signer.');
         EmailMessage emailLog = [
-            SELECT RelatedToId, Subject, ToAddress, Incoming, Status, TextBody
+            SELECT RelatedToId, Subject, ToAddress, Incoming, Status, TextBody, HtmlBody
             FROM EmailMessage
             WHERE RelatedToId = :fixture.parentId
-            AND Subject = 'Signature request sent: Send Controller Source'
+            AND Subject = 'Commercial Cleaning Proposal Signature'
             LIMIT 1
         ];
-        System.assertEquals(fixture.parentId, emailLog.RelatedToId, 'Sender confirmation should be logged as an email on the parent record.');
-        System.assertEquals(UserInfo.getUserEmail(), emailLog.ToAddress, 'Email log should be addressed to the Salesforce sender.');
+        System.assertEquals(fixture.parentId, emailLog.RelatedToId, 'Signer request should be logged as an email on the parent record.');
+        System.assertEquals('Commercial Cleaning Proposal Signature', emailLog.Subject, 'Logged email should use the subject entered by the sender.');
+        System.assertEquals('signer@example.com', emailLog.ToAddress, 'Email log should be addressed to the signer.');
         System.assertEquals(false, emailLog.Incoming, 'Email log should be outbound.');
         System.assertEquals('3', emailLog.Status, 'Email log should be marked sent.');
         System.assert(emailLog.TextBody.contains('signer@example.com'), 'Email log should identify the signer.');
+        System.assert(emailLog.HtmlBody.contains('Review &amp; Sign Document'), 'Email log should contain the signer request email body.');
     }
 
     @IsTest
