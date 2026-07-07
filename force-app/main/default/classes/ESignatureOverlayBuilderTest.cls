@@ -89,6 +89,25 @@ private class ESignatureOverlayBuilderTest {
     }
 
     @IsTest
+    static void embedsInitialsImageStoredOnInitialsField() {
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Status__c = 'Signed',
+            Signer_Name__c = 'Derek Hawley',
+            Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
+        );
+        insert env;
+
+        insert field(env.Id, 'Initials', 'data:image/jpeg;base64,' + tinyJpegBase64(), 1, 100, 300, 80, 22, 1);
+
+        List<Map<String, Object>> payloads = ESignatureOverlayBuilder.buildOverlayPayloads(env.Id);
+
+        String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
+        System.assert(pdfText.contains('/Subtype /Image'), 'Overlay should embed the captured initials image.');
+        System.assert(pdfText.contains('/Init1 Do'), 'Initials field should draw its own embedded image.');
+        System.assert(!pdfText.contains('data:image/jpeg;base64'), 'Initials image data should not be rendered as visible text.');
+    }
+
+    @IsTest
     static void rendersCheckedCheckboxAsCheckmarkOnly() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Status__c = 'Signed',

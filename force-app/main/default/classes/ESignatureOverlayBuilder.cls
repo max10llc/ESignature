@@ -200,17 +200,40 @@ public without sharing class ESignatureOverlayBuilder {
         Decimal pageHeight,
         ESignature_Envelope__c env
     ) {
+        List<SignatureImageResource> images = new List<SignatureImageResource>();
+        Map<Id, SignatureImageResource> initialsImagesByField = new Map<Id, SignatureImageResource>();
+        Integer nextObjectNumber = 6;
         SignatureImageResource signatureImage = signatureImageFromDataUrl(env == null ? null : env.Signature_Image_Data_Url__c);
         if (signatureImage != null) {
-            signatureImage.objectNumber = 6;
+            signatureImage.objectNumber = nextObjectNumber++;
             signatureImage.pdfName = 'Sig1';
+            images.add(signatureImage);
         }
-        String content = buildContentStream(fields, signatureImage);
-        String pdf = buildPdfDocument(content, pageWidth, pageHeight, signatureImage);
+        Integer initialsImageIndex = 0;
+        for (ESignature_Field__c field : fields) {
+            String typeValue = normalizeType(field.Field_Type__c);
+            if (!isFieldType(typeValue, 'Initials')) {
+                continue;
+            }
+            SignatureImageResource initialsImage = signatureImageFromDataUrl(field.Value__c);
+            if (initialsImage == null) {
+                continue;
+            }
+            initialsImage.objectNumber = nextObjectNumber++;
+            initialsImage.pdfName = 'Init' + String.valueOf(++initialsImageIndex);
+            initialsImagesByField.put(field.Id, initialsImage);
+            images.add(initialsImage);
+        }
+        String content = buildContentStream(fields, signatureImage, initialsImagesByField);
+        String pdf = buildPdfDocument(content, pageWidth, pageHeight, images);
         return Blob.valueOf(pdf);
     }
 
-    private static String buildContentStream(List<ESignature_Field__c> fields, SignatureImageResource signatureImage) {
+    private static String buildContentStream(
+        List<ESignature_Field__c> fields,
+        SignatureImageResource signatureImage,
+        Map<Id, SignatureImageResource> initialsImagesByField
+    ) {
         List<String> lines = new List<String>();
         for (ESignature_Field__c field : fields) {
             String value = normalizeText(field.Value__c);
@@ -234,6 +257,14 @@ public without sharing class ESignatureOverlayBuilder {
                 continue;
             }
 
+            if (isFieldType(typeValue, 'Initials')) {
+                SignatureImageResource initialsImage = initialsImagesByField == null ? null : initialsImagesByField.get(field.Id);
+                if (initialsImage != null) {
+                    lines.add(imageDraw(initialsImage, x, y, width, height));
+                    continue;
+                }
+            }
+
             if (isFieldType(typeValue, 'Signature') && signatureImage != null) {
                 lines.add(imageDraw(signatureImage, x, y, width, height));
                 continue;
@@ -251,12 +282,16 @@ public without sharing class ESignatureOverlayBuilder {
         return String.join(lines, '\n');
     }
 
-    private static String buildPdfDocument(String content, Decimal pageWidth, Decimal pageHeight, SignatureImageResource signatureImage) {
-        List<SignatureImageResource> images = new List<SignatureImageResource>();
-        if (signatureImage != null) {
-            images.add(signatureImage);
+    private static String buildPdfDocument(
+        String content,
+        Decimal pageWidth,
+        Decimal pageHeight,
+        List<SignatureImageResource> images
+    ) {
+        if (images == null) {
+            images = new List<SignatureImageResource>();
         }
-        Integer contentObjectNumber = images.isEmpty() ? 6 : 7;
+        Integer contentObjectNumber = images.isEmpty() ? 6 : 6 + images.size();
 
         List<String> objects = new List<String>();
         objects.add('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');

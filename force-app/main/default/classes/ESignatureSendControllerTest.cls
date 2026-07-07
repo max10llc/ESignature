@@ -175,18 +175,6 @@ private class ESignatureSendControllerTest {
             WHERE Envelope__c = :fixture.envelope.Id
             AND Event_Type__c = 'Sent'
         ], 'Sent audit event should be written.');
-        Task activity = [
-            SELECT WhatId, OwnerId, Subject, Status, Description
-            FROM Task
-            WHERE WhatId = :fixture.parentId
-            AND Subject = 'Email: Signature request sent'
-            LIMIT 1
-        ];
-        System.assertEquals(fixture.parentId, activity.WhatId, 'Sender confirmation email should be logged to the parent record.');
-        System.assertEquals(UserInfo.getUserId(), activity.OwnerId, 'Logged activity should belong to the Salesforce sender.');
-        System.assertEquals('Completed', activity.Status, 'Logged activity should be completed.');
-        System.assert(activity.Description.contains('Send Controller Source'), 'Logged activity should identify the document.');
-        System.assert(activity.Description.contains('signer@example.com'), 'Logged activity should identify the signer.');
         EmailMessage emailLog = [
             SELECT RelatedToId, Subject, ToAddress, Incoming, Status, TextBody, HtmlBody
             FROM EmailMessage
@@ -201,6 +189,12 @@ private class ESignatureSendControllerTest {
         System.assertEquals('3', emailLog.Status, 'Email log should be marked sent.');
         System.assert(emailLog.TextBody.contains('signer@example.com'), 'Email log should identify the signer.');
         System.assert(emailLog.HtmlBody.contains('Review &amp; Sign Document'), 'Email log should contain the signer request email body.');
+        System.assertEquals(0, [
+            SELECT COUNT()
+            FROM Task
+            WHERE WhatId = :fixture.parentId
+            AND Subject = 'Email: Signature request sent'
+        ], 'The signer request should not create a separate plain Task in addition to the logged EmailMessage.');
     }
 
     @IsTest

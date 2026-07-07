@@ -1,5 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>Send_E_Signature_Envelope</name>
+        <label>Send E-Signature Envelope</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <actionName>ESignatureSendEnvelopeAction</actionName>
+        <actionType>apex</actionType>
+        <connector>
+            <targetReference>Return_to_Record</targetReference>
+        </connector>
+        <flowTransactionModel>Automatic</flowTransactionModel>
+        <inputParameters>
+            <name>envelopeId</name>
+        </inputParameters>
+        <inputParameters>
+            <name>envelopeRecord</name>
+        </inputParameters>
+        <inputParameters>
+            <name>envelopeRecords</name>
+        </inputParameters>
+        <inputParameters>
+            <name>expirationDays</name>
+        </inputParameters>
+        <inputParameters>
+            <name>parentRecordId</name>
+            <value>
+                <elementReference>recordId</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>requestMessage</name>
+            <value>
+                <elementReference>Message</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>requestSubject</name>
+            <value>
+                <elementReference>Subject</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>signerContactId</name>
+            <value>
+                <elementReference>Contact</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>signerEmail</name>
+        </inputParameters>
+        <inputParameters>
+            <name>signerName</name>
+            <value>
+                <elementReference>varT_SignerName</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>signerTitle</name>
+        </inputParameters>
+        <nameSegment>ESignatureSendEnvelopeAction</nameSegment>
+        <offset>0</offset>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </actionCalls>
     <apiVersion>67.0</apiVersion>
     <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
     <decisions>
@@ -8,27 +76,147 @@
         <locationX>0</locationX>
         <locationY>0</locationY>
         <defaultConnector>
-            <targetReference>screen3</targetReference>
+            <targetReference>screen4</targetReference>
         </defaultConnector>
         <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
         <rules>
-            <name>Document_Sent</name>
+            <name>E_Signature_Sent</name>
             <conditionLogic>and</conditionLogic>
             <conditions>
-                <leftValueReference>ESignatureSend.documentSent</leftValueReference>
+                <leftValueReference>Send_E_Signature_Envelope.success</leftValueReference>
                 <operator>EqualTo</operator>
                 <rightValue>
                     <booleanValue>true</booleanValue>
                 </rightValue>
             </conditions>
-            <label>Document Sent</label>
+            <connector>
+                <targetReference>screen3</targetReference>
+            </connector>
+            <label>E-Signature Sent</label>
         </rules>
     </decisions>
+    <decisions>
+        <name>What_ParentId</name>
+        <label>What ParentId?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>screen2</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Account</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Determine_Object_From_Record_Id_Subflow.varT_ObjectName</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Account</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>screen2</targetReference>
+            </connector>
+            <label>Account</label>
+        </rules>
+        <rules>
+            <name>Opportunity</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Determine_Object_From_Record_Id_Subflow.varT_ObjectName</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Opportunity</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Get_Opportunity</targetReference>
+            </connector>
+            <label>Opportunity</label>
+        </rules>
+        <rules>
+            <name>Work_Order</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Determine_Object_From_Record_Id_Subflow.varT_ObjectName</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Work Order</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Get_Work_Order</targetReference>
+            </connector>
+            <label>Work Order</label>
+        </rules>
+        <rules>
+            <name>Case</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Determine_Object_From_Record_Id_Subflow.varT_ObjectName</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Case</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Get_Case</targetReference>
+            </connector>
+            <label>Case</label>
+        </rules>
+    </decisions>
+    <dynamicChoiceSets>
+        <name>rcs_SignerContact</name>
+        <dataType>String</dataType>
+        <displayField>E_Signature_Contact__c</displayField>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>AccountId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>forT_ParentId</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>Email__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>AccountContactRelation</object>
+        <outputAssignments>
+            <assignToReference>varT_SignerName</assignToReference>
+            <field>Full_Name__c</field>
+        </outputAssignments>
+        <sortField>Full_Name__c</sortField>
+        <sortOrder>Asc</sortOrder>
+        <valueField>ContactId</valueField>
+    </dynamicChoiceSets>
     <environments>Default</environments>
     <formulas>
         <name>forB_EnvelopeReady</name>
         <dataType>Boolean</dataType>
         <expression>{!ESignature_Prepare_Document.isEnvelopeReady}</expression>
+    </formulas>
+    <formulas>
+        <description>Sets the parent Id of the record where the flow was launched from.</description>
+        <name>forT_ParentId</name>
+        <dataType>String</dataType>
+        <expression>IF(
+{!Determine_Object_From_Record_Id_Subflow.varT_ObjectName} = &apos;Account&apos; ,
+{!recordId} ,
+IF(
+{!Determine_Object_From_Record_Id_Subflow.varT_ObjectName} = &apos;Opportunity&apos; ,
+{!Get_Opportunity.AccountId} ,
+IF(
+{!Determine_Object_From_Record_Id_Subflow.varT_ObjectName} = &apos;Work Order&apos; ,
+{!Get_Work_Order.AccountId} ,
+IF(
+{!Determine_Object_From_Record_Id_Subflow.varT_ObjectName} = &apos;Case&apos; ,
+{!Get_Case.AccountId} ,
+Null
+) ) ) )</expression>
     </formulas>
     <interviewLabel>Prepare E-Signature Document {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Prepare E-Signature Document</label>
@@ -51,6 +239,27 @@
         </value>
     </processMetadataValues>
     <processType>Flow</processType>
+    <recordLookups>
+        <name>Get_Case</name>
+        <label>Get Case</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>screen2</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Case</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
     <recordLookups>
         <name>Get_Content_Document_Links</name>
         <label>Get Content Document Links</label>
@@ -100,6 +309,48 @@
         <object>ContentVersion</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
+    <recordLookups>
+        <name>Get_Opportunity</name>
+        <label>Get Opportunity</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>screen2</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Opportunity</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <name>Get_Work_Order</name>
+        <label>Get Work Order</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>screen2</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>WorkOrder</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
     <screens>
         <name>screen1</name>
         <label>screen1</label>
@@ -109,7 +360,7 @@
         <allowFinish>true</allowFinish>
         <allowPause>true</allowPause>
         <connector>
-            <targetReference>screen2</targetReference>
+            <targetReference>Determine_Object_From_Record_Id_Subflow</targetReference>
         </connector>
         <fields>
             <name>ESignature_Prepare_Document</name>
@@ -209,21 +460,103 @@
         <allowFinish>true</allowFinish>
         <allowPause>false</allowPause>
         <connector>
-            <targetReference>Return_to_Record</targetReference>
+            <targetReference>Send_E_Signature_Envelope</targetReference>
         </connector>
         <fields>
-            <name>ESignatureSend</name>
-            <extensionName>c:eSignatureSendEnvelope</extensionName>
-            <fieldType>ComponentInstance</fieldType>
-            <inputParameters>
-                <name>recordId</name>
-                <value>
-                    <elementReference>recordId</elementReference>
-                </value>
-            </inputParameters>
-            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
-            <isRequired>true</isRequired>
-            <storeOutputAutomatically>true</storeOutputAutomatically>
+            <name>screen2_Section1</name>
+            <fieldType>RegionContainer</fieldType>
+            <fields>
+                <name>screen2_Section1_Column1</name>
+                <fieldType>Region</fieldType>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <fields>
+                <name>screen2_Section1_Column2</name>
+                <fieldType>Region</fieldType>
+                <fields>
+                    <name>Contact</name>
+                    <choiceReferences>rcs_SignerContact</choiceReferences>
+                    <dataType>String</dataType>
+                    <defaultValue>
+                        <elementReference>Contact</elementReference>
+                    </defaultValue>
+                    <fieldText>Contact</fieldText>
+                    <fieldType>DropdownBox</fieldType>
+                    <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+                    <isRequired>true</isRequired>
+                    <styleProperties>
+                        <verticalAlignment>
+                            <stringValue>top</stringValue>
+                        </verticalAlignment>
+                        <width>
+                            <stringValue>12</stringValue>
+                        </width>
+                    </styleProperties>
+                </fields>
+                <fields>
+                    <name>Subject</name>
+                    <dataType>String</dataType>
+                    <defaultValue>
+                        <elementReference>Subject</elementReference>
+                    </defaultValue>
+                    <fieldText>Subject</fieldText>
+                    <fieldType>InputField</fieldType>
+                    <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+                    <isRequired>true</isRequired>
+                    <styleProperties>
+                        <verticalAlignment>
+                            <stringValue>top</stringValue>
+                        </verticalAlignment>
+                        <width>
+                            <stringValue>12</stringValue>
+                        </width>
+                    </styleProperties>
+                </fields>
+                <fields>
+                    <name>Message</name>
+                    <defaultValue>
+                        <stringValue>{!Message}</stringValue>
+                    </defaultValue>
+                    <fieldText>Message</fieldText>
+                    <fieldType>LargeTextArea</fieldType>
+                    <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+                    <isRequired>true</isRequired>
+                    <styleProperties>
+                        <verticalAlignment>
+                            <stringValue>top</stringValue>
+                        </verticalAlignment>
+                        <width>
+                            <stringValue>12</stringValue>
+                        </width>
+                    </styleProperties>
+                </fields>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <fields>
+                <name>screen2_Section1_Column3</name>
+                <fieldType>Region</fieldType>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <isRequired>false</isRequired>
+            <regionContainerType>SectionWithoutHeader</regionContainerType>
             <styleProperties>
                 <verticalAlignment>
                     <stringValue>top</stringValue>
@@ -233,59 +566,8 @@
                 </width>
             </styleProperties>
         </fields>
-        <fields>
-            <name>fbb_SendDocument</name>
-            <extensionName>c:flowButtonBar</extensionName>
-            <fieldType>ComponentInstance</fieldType>
-            <inputParameters>
-                <name>alignment</name>
-                <value>
-                    <stringValue>right</stringValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>orientation</name>
-                <value>
-                    <stringValue>horizontal</stringValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>showLines</name>
-                <value>
-                    <stringValue>neither</stringValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>actionMode</name>
-                <value>
-                    <stringValue>navigation</stringValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>enableButtons</name>
-                <value>
-                    <booleanValue>true</booleanValue>
-                </value>
-            </inputParameters>
-            <inputParameters>
-                <name>buttons</name>
-                <value>
-                    <stringValue>[{&quot;label&quot;:&quot;Previous&quot;,&quot;value&quot;:&quot;Previous&quot;,&quot;iconPosition&quot;:&quot;left&quot;,&quot;variant&quot;:&quot;neutral&quot;,&quot;index&quot;:0},{&quot;label&quot;:&quot;Return to Record&quot;,&quot;value&quot;:&quot;Return to Record&quot;,&quot;iconPosition&quot;:&quot;left&quot;,&quot;variant&quot;:&quot;brand&quot;,&quot;index&quot;:1}]</stringValue>
-                </value>
-            </inputParameters>
-            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
-            <isRequired>true</isRequired>
-            <storeOutputAutomatically>true</storeOutputAutomatically>
-            <styleProperties>
-                <verticalAlignment>
-                    <stringValue>top</stringValue>
-                </verticalAlignment>
-                <width>
-                    <stringValue>12</stringValue>
-                </width>
-            </styleProperties>
-        </fields>
-        <showFooter>false</showFooter>
+        <nextOrFinishButtonLabel>Send E-Signature</nextOrFinishButtonLabel>
+        <showFooter>true</showFooter>
         <showHeader>false</showHeader>
     </screens>
     <screens>
@@ -293,13 +575,162 @@
         <label>screen3</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
-        <allowBack>true</allowBack>
+        <allowBack>false</allowBack>
         <allowFinish>true</allowFinish>
         <allowPause>false</allowPause>
         <fields>
-            <name>DT_DocumentNotSent</name>
-            <fieldText>&lt;p style=&quot;text-align: center;&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;font-size: 16px;&quot;&gt;The document was not sent for signature. If this was intentional click &quot;Return to Record&quot;. If not, click &quot;Previous&quot; to go back and send the document.&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;text-align: center;&quot;&gt;&lt;br&gt;&lt;/p&gt;</fieldText>
-            <fieldType>DisplayText</fieldType>
+            <name>screen3_Section1</name>
+            <fieldType>RegionContainer</fieldType>
+            <fields>
+                <name>screen3_Section1_Column1</name>
+                <fieldType>Region</fieldType>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <fields>
+                <name>screen3_Section1_Column2</name>
+                <fieldType>Region</fieldType>
+                <fields>
+                    <name>ESignatureSentSuccess</name>
+                    <extensionName>flowruntime:message</extensionName>
+                    <fieldType>ComponentInstance</fieldType>
+                    <inputParameters>
+                        <name>messageType</name>
+                        <value>
+                            <stringValue>success</stringValue>
+                        </value>
+                    </inputParameters>
+                    <inputParameters>
+                        <name>messageContent</name>
+                        <value>
+                            <stringValue>The E-Signature was successfully sent!</stringValue>
+                        </value>
+                    </inputParameters>
+                    <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+                    <isRequired>true</isRequired>
+                    <storeOutputAutomatically>true</storeOutputAutomatically>
+                    <styleProperties>
+                        <verticalAlignment>
+                            <stringValue>top</stringValue>
+                        </verticalAlignment>
+                        <width>
+                            <stringValue>12</stringValue>
+                        </width>
+                    </styleProperties>
+                </fields>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <fields>
+                <name>screen3_Section1_Column3</name>
+                <fieldType>Region</fieldType>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <isRequired>false</isRequired>
+            <regionContainerType>SectionWithoutHeader</regionContainerType>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <nextOrFinishButtonLabel>Return to Record</nextOrFinishButtonLabel>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <screens>
+        <name>screen4</name>
+        <label>screen4</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>screen4_Section1</name>
+            <fieldType>RegionContainer</fieldType>
+            <fields>
+                <name>screen4_Section1_Column1</name>
+                <fieldType>Region</fieldType>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <fields>
+                <name>screen4_Section1_Column2</name>
+                <fieldType>Region</fieldType>
+                <fields>
+                    <name>ESignatureSendError</name>
+                    <extensionName>flowruntime:message</extensionName>
+                    <fieldType>ComponentInstance</fieldType>
+                    <inputParameters>
+                        <name>messageType</name>
+                        <value>
+                            <stringValue>warning</stringValue>
+                        </value>
+                    </inputParameters>
+                    <inputParameters>
+                        <name>messageContent</name>
+                        <value>
+                            <stringValue>There was an error sending this E-Signature.</stringValue>
+                        </value>
+                    </inputParameters>
+                    <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+                    <isRequired>true</isRequired>
+                    <storeOutputAutomatically>true</storeOutputAutomatically>
+                    <styleProperties>
+                        <verticalAlignment>
+                            <stringValue>top</stringValue>
+                        </verticalAlignment>
+                        <width>
+                            <stringValue>12</stringValue>
+                        </width>
+                    </styleProperties>
+                </fields>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <fields>
+                <name>screen4_Section1_Column3</name>
+                <fieldType>Region</fieldType>
+                <inputParameters>
+                    <name>width</name>
+                    <value>
+                        <stringValue>4</stringValue>
+                    </value>
+                </inputParameters>
+                <isRequired>false</isRequired>
+            </fields>
+            <isRequired>false</isRequired>
+            <regionContainerType>SectionWithoutHeader</regionContainerType>
             <styleProperties>
                 <verticalAlignment>
                     <stringValue>top</stringValue>
@@ -321,6 +752,23 @@
         </connector>
     </start>
     <status>Active</status>
+    <subflows>
+        <name>Determine_Object_From_Record_Id_Subflow</name>
+        <label>Determine Object From Record Id Subflow</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>What_ParentId</targetReference>
+        </connector>
+        <flowName>Determine_Object_From_Record_Id_Subflow</flowName>
+        <inputAssignments>
+            <name>recordId</name>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </inputAssignments>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </subflows>
     <transforms>
         <name>Transform_Content_Document_Links</name>
         <label>Transform Content Document Links</label>
@@ -347,6 +795,13 @@
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>varT_SignerName</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
         <isOutput>false</isOutput>
     </variables>
 </Flow>

@@ -367,22 +367,14 @@ public with sharing class ESignatureSendController {
         String signerDisplay = String.isBlank(env.Signer_Name__c)
             ? env.Signer_Email__c
             : env.Signer_Name__c + ' (' + env.Signer_Email__c + ')';
-        Task activity = new Task();
-        activity.WhatId = parentId;
-        activity.OwnerId = env.Sender_User__c == null ? UserInfo.getUserId() : env.Sender_User__c;
-        activity.Subject = 'Email: Signature request sent';
-        activity.Status = 'Completed';
-        activity.Priority = 'Normal';
-        activity.ActivityDate = Date.today();
-        activity.Description = 'Signature request sent for ' + (String.isBlank(documentTitle) ? 'Document' : documentTitle)
+        String emailLogDescription = 'Signature request sent for ' + (String.isBlank(documentTitle) ? 'Document' : documentTitle)
             + ' to ' + signerDisplay + '.';
-        insert activity;
 
         EmailMessage emailLog = new EmailMessage();
         emailLog.RelatedToId = parentId;
-        emailLog.Subject = loggedSentEmailSubject(env, content, activity.Subject);
+        emailLog.Subject = loggedSentEmailSubject(env, content, 'Signature request sent');
         emailLog.HtmlBody = content == null ? null : content.htmlBody;
-        emailLog.TextBody = activity.Description;
+        emailLog.TextBody = emailLogDescription;
         emailLog.FromAddress = loggedFromAddress();
         emailLog.ToAddress = recipientEmail;
         emailLog.Incoming = false;

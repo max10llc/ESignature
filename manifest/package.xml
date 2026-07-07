@@ -49,6 +49,9 @@
         <name>CustomObject</name>
     </types>
     <types>
+        <members>AccountContactRelation.E_Signature_Contact__c</members>
+        <members>AccountContactRelation.Email__c</members>
+        <members>AccountContactRelation.Full_Name__c</members>
         <members>ContentVersion.ESignature_File__c</members>
         <members>ContentVersion.ESignature_Status__c</members>
         <members>ESignature_Command__e.Action__c</members>
@@ -197,6 +200,7 @@
         <name>Layout</name>
     </types>
     <types>
+        <members>Determine_Object_From_Record_Id_Subflow</members>
         <members>E_Signature_Cancel_Open_Envelopes</members>
         <members>Prepare_ESignature_Document</members>
         <name>Flow</name>

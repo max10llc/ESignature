@@ -503,17 +503,17 @@
             <button type="button" id="signatureModeDrawButton" class="btn secondary" onclick="setSignatureDialogMode('draw');">Draw Signature</button>
         </div>
         <div id="signatureTypedPanel">
-            <label>Typed Signature</label>
+            <label id="signatureTypedLabel">Typed Signature</label>
             <input type="text" id="signatureTypedName" autocomplete="name" oninput="updateSignaturePreview();" />
             <div id="signatureTypedPreview" class="signature-preview"></div>
         </div>
         <div id="signatureDrawPanel" style="display:none;">
-            <label>Draw Signature</label>
+            <label id="signatureDrawLabel">Draw Signature</label>
             <div class="signature-pad-wrap"><canvas id="signatureDialogPad"></canvas></div>
-            <button type="button" class="btn secondary" onclick="clearSignaturePad();">Clear Signature</button>
+            <button type="button" id="signatureClearButton" class="btn secondary" onclick="clearSignaturePad();">Clear Signature</button>
         </div>
         <div class="signature-dialog-actions">
-            <button type="button" class="btn" onclick="applySignatureDialog();">Apply Signature</button>
+            <button type="button" id="signatureApplyButton" class="btn" onclick="applySignatureDialog();">Apply Signature</button>
             <button type="button" class="btn secondary" onclick="closeSignatureDialog();">Cancel</button>
         </div>
     </div>
@@ -539,6 +539,9 @@ var signaturePadCanvas;
 var signaturePadCtx;
 var activeSignatureFieldId = null;
 var signatureDialogMode = 'typed';
+var savedInitialsValue = '';
+var savedInitialsImageDataUrl = '';
+var savedInitialsPreviewDataUrl = '';
 var activeRequiredFieldId = null;
 var userAdjustedZoom = false;
 var renderSequence = 0;
@@ -877,6 +880,11 @@ function setSignerTitle(value) {
 function todayText() {
     return new Date().toLocaleDateString('en-US');
 }
+function initialsFromName() {
+    return getTypedName().split(/\s+/).filter(Boolean).map(function(p) {
+        return p.charAt(0).toUpperCase();
+    }).join('');
+}
 function clearDocumentData() {
     closeViewerOptions();
     preparedFields.forEach(function(field) {
@@ -888,10 +896,10 @@ function clearDocumentData() {
     setSignerTitle('');
     var signatureInput = document.querySelector('[id$="signatureImageDataUrl"]');
     if (signatureInput) { signatureInput.value = ''; }
-    if (signaturePadInitialized && signaturePadCtx && signaturePadCanvas) {
-        signaturePadCtx.clearRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
-        signaturePadHasInk = false;
-    }
+    savedInitialsValue = '';
+    savedInitialsImageDataUrl = '';
+    savedInitialsPreviewDataUrl = '';
+    resetSignaturePadCanvas();
     activeSignatureFieldId = null;
     activeRequiredFieldId = null;
     applyPreparedFieldDefaults();
@@ -970,7 +978,13 @@ function initSignaturePad() {
     signaturePadCanvas.addEventListener('touchend', signaturePadEnd, { passive:false });
     signaturePadInitialized = true;
 }
-function clearSignaturePad() { initSignaturePad(); signaturePadCtx.clearRect(0,0,signaturePadCanvas.width,signaturePadCanvas.height); signaturePadHasInk = false; }
+function resetSignaturePadCanvas() {
+    if (signaturePadInitialized && signaturePadCtx && signaturePadCanvas) {
+        signaturePadCtx.clearRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+    }
+    signaturePadHasInk = false;
+}
+function clearSignaturePad() { initSignaturePad(); resetSignaturePadCanvas(); }
 
 function canvasToSignatureJpeg(sourceCanvas) {
     var canvas = document.createElement('canvas');
@@ -1126,6 +1140,50 @@ function findPreparedField(fieldId) {
     }
     return null;
 }
+function isImageDataUrl(value) {
+    return /^data:image\/(jpeg|jpg|png);base64,/i.test(value || '');
+}
+function signatureDialogFieldType() {
+    var field = findPreparedField(activeSignatureFieldId);
+    return fieldTypeName(field || {});
+}
+function configureSignatureDialogLabels(type) {
+    var isInitials = type === 'initials';
+    var title = document.getElementById('signatureDialogTitle');
+    var typedButton = document.getElementById('signatureModeTypedButton');
+    var drawButton = document.getElementById('signatureModeDrawButton');
+    var typedLabel = document.getElementById('signatureTypedLabel');
+    var drawLabel = document.getElementById('signatureDrawLabel');
+    var clearButton = document.getElementById('signatureClearButton');
+    var applyButton = document.getElementById('signatureApplyButton');
+    var input = document.getElementById('signatureTypedName');
+    if (title) { title.textContent = isInitials ? 'Add Initials' : 'Add Signature'; }
+    if (typedButton) { typedButton.textContent = isInitials ? 'Type Initials' : 'Type Name'; }
+    if (drawButton) { drawButton.textContent = isInitials ? 'Draw Initials' : 'Draw Signature'; }
+    if (typedLabel) { typedLabel.textContent = isInitials ? 'Typed Initials' : 'Typed Signature'; }
+    if (drawLabel) { drawLabel.textContent = isInitials ? 'Draw Initials' : 'Draw Signature'; }
+    if (clearButton) { clearButton.textContent = isInitials ? 'Clear Initials' : 'Clear Signature'; }
+    if (applyButton) { applyButton.textContent = isInitials ? 'Apply Initials' : 'Apply Signature'; }
+    if (input) { input.setAttribute('autocomplete', isInitials ? 'off' : 'name'); }
+}
+function defaultInitialsForField(field) {
+    if (field && field.initialsTextValue) { return field.initialsTextValue; }
+    if (savedInitialsValue) { return savedInitialsValue; }
+    if (field && field.value && !isImageDataUrl(field.value)) { return field.value; }
+    return initialsFromName();
+}
+function applyInitialsToField(field, initialsValue, imageDataUrl, previewDataUrl) {
+    field.initialsTextValue = initialsValue || '';
+    field.value = imageDataUrl || initialsValue || '';
+    field.signatureImageDataUrl = imageDataUrl || '';
+    field.signaturePreviewDataUrl = previewDataUrl || imageDataUrl || '';
+    field.completed = !!field.value;
+}
+function applySavedInitialsToField(field) {
+    if (!savedInitialsImageDataUrl) { return false; }
+    applyInitialsToField(field, savedInitialsValue, savedInitialsImageDataUrl, savedInitialsPreviewDataUrl);
+    return true;
+}
 function setSignatureDialogMode(mode) {
     signatureDialogMode = mode === 'draw' ? 'draw' : 'typed';
     document.getElementById('signatureTypedPanel').style.display = signatureDialogMode === 'typed' ? 'block' : 'none';
@@ -1148,8 +1206,11 @@ function updateSignaturePreview() {
 }
 function openSignatureDialog(field) {
     activeSignatureFieldId = field.id;
-    setSignatureDialogTypedName(field.value || getTypedName());
+    var type = fieldTypeName(field);
+    configureSignatureDialogLabels(type);
+    setSignatureDialogTypedName(type === 'initials' ? defaultInitialsForField(field) : field.value || getTypedName());
     updateSignaturePreview();
+    resetSignaturePadCanvas();
     setSignatureDialogMode('typed');
     var backdrop = document.getElementById('signatureDialogBackdrop');
     if (backdrop) { backdrop.style.display = 'flex'; }
@@ -1162,13 +1223,25 @@ function closeSignatureDialog() {
 function applySignatureDialog() {
     var field = findPreparedField(activeSignatureFieldId);
     if (!field) { closeSignatureDialog(); return false; }
+    var fieldType = signatureDialogFieldType();
+    var isInitialsField = fieldType === 'initials';
 
     if (signatureDialogMode === 'draw') {
         initSignaturePad();
-        if (!signaturePadHasInk) { alert('Draw your signature before applying it.'); return false; }
+        if (!signaturePadHasInk) { alert(isInitialsField ? 'Draw your initials before applying them.' : 'Draw your signature before applying it.'); return false; }
         var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas);
         var drawnPreviewDataUrl = canvasToTransparentPng(signaturePadCanvas);
         var signerName = getSignatureDialogTypedName();
+        if (isInitialsField) {
+            var drawnInitialsValue = signerName || initialsFromName() || 'Initials';
+            savedInitialsValue = drawnInitialsValue;
+            savedInitialsImageDataUrl = drawnDataUrl;
+            savedInitialsPreviewDataUrl = drawnPreviewDataUrl;
+            applyInitialsToField(field, drawnInitialsValue, drawnDataUrl, drawnPreviewDataUrl);
+            closeSignatureDialog();
+            renderFieldLayer();
+            return false;
+        }
         if (!signerName) { alert('The signer name is missing from this request.'); return false; }
         setTypedName(signerName);
         field.value = signerName;
@@ -1177,7 +1250,17 @@ function applySignatureDialog() {
         document.querySelector('[id$="signatureImageDataUrl"]').value = drawnDataUrl;
     } else {
         var typedValue = getSignatureDialogTypedName();
-        if (!typedValue) { alert('The signer name is missing from this request.'); return false; }
+        if (!typedValue) { alert(isInitialsField ? 'Type your initials before applying them.' : 'The signer name is missing from this request.'); return false; }
+        if (isInitialsField) {
+            var typedInitialsDataUrl = typedSignatureToJpeg(typedValue);
+            savedInitialsValue = typedValue;
+            savedInitialsImageDataUrl = typedInitialsDataUrl;
+            savedInitialsPreviewDataUrl = typedInitialsDataUrl;
+            applyInitialsToField(field, typedValue, typedInitialsDataUrl, typedInitialsDataUrl);
+            closeSignatureDialog();
+            renderFieldLayer();
+            return false;
+        }
         setTypedName(typedValue);
         var typedDataUrl = typedSignatureToJpeg(typedValue);
         field.value = typedValue;
@@ -1207,8 +1290,8 @@ function valueForField(field) {
         return name;
     }
     if (type === 'initials') {
-        if (!name) { alert('The signer name is missing from this request.'); return null; }
-        return name.split(/\s+/).filter(Boolean).map(function(p) { return p.charAt(0).toUpperCase(); }).join('');
+        openSignatureDialog(field);
+        return null;
     }
     if (type === 'title') {
         return null;
@@ -1221,8 +1304,17 @@ function valueForField(field) {
 function completeField(fieldId) {
     for (var i = 0; i < preparedFields.length; i++) {
         if (preparedFields[i].id === fieldId) {
-            if (fieldTypeName(preparedFields[i]) === 'signature') {
+            var type = fieldTypeName(preparedFields[i]);
+            if (type === 'signature') {
                 openSignatureDialog(preparedFields[i]);
+                return false;
+            }
+            if (type === 'initials') {
+                if (!applySavedInitialsToField(preparedFields[i])) {
+                    openSignatureDialog(preparedFields[i]);
+                    return false;
+                }
+                renderFieldLayer();
                 return false;
             }
             var value = valueForField(preparedFields[i]);
@@ -1294,6 +1386,20 @@ function renderFieldLayer() {
                 updateRequiredFieldNav();
             };
             button.querySelector('.field-value').appendChild(input);
+        } else if (type === 'initials') {
+            button.querySelector('.field-label').textContent = field.required ? '*' : '';
+            button.onclick = function() { return completeField(field.id); };
+            var initialsValue = button.querySelector('.field-value');
+            var initialsPreviewUrl = field.signaturePreviewDataUrl || field.signatureImageDataUrl || (isImageDataUrl(field.value) ? field.value : '');
+            if (initialsPreviewUrl) {
+                var initialsImage = document.createElement('img');
+                initialsImage.className = 'signature-preview-image';
+                initialsImage.alt = 'Initials';
+                initialsImage.src = initialsPreviewUrl;
+                initialsValue.appendChild(initialsImage);
+            } else {
+                initialsValue.textContent = field.value || 'Click to Initial';
+            }
         } else if (type === 'checkbox') {
             button.querySelector('.field-label').textContent = label + (field.required ? ' *' : '');
             button.onclick = function() { return completeField(field.id); };
@@ -1440,7 +1546,9 @@ function buildSignatureAndFields() {
         if (field.required && !field.value) { missing.push(field.label || field.type || 'Required field'); }
     });
     if (missing.length) { alert('Complete required fields before signing: ' + missing.join(', ')); renderFieldLayer(); return false; }
-    document.querySelector('[id$="signerFieldsJson"]').value = JSON.stringify(preparedFields.map(function(field) { return { id: field.id, value: field.value || '' }; }));
+    document.querySelector('[id$="signerFieldsJson"]').value = JSON.stringify(preparedFields.map(function(field) {
+        return { id: field.id, value: field.value || '' };
+    }));
     return true;
 }
 window.addEventListener('click', function(evt) {
