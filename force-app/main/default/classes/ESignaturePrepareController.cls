@@ -341,12 +341,13 @@ public with sharing class ESignaturePrepareController {
             return;
         }
 
+        String details = 'Envelope canceled because a newer e-signature draft was saved for this record.';
         for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
             prior.Status__c = 'Canceled';
+            prior.Cancellation_Reason__c = details;
         }
         update priorOpenEnvelopes;
 
-        String details = 'Envelope canceled because a newer e-signature draft was saved for this record.';
         for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
             ESignatureUtil.updateSourceFileESignatureStatus(prior, 'Canceled');
             ESignatureUtil.audit(prior.Id, 'Canceled', UserInfo.getUserEmail(), details);

@@ -94,6 +94,11 @@
   </fieldPermissions>
   <fieldPermissions>
     <editable>false</editable>
+    <field>ESignature_Envelope__c.Cancellation_Reason__c</field>
+    <readable>true</readable>
+  </fieldPermissions>
+  <fieldPermissions>
+    <editable>false</editable>
     <field>ESignature_Envelope__c.Status__c</field>
     <readable>true</readable>
   </fieldPermissions>

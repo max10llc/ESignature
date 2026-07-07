@@ -62,6 +62,7 @@
         <members>ESignature_Audit_Event__c.Occurred_At__c</members>
         <members>ESignature_Audit_Event__c.User_Agent__c</members>
         <members>ESignature_Envelope__c.Account__c</members>
+        <members>ESignature_Envelope__c.Cancellation_Reason__c</members>
         <members>ESignature_Envelope__c.Case__c</members>
         <members>ESignature_Envelope__c.Completed_Fields_JSON__c</members>
         <members>ESignature_Envelope__c.Completion_Message__c</members>

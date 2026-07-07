@@ -58,6 +58,7 @@ public without sharing class ESignatureEnvelopeCancellationService {
                 continue;
             }
             env.Status__c = 'Canceled';
+            env.Cancellation_Reason__c = cancellationReasonValue(reason);
             updates.add(env);
         }
 
@@ -103,6 +104,10 @@ public without sharing class ESignatureEnvelopeCancellationService {
             details += ' Reason: ' + reason.trim();
         }
         return details;
+    }
+
+    private static String cancellationReasonValue(String reason) {
+        return String.isBlank(reason) ? 'Envelope canceled manually from Salesforce.' : reason.trim();
     }
 
     private static void sendCancellationNotificationEmails(ESignature_Envelope__c env, String reason) {

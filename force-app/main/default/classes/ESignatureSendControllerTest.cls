@@ -230,7 +230,7 @@ private class ESignatureSendControllerTest {
         Test.stopTest();
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Status__c
+            SELECT Status__c, Cancellation_Reason__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ fixture.envelope.Id, priorDraft.Id, priorSent.Id, priorViewed.Id, sameParentSigned.Id, otherParentSent.Id }
         ]);
@@ -240,6 +240,9 @@ private class ESignatureSendControllerTest {
         System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Status__c, 'Prior viewed envelope on the same parent should be canceled.');
         System.assertEquals('Signed', envelopes.get(sameParentSigned.Id).Status__c, 'Completed envelopes should not be changed.');
         System.assertEquals('Sent', envelopes.get(otherParentSent.Id).Status__c, 'Open envelopes on other parent records should not be changed.');
+        System.assertEquals('Envelope canceled because a newer e-signature envelope was sent for this record.', envelopes.get(priorDraft.Id).Cancellation_Reason__c);
+        System.assertEquals('Envelope canceled because a newer e-signature envelope was sent for this record.', envelopes.get(priorSent.Id).Cancellation_Reason__c);
+        System.assertEquals('Envelope canceled because a newer e-signature envelope was sent for this record.', envelopes.get(priorViewed.Id).Cancellation_Reason__c);
 
         Map<Id, ContentVersion> sources = new Map<Id, ContentVersion>([
             SELECT ESignature_Status__c

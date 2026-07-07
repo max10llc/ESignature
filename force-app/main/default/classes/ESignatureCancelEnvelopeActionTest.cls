@@ -36,13 +36,15 @@ private class ESignatureCancelEnvelopeActionTest {
         System.assert(responses[0].failedEnvelopeIds.contains(String.valueOf(signed.Id)));
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Status__c
+            SELECT Status__c, Cancellation_Reason__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ sent.Id, viewed.Id, signed.Id }
         ]);
         System.assertEquals('Canceled', envelopes.get(sent.Id).Status__c);
         System.assertEquals('Canceled', envelopes.get(viewed.Id).Status__c);
         System.assertEquals('Signed', envelopes.get(signed.Id).Status__c);
+        System.assertEquals('Customer asked us to stop the request.', envelopes.get(sent.Id).Cancellation_Reason__c);
+        System.assertEquals('Customer asked us to stop the request.', envelopes.get(viewed.Id).Cancellation_Reason__c);
 
         Map<Id, ContentVersion> sources = new Map<Id, ContentVersion>([
             SELECT ESignature_Status__c
@@ -121,12 +123,14 @@ private class ESignatureCancelEnvelopeActionTest {
         System.assertEquals(0, responses[0].failedCount);
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Status__c
+            SELECT Status__c, Cancellation_Reason__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ firstEnvelope.Id, secondEnvelope.Id }
         ]);
         System.assertEquals('Canceled', envelopes.get(firstEnvelope.Id).Status__c);
         System.assertEquals('Canceled', envelopes.get(secondEnvelope.Id).Status__c);
+        System.assertEquals('Canceled from a Flow record collection.', envelopes.get(firstEnvelope.Id).Cancellation_Reason__c);
+        System.assertEquals('Canceled from a Flow record collection.', envelopes.get(secondEnvelope.Id).Cancellation_Reason__c);
     }
 
     @IsTest
@@ -159,12 +163,13 @@ private class ESignatureCancelEnvelopeActionTest {
         System.assertEquals(0, responses[0].failedCount);
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Status__c
+            SELECT Status__c, Cancellation_Reason__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ openEnvelope.Id, signedEnvelope.Id }
         ]);
         System.assertEquals('Canceled', envelopes.get(openEnvelope.Id).Status__c);
         System.assertEquals('Signed', envelopes.get(signedEnvelope.Id).Status__c);
+        System.assertEquals('Canceled from a Flow parent record id.', envelopes.get(openEnvelope.Id).Cancellation_Reason__c);
     }
 
     @IsTest

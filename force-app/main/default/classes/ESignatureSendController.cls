@@ -308,12 +308,13 @@ public with sharing class ESignatureSendController {
             return;
         }
 
+        String details = 'Envelope canceled because a newer e-signature envelope was sent for this record.';
         for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
             prior.Status__c = 'Canceled';
+            prior.Cancellation_Reason__c = details;
         }
         update priorOpenEnvelopes;
 
-        String details = 'Envelope canceled because a newer e-signature envelope was sent for this record.';
         for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
             ESignatureUtil.updateSourceFileESignatureStatus(prior, 'Canceled');
             ESignatureUtil.audit(prior.Id, 'Canceled', UserInfo.getUserEmail(), details);

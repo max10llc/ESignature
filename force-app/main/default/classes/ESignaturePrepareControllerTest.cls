@@ -168,7 +168,7 @@ private class ESignaturePrepareControllerTest {
         );
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Status__c
+            SELECT Status__c, Cancellation_Reason__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ ESignatureUtil.safeId(result.envelopeId), priorDraft.Id, priorSent.Id, priorViewed.Id, priorBlank.Id, priorSigned.Id, otherSent.Id }
         ]);
@@ -179,6 +179,10 @@ private class ESignaturePrepareControllerTest {
         System.assertEquals('Canceled', envelopes.get(priorBlank.Id).Status__c, 'Prior blank-status envelope should be canceled.');
         System.assertEquals('Signed', envelopes.get(priorSigned.Id).Status__c, 'Completed envelopes should not be changed.');
         System.assertEquals('Sent', envelopes.get(otherSent.Id).Status__c, 'Other parent envelopes should not be changed.');
+        System.assertEquals('Envelope canceled because a newer e-signature draft was saved for this record.', envelopes.get(priorDraft.Id).Cancellation_Reason__c);
+        System.assertEquals('Envelope canceled because a newer e-signature draft was saved for this record.', envelopes.get(priorSent.Id).Cancellation_Reason__c);
+        System.assertEquals('Envelope canceled because a newer e-signature draft was saved for this record.', envelopes.get(priorViewed.Id).Cancellation_Reason__c);
+        System.assertEquals('Envelope canceled because a newer e-signature draft was saved for this record.', envelopes.get(priorBlank.Id).Cancellation_Reason__c);
 
         System.assertEquals(4, [
             SELECT COUNT()
