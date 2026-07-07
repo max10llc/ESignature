@@ -27,15 +27,34 @@ public with sharing class ESignatureSendController {
     @AuraEnabled(cacheable=true)
     public static List<EnvelopeDTO> getDraftEnvelopes(String parentRecordId, String refreshKey) {
         List<EnvelopeDTO> output = new List<EnvelopeDTO>();
-        List<ESignature_Envelope__c> envelopes = [
-            SELECT Id, Name, Status__c, LastModifiedDate,
-                   (SELECT Id FROM ESignature_Fields__r)
-            FROM ESignature_Envelope__c
-            WHERE Parent_Record_Id__c = :parentRecordId
-            AND (Status__c = 'Draft' OR Status__c = null)
-            ORDER BY LastModifiedDate DESC
-            LIMIT 1
-        ];
+        Set<String> parentRecordIds = ESignatureUtil.parentRecordIdValues(parentRecordId);
+        Id parentId = ESignatureUtil.safeId(parentRecordId);
+        if (parentRecordIds.isEmpty()) {
+            return output;
+        }
+        List<ESignature_Envelope__c> envelopes = parentId == null
+            ? [
+                SELECT Id, Name, Status__c, LastModifiedDate,
+                       (SELECT Id FROM ESignature_Fields__r)
+                FROM ESignature_Envelope__c
+                WHERE Parent_Record_Id__c IN :parentRecordIds
+                AND (Status__c = 'Draft' OR Status__c = null)
+                ORDER BY LastModifiedDate DESC
+                LIMIT 1
+            ]
+            : [
+                SELECT Id, Name, Status__c, LastModifiedDate,
+                       (SELECT Id FROM ESignature_Fields__r)
+                FROM ESignature_Envelope__c
+                WHERE (Parent_Record_Id__c IN :parentRecordIds
+                    OR Account__c = :parentId
+                    OR Case__c = :parentId
+                    OR Opportunity__c = :parentId
+                    OR Work_Order__c = :parentId)
+                AND (Status__c = 'Draft' OR Status__c = null)
+                ORDER BY LastModifiedDate DESC
+                LIMIT 1
+            ];
         Set<Id> envelopeIds = new Set<Id>();
         for (ESignature_Envelope__c env : envelopes) {
             envelopeIds.add(env.Id);
@@ -262,14 +281,29 @@ public with sharing class ESignatureSendController {
         if (currentEnv == null || currentEnv.Id == null || String.isBlank(currentEnv.Parent_Record_Id__c)) {
             return;
         }
-        List<ESignature_Envelope__c> priorOpenEnvelopes = [
-            SELECT Id, Status__c, Signer_Email__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
-            FROM ESignature_Envelope__c
-            WHERE Parent_Record_Id__c = :currentEnv.Parent_Record_Id__c
-            AND Id != :currentEnv.Id
-            AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
-            FOR UPDATE
-        ];
+        Set<String> parentRecordIds = ESignatureUtil.parentRecordIdValues(currentEnv.Parent_Record_Id__c);
+        Id parentId = ESignatureUtil.safeId(currentEnv.Parent_Record_Id__c);
+        List<ESignature_Envelope__c> priorOpenEnvelopes = parentId == null
+            ? [
+                SELECT Id, Status__c, Signer_Email__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+                FROM ESignature_Envelope__c
+                WHERE Parent_Record_Id__c IN :parentRecordIds
+                AND Id != :currentEnv.Id
+                AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
+                FOR UPDATE
+            ]
+            : [
+                SELECT Id, Status__c, Signer_Email__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+                FROM ESignature_Envelope__c
+                WHERE (Parent_Record_Id__c IN :parentRecordIds
+                    OR Account__c = :parentId
+                    OR Case__c = :parentId
+                    OR Opportunity__c = :parentId
+                    OR Work_Order__c = :parentId)
+                AND Id != :currentEnv.Id
+                AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
+                FOR UPDATE
+            ];
         if (priorOpenEnvelopes.isEmpty()) {
             return;
         }

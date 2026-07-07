@@ -213,6 +213,7 @@ private class ESignatureSendControllerTest {
         ESignature_Envelope__c priorDraft = activeEnvelope(fixture.parentId, 'Draft', draftSource);
         ESignature_Envelope__c priorSent = activeEnvelope(fixture.parentId, 'Sent', sentSource);
         ESignature_Envelope__c priorViewed = activeEnvelope(fixture.parentId, 'Viewed', viewedSource);
+        priorViewed.Parent_Record_Id__c = String.valueOf(fixture.parentId).substring(0, 15);
         ESignature_Envelope__c sameParentSigned = activeEnvelope(fixture.parentId, 'Signed', createSourceFile('Signed Source'));
         ESignature_Envelope__c otherParentSent = activeEnvelope(otherParent.Id, 'Sent', otherSource);
         insert new List<ESignature_Envelope__c>{ priorDraft, priorSent, priorViewed, sameParentSigned, otherParentSent };

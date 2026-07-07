@@ -3,8 +3,11 @@ public with sharing class ESignatureCancelEnvelopeAction {
         @InvocableVariable(label='Envelope Id' description='Single E-Signature Envelope record Id to cancel.')
         public String envelopeId;
 
-        @InvocableVariable(label='Envelope Ids' description='Optional comma, semicolon, space, or line-separated E-Signature Envelope record Ids to cancel.')
-        public String envelopeIds;
+        @InvocableVariable(label='Envelope Records' description='Optional E-Signature Envelope record collection, such as records returned by a Flow Get Records element.')
+        public List<ESignature_Envelope__c> envelopeRecords;
+
+        @InvocableVariable(label='Parent Record Id' description='Optional Account, Case, Opportunity, or Work Order record Id. All open related E-Signature Envelopes will be canceled.')
+        public String parentRecordId;
 
         @InvocableVariable(label='Cancellation Reason' description='Optional reason to store on the cancellation audit event and email notification.')
         public String cancellationReason;
@@ -110,12 +113,46 @@ public with sharing class ESignatureCancelEnvelopeAction {
             return output;
         }
         addEnvelopeId(output, request.envelopeId);
-        if (!String.isBlank(request.envelopeIds)) {
-            for (String value : request.envelopeIds.split('[,;\\s]+')) {
-                addEnvelopeId(output, value);
+        if (request.envelopeRecords != null) {
+            for (ESignature_Envelope__c envelope : request.envelopeRecords) {
+                if (envelope != null) {
+                    addEnvelopeId(output, String.valueOf(envelope.Id));
+                }
             }
         }
+        addOpenEnvelopeIdsForParent(output, request.parentRecordId);
         return output;
+    }
+
+    private static void addOpenEnvelopeIdsForParent(Set<Id> output, String parentRecordId) {
+        if (output == null || String.isBlank(parentRecordId)) {
+            return;
+        }
+        Set<String> parentRecordIds = ESignatureUtil.parentRecordIdValues(parentRecordId);
+        Id parentId = ESignatureUtil.safeId(parentRecordId);
+        if (parentRecordIds.isEmpty()) {
+            return;
+        }
+        List<ESignature_Envelope__c> envelopes = parentId == null
+            ? [
+                SELECT Id
+                FROM ESignature_Envelope__c
+                WHERE Parent_Record_Id__c IN :parentRecordIds
+                AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed', 'Error'))
+            ]
+            : [
+                SELECT Id
+                FROM ESignature_Envelope__c
+                WHERE (Parent_Record_Id__c IN :parentRecordIds
+                    OR Account__c = :parentId
+                    OR Case__c = :parentId
+                    OR Opportunity__c = :parentId
+                    OR Work_Order__c = :parentId)
+                AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed', 'Error'))
+            ];
+        for (ESignature_Envelope__c envelope : envelopes) {
+            output.add(envelope.Id);
+        }
     }
 
     private static void addEnvelopeId(Set<Id> output, String value) {

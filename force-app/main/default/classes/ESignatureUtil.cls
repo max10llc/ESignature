@@ -398,8 +398,8 @@ public without sharing class ESignatureUtil {
         if (env == null) {
             return;
         }
-        env.Parent_Record_Id__c = parentRecordId;
         Id parentId = safeId(parentRecordId);
+        env.Parent_Record_Id__c = parentId == null ? normalizeRecordIdString(parentRecordId) : String.valueOf(parentId);
         String parentObjectApiName = parentId == null ? null : parentId.getSObjectType().getDescribe().getName();
         env.Parent_Object_Api_Name__c = parentObjectApiName;
         env.Account__c = null;
@@ -418,6 +418,32 @@ public without sharing class ESignatureUtil {
         } else if (parentObjectApiName == 'WorkOrder') {
             env.Work_Order__c = parentId;
         }
+    }
+
+    public static String normalizeRecordIdString(String value) {
+        if (String.isBlank(value)) {
+            return null;
+        }
+        Id parsedId = safeId(value);
+        return parsedId == null ? value.trim() : String.valueOf(parsedId);
+    }
+
+    public static Set<String> parentRecordIdValues(String value) {
+        Set<String> output = new Set<String>();
+        if (String.isBlank(value)) {
+            return output;
+        }
+        String trimmed = value.trim();
+        output.add(trimmed);
+        Id parsedId = safeId(trimmed);
+        if (parsedId != null) {
+            String normalized = String.valueOf(parsedId);
+            output.add(normalized);
+            if (normalized.length() == 18) {
+                output.add(normalized.substring(0, 15));
+            }
+        }
+        return output;
     }
 
     public static Id safeId(String value) {

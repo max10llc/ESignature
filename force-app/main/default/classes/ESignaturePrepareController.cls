@@ -110,19 +110,42 @@ public with sharing class ESignaturePrepareController {
 
     @AuraEnabled(cacheable=true)
     public static List<PlacementDTO> getPlacements(String parentRecordId, String contentDocumentId) {
-        List<ESignature_Envelope__c> envelopes = [
-            SELECT Id
-            FROM ESignature_Envelope__c
-            WHERE Parent_Record_Id__c = :parentRecordId
-            AND (Status__c = 'Draft' OR Status__c = null)
-            AND Id IN (
-                SELECT Envelope__c
-                FROM ESignature_Field__c
-                WHERE Content_Document_Id__c = :contentDocumentId
-            )
-            ORDER BY LastModifiedDate DESC
-            LIMIT 1
-        ];
+        Set<String> parentRecordIds = ESignatureUtil.parentRecordIdValues(parentRecordId);
+        Id parentId = ESignatureUtil.safeId(parentRecordId);
+        if (parentRecordIds.isEmpty()) {
+            return new List<PlacementDTO>();
+        }
+        List<ESignature_Envelope__c> envelopes = parentId == null
+            ? [
+                SELECT Id
+                FROM ESignature_Envelope__c
+                WHERE Parent_Record_Id__c IN :parentRecordIds
+                AND (Status__c = 'Draft' OR Status__c = null)
+                AND Id IN (
+                    SELECT Envelope__c
+                    FROM ESignature_Field__c
+                    WHERE Content_Document_Id__c = :contentDocumentId
+                )
+                ORDER BY LastModifiedDate DESC
+                LIMIT 1
+            ]
+            : [
+                SELECT Id
+                FROM ESignature_Envelope__c
+                WHERE (Parent_Record_Id__c IN :parentRecordIds
+                    OR Account__c = :parentId
+                    OR Case__c = :parentId
+                    OR Opportunity__c = :parentId
+                    OR Work_Order__c = :parentId)
+                AND (Status__c = 'Draft' OR Status__c = null)
+                AND Id IN (
+                    SELECT Envelope__c
+                    FROM ESignature_Field__c
+                    WHERE Content_Document_Id__c = :contentDocumentId
+                )
+                ORDER BY LastModifiedDate DESC
+                LIMIT 1
+            ];
         if (envelopes.isEmpty()) {
             return new List<PlacementDTO>();
         }
@@ -160,6 +183,9 @@ public with sharing class ESignaturePrepareController {
         if (String.isBlank(parentRecordId)) {
             throw new AuraHandledException('Parent Record Id is required.');
         }
+        Set<String> parentRecordIds = ESignatureUtil.parentRecordIdValues(parentRecordId);
+        Id parentId = ESignatureUtil.safeId(parentRecordId);
+        String normalizedParentRecordId = ESignatureUtil.normalizeRecordIdString(parentRecordId);
         if (String.isBlank(contentDocumentId)) {
             throw new AuraHandledException('Content Document Id is required.');
         }
@@ -180,19 +206,37 @@ public with sharing class ESignaturePrepareController {
             throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
         }
         Integer pageCount = Integer.valueOf(ESignatureUtil.estimatePageCount(version.VersionData));
-        List<ESignature_Envelope__c> envelopes = [
-            SELECT Id, Status__c
-            FROM ESignature_Envelope__c
-            WHERE Parent_Record_Id__c = :parentRecordId
-            AND (Status__c = 'Draft' OR Status__c = null)
-            AND Id IN (
-                SELECT Envelope__c
-                FROM ESignature_Field__c
-                WHERE Content_Document_Id__c = :contentDocumentId
-            )
-            ORDER BY LastModifiedDate DESC
-            LIMIT 1
-        ];
+        List<ESignature_Envelope__c> envelopes = parentId == null
+            ? [
+                SELECT Id, Status__c
+                FROM ESignature_Envelope__c
+                WHERE Parent_Record_Id__c IN :parentRecordIds
+                AND (Status__c = 'Draft' OR Status__c = null)
+                AND Id IN (
+                    SELECT Envelope__c
+                    FROM ESignature_Field__c
+                    WHERE Content_Document_Id__c = :contentDocumentId
+                )
+                ORDER BY LastModifiedDate DESC
+                LIMIT 1
+            ]
+            : [
+                SELECT Id, Status__c
+                FROM ESignature_Envelope__c
+                WHERE (Parent_Record_Id__c IN :parentRecordIds
+                    OR Account__c = :parentId
+                    OR Case__c = :parentId
+                    OR Opportunity__c = :parentId
+                    OR Work_Order__c = :parentId)
+                AND (Status__c = 'Draft' OR Status__c = null)
+                AND Id IN (
+                    SELECT Envelope__c
+                    FROM ESignature_Field__c
+                    WHERE Content_Document_Id__c = :contentDocumentId
+                )
+                ORDER BY LastModifiedDate DESC
+                LIMIT 1
+            ];
         List<Object> rows = String.isBlank(placementsJson)
             ? new List<Object>()
             : (List<Object>) JSON.deserializeUntyped(placementsJson);
@@ -226,7 +270,7 @@ public with sharing class ESignaturePrepareController {
             Map<String, Object> row = (Map<String, Object>) item;
             ESignature_Field__c field = new ESignature_Field__c();
             field.Envelope__c = envelope.Id;
-            field.Parent_Record_Id__c = parentRecordId;
+            field.Parent_Record_Id__c = normalizedParentRecordId;
             field.Content_Document_Id__c = contentDocumentId;
             field.Content_Version_Id__c = version.Id;
             field.Field_Type__c = ESignatureUtil.stringValue(row.get('fieldType'));
@@ -270,14 +314,29 @@ public with sharing class ESignaturePrepareController {
         if (currentEnv == null || currentEnv.Id == null || String.isBlank(currentEnv.Parent_Record_Id__c)) {
             return;
         }
-        List<ESignature_Envelope__c> priorOpenEnvelopes = [
-            SELECT Id, Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
-            FROM ESignature_Envelope__c
-            WHERE Parent_Record_Id__c = :currentEnv.Parent_Record_Id__c
-            AND Id != :currentEnv.Id
-            AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
-            FOR UPDATE
-        ];
+        Set<String> parentRecordIds = ESignatureUtil.parentRecordIdValues(currentEnv.Parent_Record_Id__c);
+        Id parentId = ESignatureUtil.safeId(currentEnv.Parent_Record_Id__c);
+        List<ESignature_Envelope__c> priorOpenEnvelopes = parentId == null
+            ? [
+                SELECT Id, Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+                FROM ESignature_Envelope__c
+                WHERE Parent_Record_Id__c IN :parentRecordIds
+                AND Id != :currentEnv.Id
+                AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
+                FOR UPDATE
+            ]
+            : [
+                SELECT Id, Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+                FROM ESignature_Envelope__c
+                WHERE (Parent_Record_Id__c IN :parentRecordIds
+                    OR Account__c = :parentId
+                    OR Case__c = :parentId
+                    OR Opportunity__c = :parentId
+                    OR Work_Order__c = :parentId)
+                AND Id != :currentEnv.Id
+                AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
+                FOR UPDATE
+            ];
         if (priorOpenEnvelopes.isEmpty()) {
             return;
         }

@@ -154,6 +154,7 @@ private class ESignaturePrepareControllerTest {
         ESignature_Envelope__c priorDraft = envelope(parent.Id, 'Draft', draftSource);
         ESignature_Envelope__c priorSent = envelope(parent.Id, 'Sent', sentSource);
         ESignature_Envelope__c priorViewed = envelope(parent.Id, 'Viewed', viewedSource);
+        priorViewed.Parent_Record_Id__c = String.valueOf(parent.Id).substring(0, 15);
         ESignature_Envelope__c priorBlank = envelope(parent.Id, null, blankSource);
         ESignature_Envelope__c priorSigned = envelope(parent.Id, 'Signed', signedSource);
         ESignature_Envelope__c otherSent = envelope(otherParent.Id, 'Sent', otherSource);

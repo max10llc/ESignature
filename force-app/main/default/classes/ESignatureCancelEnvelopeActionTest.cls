@@ -16,7 +16,7 @@ private class ESignatureCancelEnvelopeActionTest {
 
         ESignatureCancelEnvelopeAction.Request request = new ESignatureCancelEnvelopeAction.Request();
         request.envelopeId = String.valueOf(sent.Id);
-        request.envelopeIds = String.valueOf(viewed.Id) + '\n' + String.valueOf(signed.Id);
+        request.envelopeRecords = new List<ESignature_Envelope__c>{ viewed, signed };
         request.cancellationReason = 'Customer asked us to stop the request.';
         request.sendCancellationEmails = false;
 
@@ -85,6 +85,86 @@ private class ESignatureCancelEnvelopeActionTest {
         System.assertEquals(1, responses[0].skippedCount);
         System.assertEquals(0, responses[0].failedCount);
         System.assert(responses[0].message.contains('already canceled'));
+    }
+
+    @IsTest
+    static void cancelActionAcceptsFlowRecordCollection() {
+        Account parent = new Account(Name = 'Cancel Envelope Record Collection Parent');
+        insert parent;
+
+        ContentVersion firstSource = createPdfFile(parent.Id, 'Cancel First Record Source');
+        ContentVersion secondSource = createPdfFile(parent.Id, 'Cancel Second Record Source');
+        ESignature_Envelope__c firstEnvelope = envelope(parent.Id, 'Sent', firstSource, 'first.record@example.com');
+        ESignature_Envelope__c secondEnvelope = envelope(parent.Id, 'Viewed', secondSource, 'second.record@example.com');
+        insert new List<ESignature_Envelope__c>{ firstEnvelope, secondEnvelope };
+
+        List<ESignature_Envelope__c> flowGetRecordsOutput = [
+            SELECT Id
+            FROM ESignature_Envelope__c
+            WHERE Id IN :new Set<Id>{ firstEnvelope.Id, secondEnvelope.Id }
+        ];
+
+        ESignatureCancelEnvelopeAction.Request request = new ESignatureCancelEnvelopeAction.Request();
+        request.envelopeRecords = flowGetRecordsOutput;
+        request.cancellationReason = 'Canceled from a Flow record collection.';
+        request.sendCancellationEmails = false;
+
+        Test.startTest();
+        List<ESignatureCancelEnvelopeAction.Response> responses =
+            ESignatureCancelEnvelopeAction.cancelEnvelopes(new List<ESignatureCancelEnvelopeAction.Request>{ request });
+        Test.stopTest();
+
+        System.assertEquals(1, responses.size(), 'One Flow request should return one response.');
+        System.assertEquals(true, responses[0].success);
+        System.assertEquals(2, responses[0].requestedCount);
+        System.assertEquals(2, responses[0].canceledCount);
+        System.assertEquals(0, responses[0].failedCount);
+
+        Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
+            SELECT Status__c
+            FROM ESignature_Envelope__c
+            WHERE Id IN :new Set<Id>{ firstEnvelope.Id, secondEnvelope.Id }
+        ]);
+        System.assertEquals('Canceled', envelopes.get(firstEnvelope.Id).Status__c);
+        System.assertEquals('Canceled', envelopes.get(secondEnvelope.Id).Status__c);
+    }
+
+    @IsTest
+    static void cancelActionFindsOpenEnvelopesByParentRecordId() {
+        Account parent = new Account(Name = 'Cancel By Parent Record Parent');
+        insert parent;
+
+        ContentVersion openSource = createPdfFile(parent.Id, 'Cancel By Parent Open Source');
+        ContentVersion signedSource = createPdfFile(parent.Id, 'Cancel By Parent Signed Source');
+        ESignature_Envelope__c openEnvelope = envelope(parent.Id, 'Viewed', openSource, 'open.by.parent@example.com');
+        ESignature_Envelope__c signedEnvelope = envelope(parent.Id, 'Signed', signedSource, 'signed.by.parent@example.com');
+        openEnvelope.Parent_Record_Id__c = String.valueOf(parent.Id).substring(0, 15);
+        signedEnvelope.Parent_Record_Id__c = String.valueOf(parent.Id).substring(0, 15);
+        insert new List<ESignature_Envelope__c>{ openEnvelope, signedEnvelope };
+
+        ESignatureCancelEnvelopeAction.Request request = new ESignatureCancelEnvelopeAction.Request();
+        request.parentRecordId = String.valueOf(parent.Id);
+        request.cancellationReason = 'Canceled from a Flow parent record id.';
+        request.sendCancellationEmails = false;
+
+        Test.startTest();
+        List<ESignatureCancelEnvelopeAction.Response> responses =
+            ESignatureCancelEnvelopeAction.cancelEnvelopes(new List<ESignatureCancelEnvelopeAction.Request>{ request });
+        Test.stopTest();
+
+        System.assertEquals(1, responses.size(), 'One Flow request should return one response.');
+        System.assertEquals(true, responses[0].success);
+        System.assertEquals(1, responses[0].requestedCount, 'Only open related envelopes should be selected by parent record id.');
+        System.assertEquals(1, responses[0].canceledCount);
+        System.assertEquals(0, responses[0].failedCount);
+
+        Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
+            SELECT Status__c
+            FROM ESignature_Envelope__c
+            WHERE Id IN :new Set<Id>{ openEnvelope.Id, signedEnvelope.Id }
+        ]);
+        System.assertEquals('Canceled', envelopes.get(openEnvelope.Id).Status__c);
+        System.assertEquals('Signed', envelopes.get(signedEnvelope.Id).Status__c);
     }
 
     @IsTest
