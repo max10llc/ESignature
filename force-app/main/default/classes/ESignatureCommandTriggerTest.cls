@@ -5,7 +5,7 @@ private class ESignatureCommandTriggerTest {
         String token = 'test-token';
         String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Sent',
+            Status__c = 'Sent',
             Secure_Token_Hash__c = tokenHash,
             Signer_Email__c = 'signer@example.com',
             Sender_User__c = UserInfo.getUserId()
@@ -23,11 +23,11 @@ private class ESignatureCommandTriggerTest {
         Test.stopTest();
 
         env = [
-            SELECT Envelope_Status__c, Viewed_At__c
+            SELECT Status__c, Viewed_At__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Viewed', env.Envelope_Status__c);
+        System.assertEquals('Viewed', env.Status__c);
         System.assertNotEquals(null, env.Viewed_At__c);
 
         System.assertEquals(1, [
@@ -45,7 +45,7 @@ private class ESignatureCommandTriggerTest {
         String token = 'repeat-view-token';
         String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Viewed_At__c = System.now().addMinutes(-5),
             Secure_Token_Hash__c = tokenHash,
             Signer_Name__c = 'Viewing Signer',
@@ -99,7 +99,7 @@ private class ESignatureCommandTriggerTest {
         String token = 'required-field-token';
         String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Name__c = 'Derek Hawley',
             Signer_Email__c = 'signer@example.com',
@@ -139,11 +139,11 @@ private class ESignatureCommandTriggerTest {
         Test.stopTest();
 
         env = [
-            SELECT Envelope_Status__c, Error_Message__c
+            SELECT Status__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Error', env.Envelope_Status__c, 'Envelope should not finalize when a required field is missing.');
+        System.assertEquals('Error', env.Status__c, 'Envelope should not finalize when a required field is missing.');
         System.assert(env.Error_Message__c.contains('Required Text'), 'Error should name the missing required field.');
     }
 
@@ -153,7 +153,7 @@ private class ESignatureCommandTriggerTest {
         String tokenHash = ESignatureUtil.hashToken(token);
         ContentVersion source = createSourceFile('Declined Source');
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Name__c = 'Declining Signer',
             Signer_Email__c = 'signer@example.com',
@@ -175,11 +175,11 @@ private class ESignatureCommandTriggerTest {
         Test.stopTest();
 
         env = [
-            SELECT Envelope_Status__c, Decline_Reason__c
+            SELECT Status__c, Decline_Reason__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Declined', env.Envelope_Status__c);
+        System.assertEquals('Declined', env.Status__c);
         System.assertEquals('No longer needed', env.Decline_Reason__c);
         source = [SELECT ESignature_Status__c FROM ContentVersion WHERE Id = :source.Id];
         System.assertEquals('Canceled', source.ESignature_Status__c, 'Declining should stamp the source file status.');
@@ -213,7 +213,7 @@ private class ESignatureCommandTriggerTest {
         String tokenHash = ESignatureUtil.hashToken(token);
         ContentVersion source = createSourceFile('Delegated Source');
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Name__c = 'Original Signer',
             Signer_Email__c = 'original@example.com',
@@ -244,12 +244,12 @@ private class ESignatureCommandTriggerTest {
         Test.stopTest();
 
         env = [
-            SELECT Envelope_Status__c, Secure_Token_Hash__c, Signer_Name__c, Signer_Email__c,
+            SELECT Status__c, Secure_Token_Hash__c, Signer_Name__c, Signer_Email__c,
                    Signer_Title__c, Sent_At__c, Viewed_At__c, Public_Signing_URL__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Sent', env.Envelope_Status__c, 'Delegated envelope should be sent to the delegate. Error: ' + env.Error_Message__c);
+        System.assertEquals('Sent', env.Status__c, 'Delegated envelope should be sent to the delegate. Error: ' + env.Error_Message__c);
         System.assertNotEquals(tokenHash, env.Secure_Token_Hash__c, 'Delegation should invalidate the original signer token.');
         System.assertEquals('Delegate Signer', env.Signer_Name__c);
         System.assertEquals('delegate@example.com', env.Signer_Email__c);
@@ -323,7 +323,7 @@ private class ESignatureCommandTriggerTest {
         String token = 'missing-name-token';
         String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = tokenHash,
             Signer_Email__c = 'signer@example.com'
         );
@@ -340,11 +340,11 @@ private class ESignatureCommandTriggerTest {
         Test.stopTest();
 
         env = [
-            SELECT Envelope_Status__c, Error_Message__c
+            SELECT Status__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Error', env.Envelope_Status__c);
+        System.assertEquals('Error', env.Status__c);
         System.assert(env.Error_Message__c.contains('Type your full legal name.'), 'Error should explain the missing signer name.');
     }
 
@@ -353,7 +353,7 @@ private class ESignatureCommandTriggerTest {
         String token = 'canceled-sign-token';
         String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Canceled',
+            Status__c = 'Canceled',
             Secure_Token_Hash__c = tokenHash,
             Signer_Email__c = 'signer@example.com'
         );
@@ -370,11 +370,11 @@ private class ESignatureCommandTriggerTest {
         Test.stopTest();
 
         env = [
-            SELECT Envelope_Status__c, Signed_At__c
+            SELECT Status__c, Signed_At__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Canceled', env.Envelope_Status__c, 'Canceled envelopes should not be reopened by an old signing page.');
+        System.assertEquals('Canceled', env.Status__c, 'Canceled envelopes should not be reopened by an old signing page.');
         System.assertEquals(null, env.Signed_At__c, 'Canceled envelopes should not be marked signed.');
         System.assertEquals(0, [
             SELECT COUNT()

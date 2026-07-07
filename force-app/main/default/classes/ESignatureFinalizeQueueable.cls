@@ -8,7 +8,7 @@ public without sharing class ESignatureFinalizeQueueable implements Queueable, D
     public void execute(QueueableContext context) {
         String finalizerDebugContext = null;
         ESignature_Envelope__c env = [
-            SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
+            SELECT Id, Name, Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Signed_At__c,
                    Signature_Image_Data_Url__c, Final_ContentDocument_Id__c, Final_ContentVersion_Id__c
             FROM ESignature_Envelope__c
@@ -82,7 +82,7 @@ public without sharing class ESignatureFinalizeQueueable implements Queueable, D
     private Map<String, Object> buildPayload(ESignature_Envelope__c env, ContentVersion source, ESignature_Setting__mdt settings) {
         Map<String, Object> payload = new Map<String, Object>();
         payload.put('envelopeId', env.Id);
-        payload.put('status', env.Envelope_Status__c);
+        payload.put('status', env.Status__c);
         payload.put('parentRecordId', env.Parent_Record_Id__c);
         payload.put('parentObjectApiName', env.Parent_Object_Api_Name__c);
         payload.put('sourceContentDocumentId', source.ContentDocumentId);

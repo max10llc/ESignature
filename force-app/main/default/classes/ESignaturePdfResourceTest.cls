@@ -4,7 +4,7 @@ private class ESignaturePdfResourceTest {
     static void getPdfUsesSalesforceDocumentTitleAsFilename() {
         String token = 'pdf-resource-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Name__c = 'Derek Hawley',
             Signer_Email__c = 'signer@example.com',
@@ -66,7 +66,7 @@ private class ESignaturePdfResourceTest {
     static void getPdfReturnsForbiddenForExpiredEnvelope() {
         String token = 'pdf-resource-expired-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com',
             Expires_At__c = System.now().addMinutes(-5)
@@ -84,7 +84,7 @@ private class ESignaturePdfResourceTest {
     static void getPdfReturnsGoneForCompletedEnvelope() {
         String token = 'pdf-resource-completed-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Signed',
+            Status__c = 'Signed',
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com',
             Signed_At__c = System.now()
@@ -103,7 +103,7 @@ private class ESignaturePdfResourceTest {
     static void getPdfReturnsGoneForCancelledEnvelope() {
         String token = 'pdf-resource-cancelled-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Canceled',
+            Status__c = 'Canceled',
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com'
         );
@@ -121,7 +121,7 @@ private class ESignaturePdfResourceTest {
     static void getPdfReturnsGoneForDeclinedEnvelope() {
         String token = 'pdf-resource-declined-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com',
             Decline_Reason__c = 'Signer declined from prompt.'
@@ -140,7 +140,7 @@ private class ESignaturePdfResourceTest {
     static void getPdfReturnsNotFoundWhenSourcePdfIsMissing() {
         String token = 'pdf-resource-no-source-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Viewed',
+            Status__c = 'Viewed',
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Email__c = 'signer@example.com'
         );

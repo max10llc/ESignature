@@ -3,7 +3,7 @@ private class ESignatureOverlayBuilderTest {
     @IsTest
     static void buildsOverlayForExplicitCompletedFields() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Signed',
+            Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signer_Title__c = 'President',
             Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
@@ -42,7 +42,7 @@ private class ESignatureOverlayBuilderTest {
     @IsTest
     static void synthesizesMissingIdentityFieldsNearSignature() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Signed',
+            Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signer_Title__c = 'President',
             Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
@@ -63,7 +63,7 @@ private class ESignatureOverlayBuilderTest {
     @IsTest
     static void embedsSignatureImageWhenAvailable() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Signed',
+            Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signer_Title__c = 'President',
             Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0),
@@ -91,7 +91,7 @@ private class ESignatureOverlayBuilderTest {
     @IsTest
     static void rendersCheckedCheckboxAsCheckmarkOnly() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Signed',
+            Status__c = 'Signed',
             Signer_Name__c = 'Derek Hawley',
             Signed_At__c = DateTime.newInstanceGmt(2026, 6, 23, 15, 0, 0)
         );

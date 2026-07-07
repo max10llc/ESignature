@@ -1,7 +1,7 @@
 public without sharing class ESignatureFinalizerService {
     public static ESignature_Envelope__c loadEnvelope(Id envelopeId) {
         return [
-            SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c,
+            SELECT Id, Name, Status__c, Parent_Record_Id__c,
                    Signer_Name__c, Signer_Email__c, Sender_User__c,
                    Final_ContentDocument_Id__c, Final_ContentVersion_Id__c,
                    Completion_Message__c, Error_Message__c, Finalizer_Request_Id__c,
@@ -14,7 +14,7 @@ public without sharing class ESignatureFinalizerService {
 
     public static void markAccepted(Id envelopeId, String requestId, String message) {
         ESignature_Envelope__c env = loadEnvelope(envelopeId);
-        env.Envelope_Status__c = 'Finalizing';
+        env.Status__c = 'Finalizing';
         env.Finalizer_Request_Id__c = requestId;
         env.Error_Message__c = null;
         env.Completion_Message__c = String.isBlank(message)
@@ -73,7 +73,7 @@ public without sharing class ESignatureFinalizerService {
     }
 
     private static void completeWithFileIds(ESignature_Envelope__c env, Id finalContentVersionId, Id finalContentDocumentId, String message) {
-        env.Envelope_Status__c = 'Signed';
+        env.Status__c = 'Signed';
         env.Final_ContentVersion_Id__c = finalContentVersionId;
         env.Final_ContentDocument_Id__c = finalContentDocumentId;
         env.Error_Message__c = null;
@@ -87,7 +87,7 @@ public without sharing class ESignatureFinalizerService {
 
     public static void markError(Id envelopeId, String message) {
         ESignature_Envelope__c env = loadEnvelope(envelopeId);
-        env.Envelope_Status__c = 'Error';
+        env.Status__c = 'Error';
         env.Error_Message__c = String.isBlank(message) ? 'Finalizer reported an unknown error.' : message;
         update env;
         ESignatureUtil.audit(env.Id, 'Error', env.Signer_Email__c, env.Error_Message__c);

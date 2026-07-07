@@ -74,12 +74,12 @@ private class ESignaturePrepareControllerTest {
 
         System.assertNotEquals(null, result.envelopeId, 'Saving placements should create or update a draft envelope.');
         ESignature_Envelope__c env = [
-            SELECT Envelope_Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c, Source_File_Title__c,
+            SELECT Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c, Source_File_Title__c,
                    Parent_Record_Id__c, Parent_Object_Api_Name__c, Account__c, Opportunity__c, Work_Order__c
             FROM ESignature_Envelope__c
             WHERE Id = :result.envelopeId
         ];
-        System.assertEquals('Draft', env.Envelope_Status__c);
+        System.assertEquals('Draft', env.Status__c);
         System.assertEquals(String.valueOf(parent.Id), env.Parent_Record_Id__c);
         System.assertEquals('Account', env.Parent_Object_Api_Name__c);
         System.assertEquals(parent.Id, env.Account__c);
@@ -167,17 +167,17 @@ private class ESignaturePrepareControllerTest {
         );
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Envelope_Status__c
+            SELECT Status__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ ESignatureUtil.safeId(result.envelopeId), priorDraft.Id, priorSent.Id, priorViewed.Id, priorBlank.Id, priorSigned.Id, otherSent.Id }
         ]);
-        System.assertEquals('Draft', envelopes.get(ESignatureUtil.safeId(result.envelopeId)).Envelope_Status__c, 'The current draft should stay active.');
-        System.assertEquals('Canceled', envelopes.get(priorDraft.Id).Envelope_Status__c, 'Prior draft envelope should be canceled.');
-        System.assertEquals('Canceled', envelopes.get(priorSent.Id).Envelope_Status__c, 'Prior sent envelope should be canceled.');
-        System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Envelope_Status__c, 'Prior viewed envelope should be canceled.');
-        System.assertEquals('Canceled', envelopes.get(priorBlank.Id).Envelope_Status__c, 'Prior blank-status envelope should be canceled.');
-        System.assertEquals('Signed', envelopes.get(priorSigned.Id).Envelope_Status__c, 'Completed envelopes should not be changed.');
-        System.assertEquals('Sent', envelopes.get(otherSent.Id).Envelope_Status__c, 'Other parent envelopes should not be changed.');
+        System.assertEquals('Draft', envelopes.get(ESignatureUtil.safeId(result.envelopeId)).Status__c, 'The current draft should stay active.');
+        System.assertEquals('Canceled', envelopes.get(priorDraft.Id).Status__c, 'Prior draft envelope should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorSent.Id).Status__c, 'Prior sent envelope should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Status__c, 'Prior viewed envelope should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorBlank.Id).Status__c, 'Prior blank-status envelope should be canceled.');
+        System.assertEquals('Signed', envelopes.get(priorSigned.Id).Status__c, 'Completed envelopes should not be changed.');
+        System.assertEquals('Sent', envelopes.get(otherSent.Id).Status__c, 'Other parent envelopes should not be changed.');
 
         System.assertEquals(4, [
             SELECT COUNT()
@@ -247,7 +247,7 @@ private class ESignaturePrepareControllerTest {
 
     private static ESignature_Envelope__c envelope(Id parentId, String status, ContentVersion source) {
         return new ESignature_Envelope__c(
-            Envelope_Status__c = status,
+            Status__c = status,
             Parent_Record_Id__c = String.valueOf(parentId),
             Parent_Object_Api_Name__c = 'Account',
             Source_ContentVersion_Id__c = String.valueOf(source.Id),

@@ -30,11 +30,11 @@ private class ESignatureCallbackResourceTest {
         System.assertEquals(false, body.get('success'));
         System.assert(String.valueOf(body.get('message')).contains('Unauthorized'));
         env = [
-            SELECT Envelope_Status__c, Error_Message__c
+            SELECT Status__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Finalizing', env.Envelope_Status__c);
+        System.assertEquals('Finalizing', env.Status__c);
         System.assertEquals(null, env.Error_Message__c);
     }
 
@@ -51,11 +51,11 @@ private class ESignatureCallbackResourceTest {
 
         System.assertEquals(200, RestContext.response.statusCode);
         env = [
-            SELECT Envelope_Status__c, Error_Message__c
+            SELECT Status__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Error', env.Envelope_Status__c);
+        System.assertEquals('Error', env.Status__c);
         System.assertEquals('Finalizer failed during processing.', env.Error_Message__c);
     }
 
@@ -80,11 +80,11 @@ private class ESignatureCallbackResourceTest {
 
         System.assertEquals(200, RestContext.response.statusCode);
         env = [
-            SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c
+            SELECT Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Signed', env.Envelope_Status__c);
+        System.assertEquals('Signed', env.Status__c);
         System.assertNotEquals(null, env.Final_ContentVersion_Id__c);
         System.assertNotEquals(null, env.Final_ContentDocument_Id__c);
         System.assertEquals('Callback finalized the PDF.', env.Completion_Message__c);
@@ -92,7 +92,7 @@ private class ESignatureCallbackResourceTest {
 
     private static ESignature_Envelope__c createEnvelope() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Finalizing',
+            Status__c = 'Finalizing',
             Signer_Email__c = 'signer@example.com'
         );
         insert env;

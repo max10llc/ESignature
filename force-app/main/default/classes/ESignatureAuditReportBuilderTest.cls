@@ -5,7 +5,7 @@ private class ESignatureAuditReportBuilderTest {
         User sender = auditReportUser('America/Chicago');
         System.runAs(sender) {
             ESignature_Envelope__c env = new ESignature_Envelope__c(
-                Envelope_Status__c = 'Signed',
+                Status__c = 'Signed',
                 Source_File_Title__c = 'Audit Report Contract',
                 Parent_Object_Api_Name__c = 'Opportunity',
                 Signer_Name__c = 'Derek Hawley',
@@ -50,7 +50,7 @@ private class ESignatureAuditReportBuilderTest {
     @IsTest
     static void suppliedSourceTitleOverridesEnvelopeTitle() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Signed',
+            Status__c = 'Signed',
             Source_File_Title__c = 'Envelope Stored Title',
             Signer_Name__c = 'Derek Hawley',
             Signer_Email__c = 'derek.hawley@example.com',

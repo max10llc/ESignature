@@ -487,7 +487,7 @@
     </relatedLists>
     <relatedLists>
         <fields>NAME</fields>
-        <fields>Envelope_Status__c</fields>
+        <fields>Status__c</fields>
         <fields>Signer_Email__c</fields>
         <fields>Sent_At__c</fields>
         <fields>Signed_At__c</fields>

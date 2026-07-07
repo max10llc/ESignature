@@ -52,12 +52,12 @@ private class ESignatureFinalizeQueueableTest {
         Test.stopTest();
 
         ESignature_Envelope__c env = [
-            SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c,
+            SELECT Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c,
                    Completion_Message__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
         ];
-        System.assertEquals('Signed', env.Envelope_Status__c, 'Envelope should be completed when finalPdfBase64 is returned.');
+        System.assertEquals('Signed', env.Status__c, 'Envelope should be completed when finalPdfBase64 is returned.');
         System.assertNotEquals(null, env.Final_ContentVersion_Id__c, 'Final ContentVersion Id should be stored.');
         System.assertNotEquals(null, env.Final_ContentDocument_Id__c, 'Final ContentDocument Id should be stored.');
         System.assertEquals(null, env.Error_Message__c, 'Successful finalization should clear error message.');
@@ -95,12 +95,12 @@ private class ESignatureFinalizeQueueableTest {
         Test.stopTest();
 
         ESignature_Envelope__c env = [
-            SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c,
+            SELECT Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c,
                    Completion_Message__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
         ];
-        System.assertEquals('Error', env.Envelope_Status__c, 'Missing finalPdfBase64 should put the envelope in Error.');
+        System.assertEquals('Error', env.Status__c, 'Missing finalPdfBase64 should put the envelope in Error.');
         System.assertEquals(null, env.Final_ContentVersion_Id__c, 'No final file should be stored when finalPdfBase64 is missing.');
         System.assert(env.Error_Message__c.contains('finalPdfBase64'), 'Error should clearly identify missing finalPdfBase64.');
         System.assert(env.Error_Message__c.contains('Finalizer debug:'), 'Error should include finalizer debug summary.');
@@ -130,7 +130,7 @@ private class ESignatureFinalizeQueueableTest {
         finalFile = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :finalFile.Id];
 
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Sent',
+            Status__c = 'Sent',
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Signer_Email__c = 'signer@example.com',
             Source_ContentVersion_Id__c = String.valueOf(source.Id),
@@ -139,18 +139,18 @@ private class ESignatureFinalizeQueueableTest {
         insert env;
 
         ESignatureFinalizerService.markAccepted(env.Id, 'request-123', 'Accepted for finalization.');
-        env = [SELECT Envelope_Status__c, Finalizer_Request_Id__c, Completion_Message__c FROM ESignature_Envelope__c WHERE Id = :env.Id];
-        System.assertEquals('Finalizing', env.Envelope_Status__c);
+        env = [SELECT Status__c, Finalizer_Request_Id__c, Completion_Message__c FROM ESignature_Envelope__c WHERE Id = :env.Id];
+        System.assertEquals('Finalizing', env.Status__c);
         System.assertEquals('request-123', env.Finalizer_Request_Id__c);
         System.assertEquals('Accepted for finalization.', env.Completion_Message__c);
 
         ESignatureFinalizerService.completeWithExistingFile(env.Id, finalFile.Id, null, 'Final file attached.');
         env = [
-            SELECT Envelope_Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c, Error_Message__c
+            SELECT Status__c, Final_ContentVersion_Id__c, Final_ContentDocument_Id__c, Completion_Message__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
         ];
-        System.assertEquals('Signed', env.Envelope_Status__c);
+        System.assertEquals('Signed', env.Status__c);
         System.assertEquals(String.valueOf(finalFile.Id), env.Final_ContentVersion_Id__c);
         System.assertEquals(String.valueOf(finalFile.ContentDocumentId), env.Final_ContentDocument_Id__c);
         System.assertEquals('Final file attached.', env.Completion_Message__c);
@@ -164,8 +164,8 @@ private class ESignatureFinalizeQueueableTest {
         System.assertEquals('Signed Document.pdf', ESignatureFinalizerService.resolveFileName(env, 'Signed Document'));
 
         ESignatureFinalizerService.markError(env.Id, 'Something went wrong.');
-        env = [SELECT Envelope_Status__c, Error_Message__c FROM ESignature_Envelope__c WHERE Id = :env.Id];
-        System.assertEquals('Error', env.Envelope_Status__c);
+        env = [SELECT Status__c, Error_Message__c FROM ESignature_Envelope__c WHERE Id = :env.Id];
+        System.assertEquals('Error', env.Status__c);
         System.assertEquals('Something went wrong.', env.Error_Message__c);
     }
 
@@ -219,7 +219,7 @@ private class ESignatureFinalizeQueueableTest {
 
     private static Id createEnvelopeWithSourceAndSignatureField() {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Signed',
+            Status__c = 'Signed',
             Parent_Object_Api_Name__c = 'Opportunity',
             Signer_Name__c = 'Derek Hawley',
             Signer_Email__c = 'derek.hawley@example.com',

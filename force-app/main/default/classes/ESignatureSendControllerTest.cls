@@ -136,14 +136,14 @@ private class ESignatureSendControllerTest {
         System.assert(result.signingUrl.contains('/ESignaturePage?t='), 'Result should include a public signing URL.');
 
         ESignature_Envelope__c env = [
-            SELECT Envelope_Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
+            SELECT Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
                    Sent_At__c, Expires_At__c, Public_Signing_URL__c,
                    Request_Message__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Id = :fixture.envelope.Id
         ];
-        System.assertEquals('Sent', env.Envelope_Status__c);
+        System.assertEquals('Sent', env.Status__c);
         System.assertEquals('Derek Hawley', env.Signer_Name__c);
         System.assertEquals('signer@example.com', env.Signer_Email__c);
         System.assertEquals('President', env.Signer_Title__c);
@@ -229,16 +229,16 @@ private class ESignatureSendControllerTest {
         Test.stopTest();
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Envelope_Status__c
+            SELECT Status__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ fixture.envelope.Id, priorDraft.Id, priorSent.Id, priorViewed.Id, sameParentSigned.Id, otherParentSent.Id }
         ]);
-        System.assertEquals('Sent', envelopes.get(fixture.envelope.Id).Envelope_Status__c, 'The newly sent envelope should stay active.');
-        System.assertEquals('Canceled', envelopes.get(priorDraft.Id).Envelope_Status__c, 'Prior draft envelope on the same parent should be canceled.');
-        System.assertEquals('Canceled', envelopes.get(priorSent.Id).Envelope_Status__c, 'Prior sent envelope on the same parent should be canceled.');
-        System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Envelope_Status__c, 'Prior viewed envelope on the same parent should be canceled.');
-        System.assertEquals('Signed', envelopes.get(sameParentSigned.Id).Envelope_Status__c, 'Completed envelopes should not be changed.');
-        System.assertEquals('Sent', envelopes.get(otherParentSent.Id).Envelope_Status__c, 'Open envelopes on other parent records should not be changed.');
+        System.assertEquals('Sent', envelopes.get(fixture.envelope.Id).Status__c, 'The newly sent envelope should stay active.');
+        System.assertEquals('Canceled', envelopes.get(priorDraft.Id).Status__c, 'Prior draft envelope on the same parent should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorSent.Id).Status__c, 'Prior sent envelope on the same parent should be canceled.');
+        System.assertEquals('Canceled', envelopes.get(priorViewed.Id).Status__c, 'Prior viewed envelope on the same parent should be canceled.');
+        System.assertEquals('Signed', envelopes.get(sameParentSigned.Id).Status__c, 'Completed envelopes should not be changed.');
+        System.assertEquals('Sent', envelopes.get(otherParentSent.Id).Status__c, 'Open envelopes on other parent records should not be changed.');
 
         Map<Id, ContentVersion> sources = new Map<Id, ContentVersion>([
             SELECT ESignature_Status__c
@@ -270,7 +270,7 @@ private class ESignatureSendControllerTest {
         Account parent = new Account(Name = 'Send Controller No Fields');
         insert parent;
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Draft',
+            Status__c = 'Draft',
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Parent_Object_Api_Name__c = 'Account'
         );
@@ -356,7 +356,7 @@ private class ESignatureSendControllerTest {
         insert parent;
 
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Draft',
+            Status__c = 'Draft',
             Parent_Record_Id__c = String.valueOf(parent.Id),
             Parent_Object_Api_Name__c = 'Account'
         );
@@ -410,7 +410,7 @@ private class ESignatureSendControllerTest {
 
     private static ESignature_Envelope__c activeEnvelope(Id parentId, String status, ContentVersion source) {
         return new ESignature_Envelope__c(
-            Envelope_Status__c = status,
+            Status__c = status,
             Parent_Record_Id__c = String.valueOf(parentId),
             Parent_Object_Api_Name__c = 'Account',
             Signer_Email__c = 'prior@example.com',

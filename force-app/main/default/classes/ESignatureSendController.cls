@@ -28,11 +28,11 @@ public with sharing class ESignatureSendController {
     public static List<EnvelopeDTO> getDraftEnvelopes(String parentRecordId, String refreshKey) {
         List<EnvelopeDTO> output = new List<EnvelopeDTO>();
         List<ESignature_Envelope__c> envelopes = [
-            SELECT Id, Name, Envelope_Status__c, LastModifiedDate,
+            SELECT Id, Name, Status__c, LastModifiedDate,
                    (SELECT Id FROM ESignature_Fields__r)
             FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :parentRecordId
-            AND (Envelope_Status__c = 'Draft' OR Envelope_Status__c = null)
+            AND (Status__c = 'Draft' OR Status__c = null)
             ORDER BY LastModifiedDate DESC
             LIMIT 1
         ];
@@ -53,7 +53,7 @@ public with sharing class ESignatureSendController {
             row.id = env.Id;
             row.name = env.Name;
             row.title = ESignatureUtil.titleFromEnvelope(env, titleByDocumentId, documentIdByEnvelopeId);
-            row.status = String.isBlank(env.Envelope_Status__c) ? 'Draft' : env.Envelope_Status__c;
+            row.status = String.isBlank(env.Status__c) ? 'Draft' : env.Status__c;
             row.lastModifiedDate = env.LastModifiedDate;
             row.fieldCount = env.ESignature_Fields__r == null ? 0 : env.ESignature_Fields__r.size();
             output.add(row);
@@ -187,7 +187,7 @@ public with sharing class ESignatureSendController {
             throw new AuraHandledException('Signer email is required.');
         }
         ESignature_Envelope__c env = [
-            SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c, Secure_Token_Hash__c,
+            SELECT Id, Name, Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sent_At__c,
                    Expires_At__c, Public_Signing_URL__c, Sender_User__c,
                    Request_Message__c, Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
@@ -195,8 +195,8 @@ public with sharing class ESignatureSendController {
             WHERE Id = :envelopeId
             LIMIT 1
         ];
-        if (!String.isBlank(env.Envelope_Status__c) && env.Envelope_Status__c != 'Draft') {
-            throw new AuraHandledException('Only draft envelopes can be sent. Current status: ' + env.Envelope_Status__c);
+        if (!String.isBlank(env.Status__c) && env.Status__c != 'Draft') {
+            throw new AuraHandledException('Only draft envelopes can be sent. Current status: ' + env.Status__c);
         }
         Integer fieldCount = [SELECT COUNT() FROM ESignature_Field__c WHERE Envelope__c = :env.Id];
         if (fieldCount == 0) {
@@ -216,7 +216,7 @@ public with sharing class ESignatureSendController {
         env.Signer_Email__c = signerEmail.trim();
         env.Signer_Title__c = String.isBlank(signerTitle) ? null : signerTitle.trim();
         env.Request_Message__c = normalizedRequestMessage(requestMessage);
-        env.Envelope_Status__c = 'Sent';
+        env.Status__c = 'Sent';
         env.Sent_At__c = System.now();
         env.Expires_At__c = System.now().addDays(days);
         env.Public_Signing_URL__c = signingUrl;
@@ -228,7 +228,7 @@ public with sharing class ESignatureSendController {
         try {
             ESignatureUtil.cacheSourcePdfForEnvelope(env.Id);
         } catch (Exception ex) {
-            env.Envelope_Status__c = 'Error';
+            env.Status__c = 'Error';
             env.Error_Message__c = 'Unable to cache source PDF for public signing: ' + ex.getMessage();
             update env;
             throw new AuraHandledException('Unable to cache source PDF for public signing: ' + ex.getMessage());
@@ -243,7 +243,7 @@ public with sharing class ESignatureSendController {
         SendResultDTO result = new SendResultDTO();
         result.envelopeId = env.Id;
         result.signingUrl = signingUrl;
-        result.status = env.Envelope_Status__c;
+        result.status = env.Status__c;
         result.message = 'Envelope sent to ' + env.Signer_Email__c + '.';
         return result;
     }
@@ -263,11 +263,11 @@ public with sharing class ESignatureSendController {
             return;
         }
         List<ESignature_Envelope__c> priorOpenEnvelopes = [
-            SELECT Id, Envelope_Status__c, Signer_Email__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+            SELECT Id, Status__c, Signer_Email__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :currentEnv.Parent_Record_Id__c
             AND Id != :currentEnv.Id
-            AND (Envelope_Status__c = null OR Envelope_Status__c IN ('Draft', 'Sent', 'Viewed'))
+            AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
             FOR UPDATE
         ];
         if (priorOpenEnvelopes.isEmpty()) {
@@ -275,7 +275,7 @@ public with sharing class ESignatureSendController {
         }
 
         for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
-            prior.Envelope_Status__c = 'Canceled';
+            prior.Status__c = 'Canceled';
         }
         update priorOpenEnvelopes;
 

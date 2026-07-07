@@ -33,7 +33,7 @@ public without sharing class ESignatureEnvelopeCancellationService {
         }
 
         Map<Id, ESignature_Envelope__c> envelopeById = new Map<Id, ESignature_Envelope__c>([
-            SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
+            SELECT Id, Name, Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Signer_Name__c, Signer_Email__c, Sender_User__c, Source_File_Title__c,
                    Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
@@ -44,7 +44,7 @@ public without sharing class ESignatureEnvelopeCancellationService {
         List<ESignature_Envelope__c> updates = new List<ESignature_Envelope__c>();
         for (ESignature_Envelope__c env : envelopeById.values()) {
             CancellationResult result = resultByEnvelopeId.get(env.Id);
-            String status = normalizedStatus(env.Envelope_Status__c);
+            String status = normalizedStatus(env.Status__c);
             if (isCanceledStatus(status)) {
                 result.success = true;
                 result.status = 'Canceled';
@@ -53,11 +53,11 @@ public without sharing class ESignatureEnvelopeCancellationService {
             }
             if (isTerminalStatus(status)) {
                 result.success = false;
-                result.status = env.Envelope_Status__c;
-                result.message = 'Envelope cannot be canceled because its current status is ' + env.Envelope_Status__c + '.';
+                result.status = env.Status__c;
+                result.message = 'Envelope cannot be canceled because its current status is ' + env.Status__c + '.';
                 continue;
             }
-            env.Envelope_Status__c = 'Canceled';
+            env.Status__c = 'Canceled';
             updates.add(env);
         }
 
@@ -74,7 +74,7 @@ public without sharing class ESignatureEnvelopeCancellationService {
                     runPostCancellationWork(env, reason, sendNotifications);
                 } else {
                     result.success = false;
-                    result.status = normalizedOutputStatus(env.Envelope_Status__c);
+                    result.status = normalizedOutputStatus(env.Status__c);
                     result.message = firstDmlError(saveResults[i]);
                 }
             }

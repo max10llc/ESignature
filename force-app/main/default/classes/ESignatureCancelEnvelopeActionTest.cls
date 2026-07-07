@@ -36,13 +36,13 @@ private class ESignatureCancelEnvelopeActionTest {
         System.assert(responses[0].failedEnvelopeIds.contains(String.valueOf(signed.Id)));
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
-            SELECT Envelope_Status__c
+            SELECT Status__c
             FROM ESignature_Envelope__c
             WHERE Id IN :new Set<Id>{ sent.Id, viewed.Id, signed.Id }
         ]);
-        System.assertEquals('Canceled', envelopes.get(sent.Id).Envelope_Status__c);
-        System.assertEquals('Canceled', envelopes.get(viewed.Id).Envelope_Status__c);
-        System.assertEquals('Signed', envelopes.get(signed.Id).Envelope_Status__c);
+        System.assertEquals('Canceled', envelopes.get(sent.Id).Status__c);
+        System.assertEquals('Canceled', envelopes.get(viewed.Id).Status__c);
+        System.assertEquals('Signed', envelopes.get(signed.Id).Status__c);
 
         Map<Id, ContentVersion> sources = new Map<Id, ContentVersion>([
             SELECT ESignature_Status__c
@@ -123,7 +123,7 @@ private class ESignatureCancelEnvelopeActionTest {
 
     private static ESignature_Envelope__c envelope(Id parentId, String status, ContentVersion source, String signerEmail) {
         return new ESignature_Envelope__c(
-            Envelope_Status__c = status,
+            Status__c = status,
             Parent_Record_Id__c = String.valueOf(parentId),
             Parent_Object_Api_Name__c = 'Account',
             Signer_Name__c = 'Test Signer',

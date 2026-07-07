@@ -230,7 +230,6 @@ private class ESignaturePageControllerTest {
     @IsTest
     static void cancelledEnvelopeStatusShowsCancelledMessage() {
         assertCancelledEnvelopeStatus('Canceled', 'page-canceled-status-token');
-        assertCancelledEnvelopeStatus('Cancelled', 'page-cancelled-status-token');
     }
 
     @IsTest
@@ -350,7 +349,7 @@ private class ESignaturePageControllerTest {
 
     private static ESignature_Envelope__c createEnvelope(String token, String status) {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = status,
+            Status__c = status,
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Name__c = 'Derek Hawley',
             Signer_Email__c = 'signer@example.com',

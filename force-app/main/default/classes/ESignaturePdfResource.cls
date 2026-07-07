@@ -87,7 +87,7 @@ global without sharing class ESignaturePdfResource {
         if (env == null) {
             return '';
         }
-        String status = ESignatureUtil.stringValue(env.Envelope_Status__c);
+        String status = ESignatureUtil.stringValue(env.Status__c);
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 

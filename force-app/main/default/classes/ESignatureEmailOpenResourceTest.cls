@@ -4,7 +4,7 @@ private class ESignatureEmailOpenResourceTest {
     static void getPixelReturnsPixelForValidToken() {
         String token = 'email-open-token';
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Sent',
+            Status__c = 'Sent',
             Secure_Token_Hash__c = ESignatureUtil.hashToken(token),
             Signer_Name__c = 'Email Opener',
             Signer_Email__c = 'signer@example.com',
@@ -39,7 +39,7 @@ private class ESignatureEmailOpenResourceTest {
         String token = 'email-open-command-token';
         String tokenHash = ESignatureUtil.hashToken(token);
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Sent',
+            Status__c = 'Sent',
             Secure_Token_Hash__c = tokenHash,
             Signer_Name__c = 'Email Opener',
             Signer_Email__c = 'signer@example.com',

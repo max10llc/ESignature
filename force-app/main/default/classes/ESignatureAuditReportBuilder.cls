@@ -81,7 +81,7 @@ public without sharing class ESignatureAuditReportBuilder {
 
     private static ESignature_Envelope__c loadEnvelope(Id envelopeId) {
         List<ESignature_Envelope__c> rows = [
-            SELECT Id, Name, CreatedDate, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
+            SELECT Id, Name, CreatedDate, Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sender_User__c, Sender_User__r.Email,
                    Sender_User__r.TimeZoneSidKey, Sent_At__c, Viewed_At__c, Signed_At__c, Signature_Method__c

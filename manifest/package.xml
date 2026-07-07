@@ -89,7 +89,7 @@
         <members>ESignature_Envelope__c.Source_ContentDocument_Id__c</members>
         <members>ESignature_Envelope__c.Source_ContentVersion_Id__c</members>
         <members>ESignature_Envelope__c.Source_File_Title__c</members>
-        <members>ESignature_Envelope__c.Envelope_Status__c</members>
+        <members>ESignature_Envelope__c.Status__c</members>
         <members>ESignature_Envelope__c.Viewed_At__c</members>
         <members>ESignature_Envelope__c.Work_Order__c</members>
         <members>ESignature_Field__c.Completed_At__c</members>

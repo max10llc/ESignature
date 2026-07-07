@@ -114,7 +114,7 @@ public with sharing class ESignaturePrepareController {
             SELECT Id
             FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :parentRecordId
-            AND (Envelope_Status__c = 'Draft' OR Envelope_Status__c = null)
+            AND (Status__c = 'Draft' OR Status__c = null)
             AND Id IN (
                 SELECT Envelope__c
                 FROM ESignature_Field__c
@@ -181,10 +181,10 @@ public with sharing class ESignaturePrepareController {
         }
         Integer pageCount = Integer.valueOf(ESignatureUtil.estimatePageCount(version.VersionData));
         List<ESignature_Envelope__c> envelopes = [
-            SELECT Id, Envelope_Status__c
+            SELECT Id, Status__c
             FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :parentRecordId
-            AND (Envelope_Status__c = 'Draft' OR Envelope_Status__c = null)
+            AND (Status__c = 'Draft' OR Status__c = null)
             AND Id IN (
                 SELECT Envelope__c
                 FROM ESignature_Field__c
@@ -204,7 +204,7 @@ public with sharing class ESignaturePrepareController {
         Boolean created = false;
         if (envelopes.isEmpty()) {
             envelope = new ESignature_Envelope__c();
-            envelope.Envelope_Status__c = 'Draft';
+            envelope.Status__c = 'Draft';
             envelope.Sender_User__c = UserInfo.getUserId();
             created = true;
         } else {
@@ -271,11 +271,11 @@ public with sharing class ESignaturePrepareController {
             return;
         }
         List<ESignature_Envelope__c> priorOpenEnvelopes = [
-            SELECT Id, Envelope_Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
+            SELECT Id, Status__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :currentEnv.Parent_Record_Id__c
             AND Id != :currentEnv.Id
-            AND (Envelope_Status__c = null OR Envelope_Status__c IN ('Draft', 'Sent', 'Viewed'))
+            AND (Status__c = null OR Status__c IN ('Draft', 'Sent', 'Viewed'))
             FOR UPDATE
         ];
         if (priorOpenEnvelopes.isEmpty()) {
@@ -283,7 +283,7 @@ public with sharing class ESignaturePrepareController {
         }
 
         for (ESignature_Envelope__c prior : priorOpenEnvelopes) {
-            prior.Envelope_Status__c = 'Canceled';
+            prior.Status__c = 'Canceled';
         }
         update priorOpenEnvelopes;
 

@@ -416,7 +416,7 @@ public without sharing class ESignaturePageController {
         if (envelope == null) {
             return '';
         }
-        String status = ESignatureUtil.stringValue(envelope.Envelope_Status__c);
+        String status = ESignatureUtil.stringValue(envelope.Status__c);
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 

@@ -19,7 +19,7 @@ public without sharing class ESignatureCommandProcessor {
 
         Map<String, ESignature_Envelope__c> envelopeByHash = new Map<String, ESignature_Envelope__c>();
         for (ESignature_Envelope__c env : [
-            SELECT Id, Name, Envelope_Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
+            SELECT Id, Name, Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Final_ContentDocument_Id__c, Final_ContentVersion_Id__c, Secure_Token_Hash__c,
                    Signer_Name__c, Signer_Email__c, Signer_Title__c, Sender_User__c,
                    Sent_At__c, Viewed_At__c, Signed_At__c, Expires_At__c, Page_Count__c,
@@ -72,7 +72,7 @@ public without sharing class ESignatureCommandProcessor {
             return;
         }
         if (status == 'sent') {
-            env.Envelope_Status__c = 'Viewed';
+            env.Status__c = 'Viewed';
             env.Viewed_At__c = System.now();
             update env;
             audit(env, 'Viewed', payload, 'Signer opened the envelope.');
@@ -124,7 +124,7 @@ public without sharing class ESignatureCommandProcessor {
         if (isTerminalEnvelope(env)) {
             return;
         }
-        env.Envelope_Status__c = 'Expired';
+        env.Status__c = 'Expired';
         update env;
         ESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
         audit(env, 'Expired', payload, 'Signing link expired when opened.');
@@ -134,7 +134,7 @@ public without sharing class ESignatureCommandProcessor {
         if (isTerminalEnvelope(env)) {
             return;
         }
-        env.Envelope_Status__c = 'Declined';
+        env.Status__c = 'Declined';
         env.Decline_Reason__c = ESignatureUtil.stringValue(payload.get('declineReason'));
         update env;
         ESignatureUtil.updateSourceFileESignatureStatus(env, 'Canceled');
@@ -173,7 +173,7 @@ public without sharing class ESignatureCommandProcessor {
         env.Signer_Name__c = delegateName;
         env.Signer_Email__c = delegateEmail;
         env.Signer_Title__c = null;
-        env.Envelope_Status__c = 'Sent';
+        env.Status__c = 'Sent';
         env.Sent_At__c = System.now();
         env.Viewed_At__c = null;
         env.Public_Signing_URL__c = signingUrl;
@@ -210,7 +210,7 @@ public without sharing class ESignatureCommandProcessor {
         env.Signer_Name__c = typedName;
         env.Signer_Title__c = signerTitle;
         env.Signed_At__c = System.now();
-        env.Envelope_Status__c = 'Finalizing';
+        env.Status__c = 'Finalizing';
         env.Signature_Image_Data_Url__c = ESignatureUtil.stringValue(payload.get('signatureImageDataUrl'));
         env.Signature_Method__c = String.isBlank(env.Signature_Image_Data_Url__c) ? 'Typed' : 'Drawn';
         env.Completed_Fields_JSON__c = signerFieldsJson;
@@ -227,7 +227,7 @@ public without sharing class ESignatureCommandProcessor {
         if (env.Signed_At__c != null) {
             return true;
         }
-        String status = String.isBlank(env.Envelope_Status__c) ? '' : env.Envelope_Status__c.trim().toLowerCase();
+        String status = String.isBlank(env.Status__c) ? '' : env.Status__c.trim().toLowerCase();
         return new Set<String>{
             'signed',
             'finalizing',
@@ -247,7 +247,7 @@ public without sharing class ESignatureCommandProcessor {
         if (env == null) {
             return '';
         }
-        String status = ESignatureUtil.stringValue(env.Envelope_Status__c);
+        String status = ESignatureUtil.stringValue(env.Status__c);
         return String.isBlank(status) ? '' : status.trim().toLowerCase();
     }
 
@@ -355,7 +355,7 @@ public without sharing class ESignatureCommandProcessor {
 
     private static void markError(ESignature_Envelope__c env, Map<String, Object> payload, String message) {
         try {
-            env.Envelope_Status__c = 'Error';
+            env.Status__c = 'Error';
             env.Error_Message__c = truncate(message, 32768);
             update env;
             audit(env, 'Error', payload, truncate(message, 32768));

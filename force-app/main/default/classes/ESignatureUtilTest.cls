@@ -65,7 +65,7 @@ private class ESignatureUtilTest {
         source = [SELECT Id, ContentDocumentId, Title FROM ContentVersion WHERE Id = :source.Id];
 
         ESignature_Envelope__c env = new ESignature_Envelope__c(
-            Envelope_Status__c = 'Draft',
+            Status__c = 'Draft',
             Parent_Record_Id__c = String.valueOf(parent.Id)
         );
         insert env;
