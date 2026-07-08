@@ -295,6 +295,7 @@
 <body>
 <apex:form id="form">
     <apex:inputHidden value="{!signatureImageDataUrl}" id="signatureImageDataUrl" />
+    <apex:inputHidden value="{!initialsImageDataUrl}" id="initialsImageDataUrl" />
     <apex:inputHidden value="{!signerFieldsJson}" id="signerFieldsJson" />
     <apex:inputHidden value="{!typedName}" id="typedName" />
     <apex:inputHidden value="{!signerTitle}" id="signerTitle" />
@@ -549,6 +550,7 @@ var signatureDialogMode = 'typed';
 var savedInitialsValue = '';
 var savedInitialsImageDataUrl = '';
 var savedInitialsPreviewDataUrl = '';
+var INITIALS_IMAGE_TOKEN = '__ESIGN_INITIALS_IMAGE__';
 var activeRequiredFieldId = null;
 var userAdjustedZoom = false;
 var renderSequence = 0;
@@ -903,6 +905,8 @@ function clearDocumentData() {
     setSignerTitle('');
     var signatureInput = document.querySelector('[id$="signatureImageDataUrl"]');
     if (signatureInput) { signatureInput.value = ''; }
+    var initialsInput = document.querySelector('[id$="initialsImageDataUrl"]');
+    if (initialsInput) { initialsInput.value = ''; }
     savedInitialsValue = '';
     savedInitialsImageDataUrl = '';
     savedInitialsPreviewDataUrl = '';
@@ -993,15 +997,19 @@ function resetSignaturePadCanvas() {
 }
 function clearSignaturePad() { initSignaturePad(); resetSignaturePadCanvas(); }
 
-function canvasToSignatureJpeg(sourceCanvas) {
+function canvasToSignatureJpeg(sourceCanvas, maxWidth, maxHeight, quality) {
+    var scale = 1;
+    if (maxWidth && maxHeight) {
+        scale = Math.min(1, maxWidth / sourceCanvas.width, maxHeight / sourceCanvas.height);
+    }
     var canvas = document.createElement('canvas');
-    canvas.width = sourceCanvas.width;
-    canvas.height = sourceCanvas.height;
+    canvas.width = Math.max(1, Math.round(sourceCanvas.width * scale));
+    canvas.height = Math.max(1, Math.round(sourceCanvas.height * scale));
     var ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(sourceCanvas, 0, 0);
-    return canvas.toDataURL('image/jpeg', 0.92);
+    ctx.drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality || 0.82);
 }
 function canvasToTransparentPng(sourceCanvas) {
     var canvas = document.createElement('canvas');
@@ -1047,8 +1055,8 @@ function cropCanvasToInk(sourceCanvas, padding) {
 }
 function typedSignatureToJpeg(value) {
     var canvas = document.createElement('canvas');
-    canvas.width = 900;
-    canvas.height = 220;
+    canvas.width = 640;
+    canvas.height = 160;
     var ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1061,12 +1069,12 @@ function typedSignatureToJpeg(value) {
         fontSize -= 4;
     } while (ctx.measureText(value).width > canvas.width - 80 && fontSize > 38);
     ctx.fillText(value, canvas.width / 2, canvas.height / 2);
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL('image/jpeg', 0.82);
 }
 function typedInitialsToJpeg(value) {
     var canvas = document.createElement('canvas');
-    canvas.width = 360;
-    canvas.height = 180;
+    canvas.width = 220;
+    canvas.height = 110;
     var ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1079,7 +1087,7 @@ function typedInitialsToJpeg(value) {
         fontSize -= 4;
     } while (ctx.measureText(value).width > canvas.width - 56 && fontSize > 42);
     ctx.fillText(value, canvas.width / 2, canvas.height / 2);
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL('image/jpeg', 0.82);
 }
 function syncSignatureImageFromFields() {
     for (var i = 0; i < preparedFields.length; i++) {
@@ -1294,7 +1302,7 @@ function applySignatureDialog() {
         var signerName = getSignatureDialogTypedName();
         if (isInitialsField) {
             var croppedInitialsCanvas = cropCanvasToInk(signaturePadCanvas, 18);
-            var drawnInitialsDataUrl = canvasToSignatureJpeg(croppedInitialsCanvas);
+            var drawnInitialsDataUrl = canvasToSignatureJpeg(croppedInitialsCanvas, 180, 90, 0.82);
             var drawnInitialsPreviewDataUrl = canvasToTransparentPng(croppedInitialsCanvas);
             var drawnInitialsValue = signerName || initialsFromName() || 'Initials';
             savedInitialsValue = drawnInitialsValue;
@@ -1306,7 +1314,7 @@ function applySignatureDialog() {
             return false;
         }
         if (!signerName) { alert('The signer name is missing from this request.'); return false; }
-        var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas);
+        var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas, 420, 120, 0.82);
         var drawnPreviewDataUrl = canvasToTransparentPng(signaturePadCanvas);
         setTypedName(signerName);
         field.value = signerName;
@@ -1611,8 +1619,14 @@ function buildSignatureAndFields() {
         if (field.required && !field.value) { missing.push(field.label || field.type || 'Required field'); }
     });
     if (missing.length) { alert('Complete required fields before signing: ' + missing.join(', ')); renderFieldLayer(); return false; }
+    var initialsInput = document.querySelector('[id$="initialsImageDataUrl"]');
+    if (initialsInput) { initialsInput.value = savedInitialsImageDataUrl || ''; }
     document.querySelector('[id$="signerFieldsJson"]').value = JSON.stringify(preparedFields.map(function(field) {
-        return { id: field.id, value: field.value || '' };
+        var value = field.value || '';
+        if (fieldTypeName(field) === 'initials' && savedInitialsImageDataUrl && value === savedInitialsImageDataUrl) {
+            value = INITIALS_IMAGE_TOKEN;
+        }
+        return { id: field.id, value: value };
     }));
     return true;
 }

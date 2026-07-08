@@ -4,6 +4,7 @@ public without sharing class ESignaturePageController {
     public String typedName { get; set; }
     public String signerTitle { get; set; }
     public String signatureImageDataUrl { get; set; }
+    public String initialsImageDataUrl { get; set; }
     public String signerFieldsJson { get; set; }
     public Boolean consent { get; set; }
     public Boolean disclosureAccepted { get; set; }
@@ -216,6 +217,7 @@ public without sharing class ESignaturePageController {
             payload.put('typedName', typedName.trim());
             payload.put('signerTitle', resolvedSignerTitle);
             payload.put('signatureImageDataUrl', signatureImageDataUrl);
+            payload.put('initialsImageDataUrl', initialsImageDataUrl);
             payload.put('signatureMethod', String.isBlank(signatureImageDataUrl) ? 'Typed' : 'Drawn');
             payload.put('signerFieldsJson', signerFieldsJson);
             payload.put('message', 'Signer completed required fields and submitted signature.');

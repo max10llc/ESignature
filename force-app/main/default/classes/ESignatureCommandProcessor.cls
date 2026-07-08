@@ -1,4 +1,6 @@
 public without sharing class ESignatureCommandProcessor {
+    private static final String INITIALS_IMAGE_TOKEN = '__ESIGN_INITIALS_IMAGE__';
+
     private class SubmittedFieldResult {
         String titleValue;
     }
@@ -202,7 +204,8 @@ public without sharing class ESignatureCommandProcessor {
         }
 
         String signerFieldsJson = ESignatureUtil.stringValue(payload.get('signerFieldsJson'));
-        SubmittedFieldResult fieldResult = applySubmittedFields(env, signerFieldsJson);
+        String initialsImageDataUrl = ESignatureUtil.stringValue(payload.get('initialsImageDataUrl'));
+        SubmittedFieldResult fieldResult = applySubmittedFields(env, signerFieldsJson, initialsImageDataUrl);
         if (String.isBlank(signerTitle)) {
             signerTitle = fieldResult.titleValue;
         }
@@ -264,9 +267,9 @@ public without sharing class ESignatureCommandProcessor {
         return eventCount > 0;
     }
 
-    private static SubmittedFieldResult applySubmittedFields(ESignature_Envelope__c env, String signerFieldsJson) {
+    private static SubmittedFieldResult applySubmittedFields(ESignature_Envelope__c env, String signerFieldsJson, String initialsImageDataUrl) {
         SubmittedFieldResult result = new SubmittedFieldResult();
-        Map<Id, String> submittedValues = submittedFieldValueMap(signerFieldsJson);
+        Map<Id, String> submittedValues = submittedFieldValueMap(signerFieldsJson, initialsImageDataUrl);
         List<ESignature_Field__c> fields = [
             SELECT Id, Field_Type__c, Label__c, Required__c, Value__c, Completed__c, Completed_At__c
             FROM ESignature_Field__c
@@ -297,7 +300,8 @@ public without sharing class ESignatureCommandProcessor {
         return result;
     }
 
-    private static Map<Id, String> submittedFieldValueMap(String rawJson) {
+    @TestVisible
+    private static Map<Id, String> submittedFieldValueMap(String rawJson, String initialsImageDataUrl) {
         Map<Id, String> submittedValues = new Map<Id, String>();
         if (!String.isBlank(rawJson)) {
             List<Object> rows = (List<Object>) JSON.deserializeUntyped(rawJson);
@@ -305,7 +309,11 @@ public without sharing class ESignatureCommandProcessor {
                 Map<String, Object> row = (Map<String, Object>) item;
                 Id fieldId = ESignatureUtil.safeId(ESignatureUtil.stringValue(row.get('id')));
                 if (fieldId != null) {
-                    submittedValues.put(fieldId, ESignatureUtil.stringValue(row.get('value')));
+                    String value = ESignatureUtil.stringValue(row.get('value'));
+                    if (value == INITIALS_IMAGE_TOKEN) {
+                        value = initialsImageDataUrl;
+                    }
+                    submittedValues.put(fieldId, value);
                 }
             }
         }

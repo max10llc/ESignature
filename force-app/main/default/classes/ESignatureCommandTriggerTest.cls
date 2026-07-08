@@ -148,6 +148,44 @@ private class ESignatureCommandTriggerTest {
     }
 
     @IsTest
+    static void submittedFieldValueMapExpandsSharedInitialsImageToken() {
+        String initialsImage = 'data:image/jpeg;base64,abc123';
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Status__c = 'Viewed',
+            Secure_Token_Hash__c = ESignatureUtil.hashToken('initials-token'),
+            Signer_Name__c = 'Derek Hawley',
+            Signer_Email__c = 'signer@example.com'
+        );
+        insert env;
+        ESignature_Field__c initialsField = new ESignature_Field__c(
+            Envelope__c = env.Id,
+            Field_Type__c = 'Initials',
+            Label__c = 'Initials',
+            Page_Number__c = 1,
+            Pdf_X__c = 100,
+            Pdf_Y__c = 200,
+            Pdf_Width__c = 80,
+            Pdf_Height__c = 24,
+            Page_Width_Points__c = 612,
+            Page_Height_Points__c = 792,
+            Required__c = true,
+            Sequence__c = 1
+        );
+        insert initialsField;
+
+        String rawJson = JSON.serialize(new List<Object>{
+            new Map<String, Object>{
+                'id' => String.valueOf(initialsField.Id),
+                'value' => '__ESIGN_INITIALS_IMAGE__'
+            }
+        });
+
+        Map<Id, String> submittedValues = ESignatureCommandProcessor.submittedFieldValueMap(rawJson, initialsImage);
+
+        System.assertEquals(initialsImage, submittedValues.get(initialsField.Id), 'Shared initials image token should expand before fields are saved.');
+    }
+
+    @IsTest
     static void declinedCommandUpdatesEnvelopeThroughTrigger() {
         String token = 'declined-token';
         String tokenHash = ESignatureUtil.hashToken(token);
