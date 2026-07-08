@@ -1,6 +1,9 @@
 public without sharing class ESignatureAuditReportBuilder {
     private static final Decimal PAGE_WIDTH = 612;
     private static final Decimal PAGE_HEIGHT = 792;
+    private static final Decimal REPORT_BORDER_BOTTOM = 40;
+    private static final Decimal REPORT_BORDER_HEIGHT = 704;
+    private static final Decimal CONTENT_BOTTOM = 48;
     private static final String AUDIT_DATE_FORMAT = 'MM-dd-yyyy';
     private static final String AUDIT_DATE_TIME_FORMAT = 'MM-dd-yyyy - h:mm:ss a z';
 
@@ -216,7 +219,13 @@ public without sharing class ESignatureAuditReportBuilder {
         if (String.isNotBlank(extraDetail)) {
             addWrappedRows(rows, extraDetail, 78, 'F2', 9, 1);
         }
-        rows.add(new PdfRow().add('', 'F2', 7));
+        rows.add(spacer(8));
+    }
+
+    private static PdfRow spacer(Integer lineHeight) {
+        PdfRow row = new PdfRow().add('', 'F2', 1);
+        row.lineHeight = lineHeight == null ? 8 : lineHeight;
+        return row;
     }
 
     private static void addWrappedRows(List<PdfRow> rows, String text, Integer maxLength, String fontName, Integer fontSize, Integer maxLines) {
@@ -244,13 +253,13 @@ public without sharing class ESignatureAuditReportBuilder {
         List<String> contentLines = new List<String>();
         contentLines.add('q');
         contentLines.add('0.75 w');
-        contentLines.add('60 56 492 688 re');
+        contentLines.add('60 ' + formatPdfNumber(REPORT_BORDER_BOTTOM) + ' 492 ' + formatPdfNumber(REPORT_BORDER_HEIGHT) + ' re');
         contentLines.add('S');
         contentLines.add('Q');
 
         Decimal y = 722;
         for (PdfRow row : rows) {
-            if (y < 76) {
+            if (y < CONTENT_BOTTOM) {
                 break;
             }
             Decimal textX = String.isBlank(row.iconResourceName) ? 82 + row.indent : 108 + row.indent;

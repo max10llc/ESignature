@@ -40,6 +40,8 @@ private class ESignatureAuditReportBuilderTest {
             System.assert(pdfText.contains('Consumer Disclosure Accepted'), 'Report should include the disclosure acceptance row.');
             System.assert(pdfText.contains('Document E-Signed'), 'Report should include the signed event row.');
             System.assert(pdfText.contains('Agreement Completed'), 'Report should include the completion row.');
+            System.assert(pdfText.contains('Secured Document'), 'Report should include the secured document row.');
+            System.assert(pdfText.contains('This completed agreement has been secured.'), 'Report should include the secured document details.');
             System.assert(pdfText.contains('06-23-2026 - 9:00:00 AM CDT'), 'Sent timestamp should use the sender Salesforce user timezone.');
             System.assert(pdfText.contains('Signature Date: 06-23-2026 - 9:10:00 AM CDT'), 'Signature timestamp should use the sender Salesforce user timezone.');
             System.assert(!pdfText.contains('2026-06-23'), 'Audit report should not use yyyy-MM-dd dates.');
