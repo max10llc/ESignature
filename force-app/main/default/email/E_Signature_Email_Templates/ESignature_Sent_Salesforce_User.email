@@ -9,8 +9,6 @@
         <tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;"><p style="Margin:0;"><strong>Signer:</strong> {{Signer}}</p></td></tr>
         <tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;"><p style="Margin:0;"><strong>Status:</strong> Sent</p></td></tr>
         <tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#374151;"><p style="Margin:0;"><strong>Record:</strong> <a href="{{RecordUrl}}" style="color:#0176d3;text-decoration:underline;word-break:break-all;">{{RecordId}}</a></p></td></tr>
-        <tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;"><p style="Margin:0;">This link is unique to the signer and will expire on {{ExpirationDate}}.</p></td></tr>
-        <tr><td style="padding:0 24px 16px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;"><p style="Margin:0;">Signing URL:<br/><a href="{{SigningUrl}}" style="color:#0176d3;text-decoration:underline;word-break:break-all;">{{SigningUrl}}</a></p></td></tr>
       </table>
     </td>
   </tr>
