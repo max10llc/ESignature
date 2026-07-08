@@ -61,20 +61,6 @@
                                 </div>
                             </section>
 
-                            <section class="field-editor sidebar-section">
-                                <div class="sidebar-heading">Selected Field</div>
-                                <template if:true={selectedField}>
-                                    <lightning-input label="Label" value={selectedField.label} onchange={handleSelectedLabelChange}></lightning-input>
-                                    <div class="required-editor">
-                                        <lightning-input type="checkbox" label="Required" checked={selectedField.required} onchange={handleSelectedRequiredChange}></lightning-input>
-                                    </div>
-                                    <div class="selected-help">Drag to move. Use the lower-right handle to resize.</div>
-                                </template>
-                                <template if:false={selectedField}>
-                                    <div class="no-field-selected">Select a field to edit it.</div>
-                                </template>
-                            </section>
-
                             <div class="sidebar-actions">
                                 <lightning-button variant="brand" label="Save" onclick={handleSave} disabled={isSaving}></lightning-button>
                             </div>

@@ -120,6 +120,7 @@
         .prepared-field.type-name,
         .prepared-field.type-date { cursor:default; }
         .prepared-field.type-signature,
+        .prepared-field.type-initials,
         .prepared-field.type-name,
         .prepared-field.type-title,
         .prepared-field.type-date { display:flex; align-items:center; justify-content:center; text-align:center; padding:0 6px; }
@@ -127,14 +128,19 @@
         .prepared-field.type-title .field-label,
         .prepared-field.type-date .field-label { display:none; }
         .prepared-field.type-signature .field-value,
+        .prepared-field.type-initials .field-value,
         .prepared-field.type-name .field-value,
         .prepared-field.type-title .field-value,
         .prepared-field.type-date .field-value { width:100%; display:flex; align-items:center; justify-content:center; line-height:1.2; text-align:center; }
         .prepared-field.type-title .field-value { height:100%; }
         .prepared-field.type-title .prepared-field-input[type=text] { height:100%; text-align:center; }
+        .prepared-field.type-initials .field-value,
         .prepared-field.type-signature .field-value { height:100%; }
+        .prepared-field.type-initials .signature-preview-image,
         .prepared-field.type-signature .signature-preview-image { display:block; max-width:100%; max-height:100%; object-fit:contain; }
+        .prepared-field.type-initials .field-label,
         .prepared-field.type-signature .field-label { position:absolute; top:2px; left:5px; color:#c23934; opacity:1; font-size:13px; line-height:12px; }
+        .prepared-field.type-initials.completed .field-value,
         .prepared-field.type-signature.completed .field-value { font-family:"Brush Script MT","Segoe Script",cursive; font-size:18px; font-weight:500; }
         .prepared-field.required.required-nav-highlight { border-color:#0b66da; background:#e0f2ff; box-shadow:0 0 0 4px rgba(11,102,218,.24); }
         .required-field-nav { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:20; width:min(452px, calc(100% - 24px)); min-height:54px; border-radius:999px; background:#0b66da; color:#fff; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:0 6px; box-shadow:0 8px 22px rgba(15,23,42,.22); }
@@ -161,6 +167,7 @@
         .signature-dialog { width:min(640px, 100%); background:#fff; border-radius:8px; box-shadow:0 22px 60px rgba(0,0,0,.28); padding:20px; }
         .signature-dialog-actions, .signature-mode-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
         .signature-preview { min-height:54px; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; font-family:"Brush Script MT","Segoe Script",cursive; font-size:32px; line-height:1.1; color:#111827; background:#fff; }
+        .signature-preview.initials-preview { min-height:44px; font-size:24px; letter-spacing:.08em; }
         .signature-pad-wrap { border:1px solid #cbd5e1; border-radius:8px; background:#fff; padding:10px; }
         #signatureDialogPad { width:100%; height:180px; border:1px dashed #94a3b8; border-radius:6px; background:#fff; touch-action:none; display:block; }
         .decline-dialog-backdrop { display:none; position:fixed; inset:0; background:rgba(17,24,39,.58); z-index:1200; align-items:center; justify-content:center; padding:18px; }
@@ -1003,6 +1010,41 @@ function canvasToTransparentPng(sourceCanvas) {
     canvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
     return canvas.toDataURL('image/png');
 }
+function cropCanvasToInk(sourceCanvas, padding) {
+    var width = sourceCanvas.width;
+    var height = sourceCanvas.height;
+    var ctx = sourceCanvas.getContext('2d');
+    var imageData = ctx.getImageData(0, 0, width, height);
+    var data = imageData.data;
+    var minX = width;
+    var minY = height;
+    var maxX = -1;
+    var maxY = -1;
+    for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+            var alpha = data[((y * width + x) * 4) + 3];
+            if (alpha > 8) {
+                if (x < minX) { minX = x; }
+                if (x > maxX) { maxX = x; }
+                if (y < minY) { minY = y; }
+                if (y > maxY) { maxY = y; }
+            }
+        }
+    }
+    if (maxX < 0 || maxY < 0) { return sourceCanvas; }
+    var pad = Math.max(0, padding || 0);
+    minX = Math.max(0, minX - pad);
+    minY = Math.max(0, minY - pad);
+    maxX = Math.min(width - 1, maxX + pad);
+    maxY = Math.min(height - 1, maxY + pad);
+    var cropWidth = Math.max(1, maxX - minX + 1);
+    var cropHeight = Math.max(1, maxY - minY + 1);
+    var canvas = document.createElement('canvas');
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
+    canvas.getContext('2d').drawImage(sourceCanvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+    return canvas;
+}
 function typedSignatureToJpeg(value) {
     var canvas = document.createElement('canvas');
     canvas.width = 900;
@@ -1018,6 +1060,24 @@ function typedSignatureToJpeg(value) {
         ctx.font = fontSize + 'px "Brush Script MT", "Segoe Script", cursive';
         fontSize -= 4;
     } while (ctx.measureText(value).width > canvas.width - 80 && fontSize > 38);
+    ctx.fillText(value, canvas.width / 2, canvas.height / 2);
+    return canvas.toDataURL('image/jpeg', 0.92);
+}
+function typedInitialsToJpeg(value) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 360;
+    canvas.height = 180;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#111111';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    var fontSize = 86;
+    do {
+        ctx.font = fontSize + 'px "Brush Script MT", "Segoe Script", cursive';
+        fontSize -= 4;
+    } while (ctx.measureText(value).width > canvas.width - 56 && fontSize > 42);
     ctx.fillText(value, canvas.width / 2, canvas.height / 2);
     return canvas.toDataURL('image/jpeg', 0.92);
 }
@@ -1165,6 +1225,8 @@ function configureSignatureDialogLabels(type) {
     if (clearButton) { clearButton.textContent = isInitials ? 'Clear Initials' : 'Clear Signature'; }
     if (applyButton) { applyButton.textContent = isInitials ? 'Apply Initials' : 'Apply Signature'; }
     if (input) { input.setAttribute('autocomplete', isInitials ? 'off' : 'name'); }
+    var preview = document.getElementById('signatureTypedPreview');
+    if (preview) { preview.className = isInitials ? 'signature-preview initials-preview' : 'signature-preview'; }
 }
 function defaultInitialsForField(field) {
     if (field && field.initialsTextValue) { return field.initialsTextValue; }
@@ -1229,20 +1291,23 @@ function applySignatureDialog() {
     if (signatureDialogMode === 'draw') {
         initSignaturePad();
         if (!signaturePadHasInk) { alert(isInitialsField ? 'Draw your initials before applying them.' : 'Draw your signature before applying it.'); return false; }
-        var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas);
-        var drawnPreviewDataUrl = canvasToTransparentPng(signaturePadCanvas);
         var signerName = getSignatureDialogTypedName();
         if (isInitialsField) {
+            var croppedInitialsCanvas = cropCanvasToInk(signaturePadCanvas, 18);
+            var drawnInitialsDataUrl = canvasToSignatureJpeg(croppedInitialsCanvas);
+            var drawnInitialsPreviewDataUrl = canvasToTransparentPng(croppedInitialsCanvas);
             var drawnInitialsValue = signerName || initialsFromName() || 'Initials';
             savedInitialsValue = drawnInitialsValue;
-            savedInitialsImageDataUrl = drawnDataUrl;
-            savedInitialsPreviewDataUrl = drawnPreviewDataUrl;
-            applyInitialsToField(field, drawnInitialsValue, drawnDataUrl, drawnPreviewDataUrl);
+            savedInitialsImageDataUrl = drawnInitialsDataUrl;
+            savedInitialsPreviewDataUrl = drawnInitialsPreviewDataUrl;
+            applyInitialsToField(field, drawnInitialsValue, drawnInitialsDataUrl, drawnInitialsPreviewDataUrl);
             closeSignatureDialog();
             renderFieldLayer();
             return false;
         }
         if (!signerName) { alert('The signer name is missing from this request.'); return false; }
+        var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas);
+        var drawnPreviewDataUrl = canvasToTransparentPng(signaturePadCanvas);
         setTypedName(signerName);
         field.value = signerName;
         field.signatureImageDataUrl = drawnDataUrl;
@@ -1252,7 +1317,7 @@ function applySignatureDialog() {
         var typedValue = getSignatureDialogTypedName();
         if (!typedValue) { alert(isInitialsField ? 'Type your initials before applying them.' : 'The signer name is missing from this request.'); return false; }
         if (isInitialsField) {
-            var typedInitialsDataUrl = typedSignatureToJpeg(typedValue);
+            var typedInitialsDataUrl = typedInitialsToJpeg(typedValue);
             savedInitialsValue = typedValue;
             savedInitialsImageDataUrl = typedInitialsDataUrl;
             savedInitialsPreviewDataUrl = typedInitialsDataUrl;

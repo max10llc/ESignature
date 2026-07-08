@@ -1,6 +1,7 @@
 public without sharing class ESignatureOverlayBuilder {
     private static final Decimal DEFAULT_PAGE_WIDTH = 612;
     private static final Decimal DEFAULT_PAGE_HEIGHT = 792;
+    private static final Decimal INITIALS_IMAGE_SCALE = 1.30;
 
     private class SignatureImageResource {
         public String hexData;
@@ -260,7 +261,7 @@ public without sharing class ESignatureOverlayBuilder {
             if (isFieldType(typeValue, 'Initials')) {
                 SignatureImageResource initialsImage = initialsImagesByField == null ? null : initialsImagesByField.get(field.Id);
                 if (initialsImage != null) {
-                    lines.add(imageDraw(initialsImage, x, y, width, height));
+                    lines.add(imageDraw(initialsImage, x, y, width, height, INITIALS_IMAGE_SCALE));
                     continue;
                 }
             }
@@ -341,6 +342,10 @@ public without sharing class ESignatureOverlayBuilder {
     }
 
     private static String imageDraw(SignatureImageResource image, Decimal x, Decimal y, Decimal width, Decimal height) {
+        return imageDraw(image, x, y, width, height, 1);
+    }
+
+    private static String imageDraw(SignatureImageResource image, Decimal x, Decimal y, Decimal width, Decimal height, Decimal scale) {
         Integer safeImageWidth = image.width == null || image.width < 1 ? 1 : image.width;
         Integer safeImageHeight = image.height == null || image.height < 1 ? 1 : image.height;
         Decimal imageWidth = Decimal.valueOf(String.valueOf(safeImageWidth));
@@ -352,6 +357,9 @@ public without sharing class ESignatureOverlayBuilder {
             drawHeight = height;
             drawWidth = height * imageRatio;
         }
+        Decimal safeScale = scale == null || scale <= 0 ? 1 : scale;
+        drawWidth *= safeScale;
+        drawHeight *= safeScale;
         Decimal drawX = x + ((width - drawWidth) / 2);
         Decimal drawY = y + ((height - drawHeight) / 2);
         return 'q /SignatureMultiply gs ' + fmt(drawWidth) + ' 0 0 ' + fmt(drawHeight) + ' ' + fmt(drawX) + ' ' + fmt(drawY) + ' cm /' + image.pdfName + ' Do Q';

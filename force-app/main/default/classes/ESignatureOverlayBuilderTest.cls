@@ -104,6 +104,7 @@ private class ESignatureOverlayBuilderTest {
         String pdfText = EncodingUtil.base64Decode((String) payloads[0].get('overlayPdfBase64')).toString();
         System.assert(pdfText.contains('/Subtype /Image'), 'Overlay should embed the captured initials image.');
         System.assert(pdfText.contains('/Init1 Do'), 'Initials field should draw its own embedded image.');
+        System.assert(pdfText.contains('28.6 0 0 28.6'), 'Initials images should render 30% larger than the fitted image size.');
         System.assert(!pdfText.contains('data:image/jpeg;base64'), 'Initials image data should not be rendered as visible text.');
     }
 
