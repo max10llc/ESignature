@@ -420,6 +420,53 @@ public without sharing class ESignatureUtil {
         }
     }
 
+    public static String parentRecordName(String parentRecordId, String parentObjectApiName) {
+        Id parentId = safeId(parentRecordId);
+        if (parentId == null) {
+            return String.isBlank(parentRecordId) ? '' : parentRecordId.trim();
+        }
+
+        try {
+            Schema.SObjectType objectType = parentId.getSObjectType();
+            if (objectType == null && !String.isBlank(parentObjectApiName)) {
+                objectType = Schema.getGlobalDescribe().get(parentObjectApiName.trim());
+            }
+            if (objectType == null) {
+                return String.valueOf(parentId);
+            }
+
+            Schema.DescribeSObjectResult describe = objectType.getDescribe();
+            Map<String, Schema.SObjectField> fields = describe.fields.getMap();
+            String nameField = null;
+            for (String fieldName : fields.keySet()) {
+                Schema.DescribeFieldResult fieldDescribe = fields.get(fieldName).getDescribe();
+                if (fieldDescribe.isNameField()) {
+                    nameField = fieldDescribe.getName();
+                    break;
+                }
+            }
+            if (String.isBlank(nameField) && fields.containsKey('Name')) {
+                nameField = 'Name';
+            }
+            if (String.isBlank(nameField)) {
+                return String.valueOf(parentId);
+            }
+
+            List<SObject> rows = Database.query(
+                'SELECT ' + nameField +
+                ' FROM ' + describe.getName() +
+                ' WHERE Id = :parentId LIMIT 1'
+            );
+            if (rows.isEmpty()) {
+                return String.valueOf(parentId);
+            }
+            String recordName = stringValue(rows[0].get(nameField));
+            return String.isBlank(recordName) ? String.valueOf(parentId) : recordName;
+        } catch (Exception ignore) {
+            return String.valueOf(parentId);
+        }
+    }
+
     public static String normalizeRecordIdString(String value) {
         if (String.isBlank(value)) {
             return null;

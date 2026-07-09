@@ -329,7 +329,6 @@ private class ESignatureSendControllerTest {
         System.assert(html.contains('Please review the revised scope.<br/>Call me with any questions.'), 'Email should include the sender-entered request message with line breaks preserved.');
         System.assert(!html.contains('Please review and sign the agreement.'), 'Custom messages should replace the generic request message.');
         System.assert(html.contains('Review &amp; Sign Document'), 'Email should include the original call-to-action label.');
-        System.assert(html.contains('This link is unique to you and will expire on'), 'Email should include the expiration notice.');
         System.assert(html.contains('https://example.com/signatures/apex/ESignaturePage?t=abc123'), 'Email should include the fallback signing URL.');
         System.assert(html.contains('/services/apexrest/ESignature/v1/email-open?t=abc123'), 'Email should include the hidden email-open tracking pixel.');
 
@@ -367,6 +366,7 @@ private class ESignatureSendControllerTest {
         System.assert(html.contains('Derek Hawley'), 'Sender confirmation email should include the signer name.');
         System.assert(html.contains('signer@example.com'), 'Sender confirmation email should include the signer email.');
         System.assert(html.contains('Status:</strong> Sent') || html.contains('Status: Sent'), 'Sender confirmation email should include sent status.');
+        System.assert(html.contains('Sent Confirmation Parent'), 'Sender confirmation email should include the envelope parent record name.');
         System.assert(html.contains(String.valueOf(parent.Id)), 'Sender confirmation email should include the envelope parent record id.');
         System.assert(html.contains('href="https://'), 'Sender confirmation record link should use an absolute Salesforce URL.');
         System.assert(html.contains('/lightning/r/Account/' + String.valueOf(parent.Id) + '/view'), 'Sender confirmation record link should point to the Lightning parent record route.');

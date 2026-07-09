@@ -681,6 +681,7 @@ public without sharing class ESignatureCommandProcessor {
         String userAgent = ESignatureUtil.stringValue(payload == null ? null : payload.get('userAgent'));
         String recordId = env == null ? null : env.Parent_Record_Id__c;
         String recordObject = env == null ? null : env.Parent_Object_Api_Name__c;
+        String recordName = ESignatureUtil.parentRecordName(recordId, recordObject);
         String recordUrl = recordUrl(recordId, recordObject);
         String safeRecordUrl = ESignatureUtil.escapeHtml(recordUrl);
         String safeRecordRow = String.isBlank(recordUrl)
@@ -714,6 +715,7 @@ public without sharing class ESignatureCommandProcessor {
                 'IPAddress' => ipAddress,
                 'UserAgent' => userAgent,
                 'RecordId' => recordId,
+                'RecordName' => recordName,
                 'RecordUrl' => recordUrl,
                 'Record' => recordUrl,
                 'RecordObject' => recordObject
@@ -730,6 +732,7 @@ public without sharing class ESignatureCommandProcessor {
                 'IPAddress' => ESignatureUtil.escapeHtml(ipAddress),
                 'UserAgent' => ESignatureUtil.escapeHtml(userAgent),
                 'RecordId' => ESignatureUtil.escapeHtml(recordId),
+                'RecordName' => ESignatureUtil.escapeHtml(recordName),
                 'RecordUrl' => safeRecordUrl,
                 'Record' => safeRecordUrl,
                 'RecordObject' => ESignatureUtil.escapeHtml(recordObject)

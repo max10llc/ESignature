@@ -10,7 +10,7 @@
 Document: {{DocumentTitle}}
 Signer: {{Signer}}
 Status: Sent
-Record: {{RecordId}}
+Record: {{RecordName}}
 Record URL:
 {{RecordUrl}}
 

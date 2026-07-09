@@ -607,12 +607,15 @@ public with sharing class ESignatureSendController {
         String expirationDate = formatDateForEmail(env == null || env.Expires_At__c == null ? null : env.Expires_At__c);
         String recordId = env == null ? '' : env.Parent_Record_Id__c;
         String recordObject = env == null ? '' : env.Parent_Object_Api_Name__c;
+        String recordName = ESignatureUtil.parentRecordName(recordId, recordObject);
         String recordUrl = recordUrl(recordId, recordObject);
         String safeRecordId = ESignatureUtil.escapeHtml(recordId);
+        String safeRecordName = ESignatureUtil.escapeHtml(recordName);
         String safeRecordUrl = ESignatureUtil.escapeHtml(recordUrl);
+        String safeRecordLabel = String.isBlank(safeRecordName) ? safeRecordId : safeRecordName;
         String recordRow = String.isBlank(recordId)
             ? ''
-            : ESignatureUtil.emailParagraphRow('<strong>Record:</strong> <a href="' + safeRecordUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeRecordId + '</a>');
+            : ESignatureUtil.emailParagraphRow('<strong>Record:</strong> <a href="' + safeRecordUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeRecordLabel + '</a>');
 
         String fallbackSubject = 'Signature request sent: ' + resolvedDocumentTitle;
         String fallbackHtml = ESignatureUtil.emailShell(
@@ -634,6 +637,7 @@ public with sharing class ESignatureSendController {
                 'Signer' => signerText,
                 'DocumentTitle' => resolvedDocumentTitle,
                 'RecordId' => recordId,
+                'RecordName' => recordName,
                 'Record' => recordUrl,
                 'RecordUrl' => recordUrl,
                 'RecordObject' => recordObject,
@@ -647,6 +651,7 @@ public with sharing class ESignatureSendController {
                 'Signer' => signer,
                 'DocumentTitle' => safeDocumentTitle,
                 'RecordId' => safeRecordId,
+                'RecordName' => safeRecordName,
                 'Record' => safeRecordUrl,
                 'RecordUrl' => safeRecordUrl,
                 'RecordObject' => ESignatureUtil.escapeHtml(recordObject),

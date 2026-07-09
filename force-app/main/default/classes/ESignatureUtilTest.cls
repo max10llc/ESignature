@@ -51,6 +51,21 @@ private class ESignatureUtilTest {
     }
 
     @IsTest
+    static void parentRecordNameResolvesOpportunityName() {
+        Opportunity parent = new Opportunity(
+            Name = 'Record Name Token Opportunity',
+            StageName = 'Prospecting',
+            CloseDate = Date.today().addDays(30)
+        );
+        insert parent;
+
+        System.assertEquals(
+            'Record Name Token Opportunity',
+            ESignatureUtil.parentRecordName(String.valueOf(parent.Id), 'Opportunity')
+        );
+    }
+
+    @IsTest
     static void sourceFileHelpersCacheAndStampStatus() {
         Account parent = new Account(Name = 'Util Source Parent');
         insert parent;
