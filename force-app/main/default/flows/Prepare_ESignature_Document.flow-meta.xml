@@ -8,7 +8,7 @@
         <actionName>ESignatureSendEnvelopeAction</actionName>
         <actionType>apex</actionType>
         <connector>
-            <targetReference>Return_to_Record</targetReference>
+            <targetReference>Success_or_Failue</targetReference>
         </connector>
         <flowTransactionModel>Automatic</flowTransactionModel>
         <inputParameters>
@@ -71,8 +71,8 @@
     <apiVersion>67.0</apiVersion>
     <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
     <decisions>
-        <name>Return_to_Record</name>
-        <label>Return to Record?</label>
+        <name>Success_or_Failue</name>
+        <label>Success or Failue</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <defaultConnector>
@@ -80,7 +80,7 @@
         </defaultConnector>
         <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
         <rules>
-            <name>E_Signature_Sent</name>
+            <name>Success</name>
             <conditionLogic>and</conditionLogic>
             <conditions>
                 <leftValueReference>Send_E_Signature_Envelope.success</leftValueReference>
@@ -92,7 +92,7 @@
             <connector>
                 <targetReference>screen3</targetReference>
             </connector>
-            <label>E-Signature Sent</label>
+            <label>Success</label>
         </rules>
     </decisions>
     <decisions>
@@ -653,8 +653,48 @@ Null
                 </width>
             </styleProperties>
         </fields>
+        <fields>
+            <name>AutoStartButton</name>
+            <extensionName>navbutton:NavigationButton</extensionName>
+            <fieldType>ComponentInstance</fieldType>
+            <inputParameters>
+                <name>AutoStart_Delay</name>
+                <value>
+                    <numberValue>2.0</numberValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>AutoStart</name>
+                <value>
+                    <booleanValue>true</booleanValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>FlowAction</name>
+                <value>
+                    <stringValue>FINISH</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>NavigateToUrl</name>
+                <value>
+                    <stringValue>/{!recordId}</stringValue>
+                </value>
+            </inputParameters>
+            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+            <isRequired>true</isRequired>
+            <storeOutputAutomatically>true</storeOutputAutomatically>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
         <nextOrFinishButtonLabel>Return to Record</nextOrFinishButtonLabel>
-        <showFooter>true</showFooter>
+        <showFooter>false</showFooter>
         <showHeader>false</showHeader>
     </screens>
     <screens>
