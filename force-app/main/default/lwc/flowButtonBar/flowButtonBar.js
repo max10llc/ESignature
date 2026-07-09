@@ -48,6 +48,7 @@ export default class FlowButtonBar extends LightningElement {
     @api previewMode;   // Reserved for future use
 
     @api cssString; // add style for buttons
+    @api disabledMode; // Backward-compatible input used by older flows.
 
     @api
     get enableButtons() {
@@ -153,7 +154,7 @@ export default class FlowButtonBar extends LightningElement {
 
     /* PRIVATE GETTERS AND SETTERS */
     get isDisabled() {
-        return !this.toBoolean(this.enableButtons);
+        return this.toBoolean(this.disabledMode) || !this.toBoolean(this.enableButtons);
     }
 
     get isVertical() { return this.orientation === VERTICAL; }

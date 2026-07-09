@@ -1,45 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
-        <members>ESignatureCancelEnvelopeAction</members>
-        <members>ESignatureCancelEnvelopeActionTest</members>
-        <members>ESignatureAuditReportBuilder</members>
-        <members>ESignatureAuditReportBuilderTest</members>
-        <members>ESignatureEmailOpenResource</members>
-        <members>ESignatureEmailOpenResourceTest</members>
-        <members>ESignatureEnvelopeCancellationService</members>
-        <members>ESignatureFinalizeQueueable</members>
-        <members>ESignatureFinalizeQueueableTest</members>
-        <members>ESignatureFinalizerCallbackResource</members>
-        <members>ESignatureCallbackResourceTest</members>
-        <members>ESignatureFinalizerService</members>
-        <members>ESignatureCommandProcessor</members>
-        <members>ESignatureCommandTriggerTest</members>
-        <members>ESignatureOverlayBuilder</members>
-        <members>ESignatureOverlayBuilderTest</members>
-        <members>ESignaturePageController</members>
-        <members>ESignaturePageControllerTest</members>
-        <members>ESignaturePdfResource</members>
-        <members>ESignaturePdfResourceTest</members>
-        <members>ESignaturePrepareController</members>
-        <members>ESignaturePrepareControllerTest</members>
-        <members>ESignatureSendEnvelopeAction</members>
-        <members>ESignatureSendEnvelopeActionTest</members>
-        <members>ESignatureSendController</members>
-        <members>ESignatureSendControllerTest</members>
-        <members>ESignatureUtil</members>
-        <members>ESignatureUtilTest</members>
-        <name>ApexClass</name>
-    </types>
-    <types>
-        <members>ESignatureCommandTrigger</members>
-        <name>ApexTrigger</name>
-    </types>
-    <types>
-        <members>ESignaturePage</members>
-        <name>ApexPage</name>
-    </types>
-    <types>
         <members>ESignature_Audit_Event__c</members>
         <members>ESignature_Command__e</members>
         <members>ESignature_Envelope__c</members>
@@ -148,75 +109,9 @@
         <name>CustomMetadata</name>
     </types>
     <types>
-        <members>E_Signature_Email_Templates</members>
-        <name>EmailFolder</name>
-    </types>
-    <types>
-        <members>E_Signature_Email_Templates/ESignature_Completed_Salesforce_User</members>
-        <members>E_Signature_Email_Templates/ESignature_Completed_Signer</members>
-        <members>E_Signature_Email_Templates/ESignature_Canceled</members>
-        <members>E_Signature_Email_Templates/ESignature_Declined</members>
-        <members>E_Signature_Email_Templates/ESignature_Delegate_Signer_Request</members>
-        <members>E_Signature_Email_Templates/ESignature_Original_Signer_Delegated</members>
-        <members>E_Signature_Email_Templates/ESignature_Salesforce_User_Document_Opened</members>
-        <members>E_Signature_Email_Templates/ESignature_Salesforce_User_Delegated</members>
-        <members>E_Signature_Email_Templates/ESignature_Salesforce_User_Email_Opened</members>
-        <members>E_Signature_Email_Templates/ESignature_Sent_Salesforce_User</members>
-        <members>E_Signature_Email_Templates/ESignature_Signature_Request</members>
-        <name>EmailTemplate</name>
-    </types>
-    <types>
-        <members>flowButtonBar</members>
-        <members>flowButtonBarCPE</members>
-        <members>eSignaturePrepareDocument</members>
-        <members>eSignatureSendEnvelope</members>
-        <name>LightningComponentBundle</name>
-    </types>
-    <types>
         <members>ESignature_Package_Guest_User</members>
         <members>ESignature_Package_User</members>
         <name>PermissionSet</name>
     </types>
-    <types>
-        <members>Clear_Document_Buton</members>
-        <members>Decline_To_Sign_Button</members>
-        <members>Delegate_Signing_Button</members>
-        <members>Download_Document_Button</members>
-        <members>Document_Icon</members>
-        <members>Document_Sent_Icon</members>
-        <members>Document_Signed_Icon</members>
-        <members>Document_Completed_Icon</members>
-        <members>Document_Locked_Icon</members>
-        <members>Kaizon_Solutions_Logo</members>
-        <members>Options_Button</members>
-        <members>ESignature_PdfJs</members>
-        <name>StaticResource</name>
-    </types>
-    <types>
-        <members>ESignature_Envelope__c</members>
-        <members>ESignature_Field__c</members>
-        <name>SharingRules</name>
-    </types>
-    <types>
-        <members>ESignature_Audit_Event__c-E-Signature Audit Event Layout</members>
-        <members>ESignature_Envelope__c-E-Signature Envelope Layout</members>
-        <members>ESignature_Field__c-E-Signature Field Layout</members>
-        <members>Opportunity-Special Service</members>
-        <members>Opportunity-Monthly Service</members>
-        <name>Layout</name>
-    </types>
-    <types>
-        <members>Determine_Object_From_Record_Id_Subflow</members>
-        <members>E_Signature_Cancel_Open_Envelopes</members>
-        <members>Prepare_ESignature_Document</members>
-        <name>Flow</name>
-    </types>
-    <types>
-        <members>Monthly_Service_Opportunity_Record_Page</members>
-        <members>Special_Service_Opportunity</members>
-        <name>FlexiPage</name>
-    </types>
     <version>67.0</version>
 </Package>
-
-

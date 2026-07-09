@@ -23,6 +23,7 @@
                 <property name="required" label="Required" type="String" role="inputOnly"></property>
                 <property name="multiselect" label="Multi-Select" type="String" role="inputOnly"></property>
                 <property name="defaultValue" label="Default Value" type="String" role="inputOnly"></property>
+                <property name="disabledMode" label="Disable Buttons" type="Boolean" description="When true, users can view but cannot click the buttons." role="inputOnly"></property>
                 <property name="enableButtons" label="Enable Buttons" type="Boolean" description="Buttons are clickable only when this value is true." default="true" role="inputOnly"></property>
 
                 <property name="value" label="Value" type="String"></property>

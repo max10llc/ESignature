@@ -154,12 +154,24 @@ public without sharing class ESignatureEnvelopeCancellationService {
         String safeSigner = ESignatureUtil.escapeHtml(signerName)
             + (String.isBlank(signerEmail) ? '' : ' (' + ESignatureUtil.escapeHtml(signerEmail) + ')');
         String signerText = displayNameWithEmailText(signerName, signerEmail);
+        String recordId = env == null ? '' : env.Parent_Record_Id__c;
+        String recordObject = env == null ? '' : env.Parent_Object_Api_Name__c;
+        String recordName = ESignatureUtil.parentRecordName(recordId, recordObject);
+        String recordUrl = recordUrl(recordId, recordObject);
+        String safeRecordId = ESignatureUtil.escapeHtml(recordId);
+        String safeRecordName = ESignatureUtil.escapeHtml(recordName);
+        String safeRecordUrl = ESignatureUtil.escapeHtml(recordUrl);
+        String safeRecordLabel = String.isBlank(safeRecordName) ? safeRecordId : safeRecordName;
+        String recordRow = String.isBlank(recordId)
+            ? ''
+            : ESignatureUtil.emailParagraphRow('<strong>Record:</strong> <a href="' + safeRecordUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeRecordLabel + '</a>');
         String fallbackSubject = 'Signature request canceled: ' + documentTitle;
         String fallbackHtml = ESignatureUtil.emailShell(
             ESignatureUtil.emailParagraphRow('The signature request was canceled.')
             + ESignatureUtil.emailDocumentBlockRow('Document', ESignatureUtil.escapeHtml(documentTitle), '#b91c1c')
             + ESignatureUtil.emailParagraphRow('<strong>Signer:</strong> ' + safeSigner)
             + ESignatureUtil.emailParagraphRow('<strong>Reason:</strong><br/>' + escapedReason)
+            + recordRow
             + ESignatureUtil.emailSubtleRow('No further action is available from the canceled signing link. A new signature request can be sent from Salesforce if needed.')
         );
         return ESignatureUtil.renderEmailTemplate(
@@ -171,7 +183,12 @@ public without sharing class ESignatureEnvelopeCancellationService {
                 'SignerEmail' => signerEmail,
                 'Signer' => signerText,
                 'DocumentTitle' => documentTitle,
-                'CancellationReason' => cancellationReason
+                'CancellationReason' => cancellationReason,
+                'RecordId' => recordId,
+                'RecordName' => recordName,
+                'Record' => recordUrl,
+                'RecordUrl' => recordUrl,
+                'RecordObject' => recordObject
             },
             new Map<String, String>{
                 'LogoHtml' => ESignatureUtil.emailLogoHtml(),
@@ -179,7 +196,12 @@ public without sharing class ESignatureEnvelopeCancellationService {
                 'SignerEmail' => ESignatureUtil.escapeHtml(signerEmail),
                 'Signer' => safeSigner,
                 'DocumentTitle' => ESignatureUtil.escapeHtml(documentTitle),
-                'CancellationReasonHtml' => escapedReason
+                'CancellationReasonHtml' => escapedReason,
+                'RecordId' => safeRecordId,
+                'RecordName' => safeRecordName,
+                'Record' => safeRecordUrl,
+                'RecordUrl' => safeRecordUrl,
+                'RecordObject' => ESignatureUtil.escapeHtml(recordObject)
             }
         );
     }
@@ -187,6 +209,18 @@ public without sharing class ESignatureEnvelopeCancellationService {
     private static String displayNameWithEmailText(String name, String email) {
         String safeName = String.isBlank(name) ? 'The signer' : name.trim();
         return String.isBlank(email) ? safeName : safeName + ' (' + email.trim() + ')';
+    }
+
+    private static String recordUrl(String recordId, String recordObject) {
+        if (String.isBlank(recordId)) {
+            return '';
+        }
+        String baseUrl = URL.getOrgDomainUrl().toExternalForm();
+        String root = baseUrl.endsWith('/') ? baseUrl.left(baseUrl.length() - 1) : baseUrl;
+        if (String.isBlank(recordObject)) {
+            return root + '/' + recordId;
+        }
+        return root + '/lightning/r/' + EncodingUtil.urlEncode(recordObject.trim(), 'UTF-8') + '/' + recordId.trim() + '/view';
     }
 
     private static String normalizedStatus(String status) {

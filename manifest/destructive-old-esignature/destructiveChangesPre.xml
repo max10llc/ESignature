@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>ESignatureFinalizeTrigger</members>
+        <name>ApexTrigger</name>
+    </types>
+    <types>
+        <members>ESignatureAdditionalCoverageTest</members>
+        <members>ESignatureAdobePollQueueable</members>
+        <members>ESignatureAdobePollSchedulable</members>
+        <members>ESignatureAdobeService</members>
+        <members>ESignatureAdobeStartQueueable</members>
+        <members>ESignatureCertificateController</members>
+        <members>ESignatureControllerTest</members>
+        <members>ESignatureDocGenPreviewQueueable</members>
+        <members>ESignatureDocGenPreviewSchedulable</members>
+        <members>ESignatureEmailOpenTrackingController</members>
+        <members>ESignatureGraphService</members>
+        <members>ESignaturePublicController</members>
+        <members>ESignatureReminderScheduler</members>
+        <members>ESignatureSecurity</members>
+        <members>ESignatureService</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>ESignatureCertificate</members>
+        <members>ESignatureEmailOpenTracking</members>
+        <name>ApexPage</name>
+    </types>
+    <types>
+        <members>eSignatureSender</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    <types>
+        <members>E_Signature_Setting.Default</members>
+        <name>CustomMetadata</name>
+    </types>
+    <types>
+        <members>E_Signature_Audit__c</members>
+        <members>E_Signature_Audit_Event__c</members>
+        <members>E_Signature_Finalize__e</members>
+        <members>E_Signature_Option__c</members>
+        <members>E_Signature_Request__c</members>
+        <members>E_Signature_Setting__mdt</members>
+        <members>E_Signature_Signer__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>ContentVersion.E_Signature_Document__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>E_Signature_Request__c</members>
+        <members>E_Signature_Audit__c</members>
+        <members>E_Signature_Signer__c</members>
+        <name>CustomTab</name>
+    </types>
+    <types>
+        <members>E_Signature_Signer__c-E-Signature Signer Layout</members>
+        <members>E_Signature_Setting__mdt-E-Signature Setting Layout</members>
+        <members>E_Signature_Option__c-E-Signature Option Layout</members>
+        <members>E_Signature_Request__c-E-Signature Request Layout</members>
+        <members>E_Signature_Audit__c-E-Signature Audit Layout</members>
+        <members>E_Signature_Audit_Event__c-E-Signature Audit Event Layout</members>
+        <name>Layout</name>
+    </types>
+    <types>
+        <members>E_Signature_Admin</members>
+        <members>E_Signature_Guest_Signer</members>
+        <members>E_Signature_User</members>
+        <name>PermissionSet</name>
+    </types>
+    <types>
+        <members>Adobe_PDF_S3_US</members>
+        <members>Adobe_PDF_Services_UE1</members>
+        <members>Adobe_PDF_Services</members>
+        <name>RemoteSiteSetting</name>
+    </types>
+    <version>67.0</version>
+</Package>

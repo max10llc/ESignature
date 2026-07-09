@@ -109,9 +109,6 @@
                             </visibilityRule>
                         </valueListItems>
                         <valueListItems>
-                            <value>Opportunity.Power_Automate</value>
-                        </valueListItems>
-                        <valueListItems>
                             <value>Opportunity.Create_Contract</value>
                             <visibilityRule>
                                 <criteria>
