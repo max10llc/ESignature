@@ -154,7 +154,7 @@ public without sharing class ESignaturePageController {
     }
 
     public String getSignerIntroText() {
-        return 'e-signature request from ' + getSenderDisplayName();
+        return 'E-signature request from ' + getSenderDisplayName();
     }
 
     public String getEnvelopeMessage() {
