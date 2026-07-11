@@ -287,6 +287,17 @@ public without sharing class ESignatureFinalizerService {
         String signer = ESignatureUtil.escapeHtml(signerName)
             + (String.isBlank(signerEmail) ? '' : ' (' + ESignatureUtil.escapeHtml(signerEmail) + ')');
         String signerText = signerName + (String.isBlank(signerEmail) ? '' : ' (' + signerEmail + ')');
+        String recordId = env == null ? '' : env.Parent_Record_Id__c;
+        String recordObject = env == null ? '' : env.Parent_Object_Api_Name__c;
+        String recordName = ESignatureUtil.parentRecordName(recordId, recordObject);
+        String recordUrl = recordUrl(recordId, recordObject);
+        String safeRecordId = ESignatureUtil.escapeHtml(recordId);
+        String safeRecordName = ESignatureUtil.escapeHtml(recordName);
+        String safeRecordUrl = ESignatureUtil.escapeHtml(recordUrl);
+        String safeRecordLabel = String.isBlank(safeRecordName) ? safeRecordId : safeRecordName;
+        String recordRow = String.isBlank(recordId)
+            ? ''
+            : ESignatureUtil.emailParagraphRow('<strong>Record:</strong> <a href="' + safeRecordUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeRecordLabel + '</a>');
 
         String fallbackSubject = 'Signature request completed: ' + documentTitle;
         String fallbackHtml = ESignatureUtil.emailShell(
@@ -294,6 +305,7 @@ public without sharing class ESignatureFinalizerService {
             + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
             + ESignatureUtil.emailParagraphRow('<strong>Signer:</strong> ' + signer)
             + ESignatureUtil.emailParagraphRow('<strong>Status:</strong> Completed')
+            + recordRow
             + ESignatureUtil.emailParagraphRow(ESignatureUtil.escapeHtml(message))
             + ESignatureUtil.emailSubtleRow('The completed signed PDF has been attached in Salesforce.')
         );
@@ -306,7 +318,12 @@ public without sharing class ESignatureFinalizerService {
                 'SignerEmail' => signerEmail,
                 'Signer' => signerText,
                 'DocumentTitle' => documentTitle,
-                'CompletionMessage' => message
+                'CompletionMessage' => message,
+                'RecordId' => recordId,
+                'RecordName' => recordName,
+                'Record' => recordUrl,
+                'RecordUrl' => recordUrl,
+                'RecordObject' => recordObject
             },
             new Map<String, String>{
                 'LogoHtml' => ESignatureUtil.emailLogoHtml(),
@@ -314,9 +331,26 @@ public without sharing class ESignatureFinalizerService {
                 'SignerEmail' => ESignatureUtil.escapeHtml(signerEmail),
                 'Signer' => signer,
                 'DocumentTitle' => safeDocumentTitle,
-                'CompletionMessage' => ESignatureUtil.escapeHtml(message)
+                'CompletionMessage' => ESignatureUtil.escapeHtml(message),
+                'RecordId' => safeRecordId,
+                'RecordName' => safeRecordName,
+                'Record' => safeRecordUrl,
+                'RecordUrl' => safeRecordUrl,
+                'RecordObject' => ESignatureUtil.escapeHtml(recordObject)
             }
         );
+    }
+
+    private static String recordUrl(String recordId, String recordObject) {
+        if (String.isBlank(recordId)) {
+            return '';
+        }
+        String baseUrl = URL.getOrgDomainUrl().toExternalForm();
+        String root = baseUrl.endsWith('/') ? baseUrl.left(baseUrl.length() - 1) : baseUrl;
+        if (String.isBlank(recordObject)) {
+            return root + '/' + recordId;
+        }
+        return root + '/lightning/r/' + EncodingUtil.urlEncode(recordObject.trim(), 'UTF-8') + '/' + recordId.trim() + '/view';
     }
 
     private static String completionMessage(ESignature_Envelope__c env) {

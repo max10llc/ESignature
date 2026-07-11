@@ -171,6 +171,13 @@ private class ESignatureFinalizeQueueableTest {
 
     @IsTest
     static void completionNotificationIdentifiesDocumentAndSigner() {
+        Opportunity parent = new Opportunity(
+            Name = 'Completed Email Record',
+            StageName = 'Prospecting',
+            CloseDate = Date.today().addDays(30)
+        );
+        insert parent;
+
         Blob finalPdfBody = Blob.valueOf('%PDF-1.4\n%completed\n%%EOF');
         ContentVersion finalFile = new ContentVersion(
             Title = 'Completed Agreement Signed',
@@ -190,6 +197,8 @@ private class ESignatureFinalizeQueueableTest {
             Sender_User__c = UserInfo.getUserId(),
             Source_File_Title__c = 'Completed Agreement',
             Completion_Message__c = 'Final signed PDF was created.',
+            Parent_Record_Id__c = String.valueOf(parent.Id),
+            Parent_Object_Api_Name__c = 'Opportunity',
             Final_ContentVersion_Id__c = String.valueOf(finalFile.Id),
             Final_ContentDocument_Id__c = String.valueOf(finalFile.ContentDocumentId)
         );
@@ -215,6 +224,13 @@ private class ESignatureFinalizeQueueableTest {
         System.assert(salesforceUserHtml.contains('/resource/Kaizon_Solutions_Logo'), 'Salesforce user completion email should render the configured company logo.');
         System.assert(salesforceUserHtml.contains('Completed Agreement'), 'Salesforce user completion email should identify the document.');
         System.assert(salesforceUserHtml.contains('Completed Signer'), 'Salesforce user completion email should identify the signer.');
+        System.assert(salesforceUserHtml.contains('Completed Email Record'), 'Salesforce user completion email should render the parent record name.');
+        System.assert(
+            salesforceUserHtml.contains('/lightning/r/Opportunity/' + parent.Id + '/view'),
+            'Salesforce user completion email should link directly to the parent record.'
+        );
+        System.assert(!salesforceUserHtml.contains('{{RecordName}}'), 'RecordName token should be replaced.');
+        System.assert(!salesforceUserHtml.contains('{{RecordUrl}}'), 'RecordUrl token should be replaced.');
     }
 
     private static Id createEnvelopeWithSourceAndSignatureField() {
