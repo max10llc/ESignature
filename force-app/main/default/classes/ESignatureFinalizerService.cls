@@ -1,7 +1,7 @@
 public without sharing class ESignatureFinalizerService {
     public static ESignature_Envelope__c loadEnvelope(Id envelopeId) {
         return [
-            SELECT Id, Name, Status__c, Parent_Record_Id__c,
+            SELECT Id, Name, Status__c, Parent_Record_Id__c, Parent_Object_Api_Name__c,
                    Signer_Name__c, Signer_Email__c, Sender_User__c,
                    Final_ContentDocument_Id__c, Final_ContentVersion_Id__c,
                    Completion_Message__c, Error_Message__c, Finalizer_Request_Id__c,

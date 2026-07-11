@@ -132,6 +132,7 @@ private class ESignatureFinalizeQueueableTest {
         ESignature_Envelope__c env = new ESignature_Envelope__c(
             Status__c = 'Sent',
             Parent_Record_Id__c = String.valueOf(parent.Id),
+            Parent_Object_Api_Name__c = 'Account',
             Signer_Email__c = 'signer@example.com',
             Source_ContentVersion_Id__c = String.valueOf(source.Id),
             Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
@@ -160,6 +161,14 @@ private class ESignatureFinalizeQueueableTest {
         finalFile = [SELECT ESignature_Status__c FROM ContentVersion WHERE Id = :finalFile.Id];
         System.assertEquals('Completed', source.ESignature_Status__c);
         System.assertEquals('Completed', finalFile.ESignature_Status__c);
+        ESignature_Envelope__c emailEnvelope = ESignatureFinalizerService.loadEnvelope(env.Id);
+        System.assertEquals('Account', emailEnvelope.Parent_Object_Api_Name__c, 'Finalizer email query should include the parent object API name.');
+        String completionEmailHtml = ESignatureFinalizerService.buildSalesforceUserCompletionEmailHtml(emailEnvelope);
+        System.assert(completionEmailHtml.contains('Finalizer Service Parent'), 'Completion email should render the parent record name from a loaded envelope.');
+        System.assert(
+            completionEmailHtml.contains('/lightning/r/Account/' + parent.Id + '/view'),
+            'Completion email should link directly to the parent record from a loaded envelope.'
+        );
         System.assertEquals('Signed Document', ESignatureFinalizerService.titleFromFileName('Signed Document.pdf'));
         System.assertEquals('Signed Document.pdf', ESignatureFinalizerService.resolveFileName(env, 'Signed Document'));
 
