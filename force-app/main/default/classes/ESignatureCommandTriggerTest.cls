@@ -342,6 +342,7 @@ private class ESignatureCommandTriggerTest {
         System.assert(delegateHtml.contains('<table role="presentation" width="100%"'), 'Delegate email should use the branded shell.');
         System.assert(delegateHtml.contains('/resource/Kaizon_Solutions_Logo'), 'Delegate email should render the configured company logo.');
         System.assert(delegateHtml.contains('Review &amp; Sign Document'), 'Delegate email should include the signing call to action.');
+        System.assert(delegateHtml.contains('display:block;padding:12px 24px;'), 'The full delegated-signature button should be clickable.');
         System.assert(delegateHtml.contains('https://example.com/signatures/apex/ESignaturePage?t=newtoken'), 'Delegate email should include the fresh signing URL.');
         System.assert(delegateHtml.contains('Original Signer'), 'Delegate email should identify the original signer.');
         System.assert(delegateHtml.contains('Please review and sign this agreement.'), 'Delegate email should include the delegate message.');
