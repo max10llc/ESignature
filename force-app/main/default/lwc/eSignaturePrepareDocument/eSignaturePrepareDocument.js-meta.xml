@@ -12,6 +12,7 @@
             <property name="recordId" type="String" label="Parent Record Id" />
             <property name="contentDocumentId" type="String" label="Content Document Id" />
             <property name="height" type="Integer" label="Minimum Viewer Height" default="525" />
+            <property name="cancel" type="Boolean" label="Cancel" role="inputOnly" default="false" description="Allows Flow cancel navigation to bypass document preparation validation." />
             <property name="isEnvelopeReady" type="Boolean" label="Envelope Ready" role="outputOnly" />
             <property name="preparedEnvelopeId" type="String" label="Prepared Envelope Id" role="outputOnly" />
             <property name="prepareValidationMessage" type="String" label="Prepare Validation Message" role="outputOnly" />

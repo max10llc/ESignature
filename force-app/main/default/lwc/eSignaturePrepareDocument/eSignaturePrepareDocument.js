@@ -41,6 +41,15 @@ export default class PdfESignPrepareDocument extends LightningElement {
     @api parentRecordId;
     @api contentDocumentId;
     @api height = DEFAULT_VIEWER_HEIGHT;
+    @api
+    get cancel() {
+        return this._cancel;
+    }
+
+    set cancel(value) {
+        this._cancel = this.toBoolean(value);
+    }
+
     @api isEnvelopeReady = false;
     @api preparedEnvelopeId;
     @api prepareValidationMessage = 'Add Signature, Name, Title, and Date fields, then click Save.';
@@ -72,6 +81,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
     responsiveViewerHeight = DEFAULT_VIEWER_HEIGHT;
     viewportResizeFrameId;
     lastSavedPlacementSignature;
+    _cancel = false;
 
     connectedCallback() {
         this.boundHandlePointerMove = this.handlePointerMove.bind(this);
@@ -166,6 +176,13 @@ export default class PdfESignPrepareDocument extends LightningElement {
 
     @api
     validate() {
+        if (this.cancel) {
+            return {
+                isValid: true,
+                errorMessage: null
+            };
+        }
+
         const state = this.syncFlowValidationOutputs();
         if (!state.isValid) {
             this.showSaveMessage('Envelope is not ready', state.message, 'error', 'sticky');
@@ -930,6 +947,17 @@ export default class PdfESignPrepareDocument extends LightningElement {
     round(value, decimals = 8) {
         const factor = 10 ** decimals;
         return Math.round(Number(value) * factor) / factor;
+    }
+
+    toBoolean(value) {
+        if (value === true) {
+            return true;
+        }
+        if (typeof value === 'string') {
+            const normalizedValue = value.trim().toLowerCase();
+            return normalizedValue === 'true' || normalizedValue === 'yes' || normalizedValue === '$globalconstant.true';
+        }
+        return false;
     }
 
     normalizeError(error) {
