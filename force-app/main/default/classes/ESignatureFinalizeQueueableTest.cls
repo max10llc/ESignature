@@ -81,7 +81,7 @@ private class ESignatureFinalizeQueueableTest {
             FROM ContentVersion
             WHERE Id = :finalVersionId
         ];
-        System.assertEquals('Completed', sourceVersion.ESignature_Status__c, 'Finalization should mark the source file completed.');
+        System.assertEquals(null, sourceVersion.ESignature_Status__c, 'Finalization should not update the source file status.');
         System.assertEquals('Completed', finalVersion.ESignature_Status__c, 'Finalization should mark the final signed file completed.');
     }
 
@@ -159,7 +159,7 @@ private class ESignatureFinalizeQueueableTest {
 
         source = [SELECT ESignature_Status__c FROM ContentVersion WHERE Id = :source.Id];
         finalFile = [SELECT ESignature_Status__c FROM ContentVersion WHERE Id = :finalFile.Id];
-        System.assertEquals('Completed', source.ESignature_Status__c);
+        System.assertEquals(null, source.ESignature_Status__c, 'Completing an existing final file should not update the source file status.');
         System.assertEquals('Completed', finalFile.ESignature_Status__c);
         ESignature_Envelope__c emailEnvelope = ESignatureFinalizerService.loadEnvelope(env.Id);
         System.assertEquals('Account', emailEnvelope.Parent_Object_Api_Name__c, 'Finalizer email query should include the parent object API name.');

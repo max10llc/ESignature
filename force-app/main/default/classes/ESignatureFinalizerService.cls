@@ -79,7 +79,6 @@ public without sharing class ESignatureFinalizerService {
         env.Error_Message__c = null;
         env.Completion_Message__c = String.isBlank(message) ? 'Final signed PDF was created.' : message;
         update env;
-        ESignatureUtil.updateSourceFileESignatureStatus(env, 'Completed');
         ESignatureUtil.updateContentVersionESignatureStatus(finalContentVersionId, 'Completed');
         ESignatureUtil.audit(env.Id, 'Finalized', env.Signer_Email__c, env.Completion_Message__c);
         sendCompletionNotificationEmail(env);
