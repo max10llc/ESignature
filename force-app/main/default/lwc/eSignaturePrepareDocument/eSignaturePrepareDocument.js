@@ -16,7 +16,7 @@ const FIELD_TYPES = [
     { label: 'Name', value: 'Name', width: DEFAULT_TEXT_FIELD_WIDTH, height: DEFAULT_TEXT_FIELD_HEIGHT, defaultRequired: true },
     { label: 'Title', value: 'Title', width: DEFAULT_TEXT_FIELD_WIDTH, height: DEFAULT_TEXT_FIELD_HEIGHT, defaultRequired: true },
     { label: 'Date', value: 'Date', width: DEFAULT_TEXT_FIELD_WIDTH, height: DEFAULT_TEXT_FIELD_HEIGHT, defaultRequired: true },
-    { label: 'Initials', value: 'Initials', width: 0.072, height: 0.027, defaultRequired: true },
+    { label: 'Initials', value: 'Initials', width: 0.072, height: 0.027, defaultRequired: false },
     { label: 'Checkbox', value: 'Checkbox', width: 0.045, height: 0.04, defaultRequired: false },
     { label: 'Text', value: 'Text', width: DEFAULT_TEXT_FIELD_WIDTH, height: DEFAULT_TEXT_FIELD_HEIGHT, defaultRequired: true }
 ];
