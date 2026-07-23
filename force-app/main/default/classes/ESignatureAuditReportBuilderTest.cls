@@ -68,6 +68,36 @@ private class ESignatureAuditReportBuilderTest {
         System.assert(pdfText.contains('Source Version Title'), 'The finalizer source title should be used when provided.');
     }
 
+    @IsTest
+    static void wrapsLongDocumentTitleByPdfTextWidth() {
+        ESignature_Envelope__c env = new ESignature_Envelope__c(
+            Status__c = 'Signed',
+            Source_File_Title__c = 'KAIZON SOLUTIONS - ATLANTA - Commercial Cleaning Proposal',
+            Signer_Name__c = 'John Smith',
+            Signer_Email__c = 'john.smith@example.com',
+            Signed_At__c = DateTime.newInstanceGmt(2026, 7, 23, 18, 10, 0),
+            Signature_Method__c = 'Typed'
+        );
+        insert env;
+
+        String pdfText = EncodingUtil.base64Decode(
+            ESignatureAuditReportBuilder.buildAuditReportBase64(env.Id, null)
+        ).toString();
+
+        System.assert(
+            !pdfText.contains('(KAIZON SOLUTIONS - ATLANTA - Commercial Cleaning) Tj'),
+            'The title should not keep the over-wide line that runs past the audit page border.'
+        );
+        System.assert(
+            pdfText.contains('(KAIZON SOLUTIONS - ATLANTA - Commercial) Tj'),
+            'The first title line should stop before it exceeds the audit page border.'
+        );
+        System.assert(
+            pdfText.contains('(Cleaning Proposal) Tj'),
+            'The remaining title words should wrap to the next audit title line.'
+        );
+    }
+
     private static ESignature_Audit_Event__c audit(Id envelopeId, String typeValue, String details, Datetime occurredAt) {
         return new ESignature_Audit_Event__c(
             Envelope__c = envelopeId,

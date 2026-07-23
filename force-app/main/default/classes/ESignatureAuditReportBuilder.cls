@@ -1,8 +1,14 @@
 public without sharing class ESignatureAuditReportBuilder {
     private static final Decimal PAGE_WIDTH = 612;
     private static final Decimal PAGE_HEIGHT = 792;
+    private static final Decimal REPORT_BORDER_X = 60;
+    private static final Decimal REPORT_BORDER_WIDTH = 492;
     private static final Decimal REPORT_BORDER_BOTTOM = 40;
     private static final Decimal REPORT_BORDER_HEIGHT = 704;
+    private static final Decimal TEXT_X = 82;
+    private static final Decimal ICON_TEXT_X = 108;
+    private static final Decimal CONTENT_RIGHT_X = REPORT_BORDER_X + REPORT_BORDER_WIDTH - 22;
+    private static final Decimal CONTENT_TEXT_WIDTH = CONTENT_RIGHT_X - TEXT_X;
     private static final Decimal CONTENT_BOTTOM = 48;
     private static final String AUDIT_DATE_FORMAT = 'MM-dd-yyyy';
     private static final String AUDIT_DATE_TIME_FORMAT = 'MM-dd-yyyy - h:mm:ss a z';
@@ -125,7 +131,7 @@ public without sharing class ESignatureAuditReportBuilder {
         ESignature_Audit_Event__c disclosureEvent = firstEvent(events, new Set<String>{ 'Disclosure Accepted' });
         ESignature_Audit_Event__c signedEvent = firstEvent(events, new Set<String>{ 'Signed' });
 
-        for (String titleLine : wrapLine(documentTitle, 48)) {
+        for (String titleLine : wrapLineByWidth(documentTitle, CONTENT_TEXT_WIDTH, 'F1', 18)) {
             rows.add(new PdfRow().add(titleLine, 'F1', 18));
         }
         rows.add(new PdfRow().add('Final Audit Report', 'F1', 15).add('   ' + createdDate, 'F2', 11));
@@ -138,7 +144,7 @@ public without sharing class ESignatureAuditReportBuilder {
         rows.add(new PdfRow().add('Transaction ID: ', 'F1', 9).add(transactionId, 'F2', 8));
         rows.add(new PdfRow().add('', 'F2', 7));
 
-        for (String historyLine : wrapLine('"' + documentTitle + '" History', 72)) {
+        for (String historyLine : wrapLineByWidth('"' + documentTitle + '" History', CONTENT_TEXT_WIDTH, 'F1', 12)) {
             rows.add(new PdfRow().add(historyLine, 'F1', 12));
         }
         rows.add(new PdfRow().add('', 'F2', 6));
@@ -253,7 +259,8 @@ public without sharing class ESignatureAuditReportBuilder {
         List<String> contentLines = new List<String>();
         contentLines.add('q');
         contentLines.add('0.75 w');
-        contentLines.add('60 ' + formatPdfNumber(REPORT_BORDER_BOTTOM) + ' 492 ' + formatPdfNumber(REPORT_BORDER_HEIGHT) + ' re');
+        contentLines.add(formatPdfNumber(REPORT_BORDER_X) + ' ' + formatPdfNumber(REPORT_BORDER_BOTTOM) + ' '
+            + formatPdfNumber(REPORT_BORDER_WIDTH) + ' ' + formatPdfNumber(REPORT_BORDER_HEIGHT) + ' re');
         contentLines.add('S');
         contentLines.add('Q');
 
@@ -262,11 +269,11 @@ public without sharing class ESignatureAuditReportBuilder {
             if (y < CONTENT_BOTTOM) {
                 break;
             }
-            Decimal textX = String.isBlank(row.iconResourceName) ? 82 + row.indent : 108 + row.indent;
+            Decimal textX = String.isBlank(row.iconResourceName) ? TEXT_X + row.indent : ICON_TEXT_X + row.indent;
             if (String.isNotBlank(row.iconResourceName) && images.containsKey(row.iconResourceName)) {
                 PdfImageResource image = images.get(row.iconResourceName);
                 Decimal iconSize = 15;
-                Decimal iconX = 82;
+                Decimal iconX = TEXT_X;
                 Decimal iconY = y - 5;
                 contentLines.add('q');
                 contentLines.add(formatPdfNumber(iconSize) + ' 0 0 ' + formatPdfNumber(iconSize) + ' ' + formatPdfNumber(iconX) + ' ' + formatPdfNumber(iconY) + ' cm');
@@ -284,7 +291,7 @@ public without sharing class ESignatureAuditReportBuilder {
                 contentLines.add('1 0 0 1 ' + formatPdfNumber(cursorX) + ' ' + formatPdfNumber(y) + ' Tm');
                 contentLines.add('(' + escapePdfText(segment.text) + ') Tj');
                 contentLines.add('ET');
-                cursorX += approximateTextWidth(segment.text, segment.fontSize);
+                cursorX += approximateTextWidth(segment.text, segment.fontName, segment.fontSize);
             }
             y -= row.lineHeight;
         }
@@ -388,9 +395,36 @@ public without sharing class ESignatureAuditReportBuilder {
         }
     }
 
-    private static Decimal approximateTextWidth(String text, Integer fontSize) {
+    private static Decimal approximateTextWidth(String text, String fontName, Integer fontSize) {
         Integer sizeValue = fontSize == null ? 10 : fontSize;
-        return Decimal.valueOf(nullToBlank(text).length()) * Decimal.valueOf(sizeValue) * Decimal.valueOf('0.50');
+        Decimal widthUnits = 0;
+        String value = nullToBlank(text);
+        for (Integer i = 0; i < value.length(); i++) {
+            widthUnits += helveticaWidthUnits(value.substring(i, i + 1), fontName);
+        }
+        return widthUnits * Decimal.valueOf(sizeValue) / Decimal.valueOf(1000);
+    }
+
+    private static Decimal helveticaWidthUnits(String ch, String fontName) {
+        if (String.isBlank(ch)) {
+            return 278;
+        }
+        if (ch == 'I' || ch == 'i' || ch == 'j' || ch == 'l') return 278;
+        if (ch == 'W') return 944;
+        if (ch == 'M' || ch == 'm') return 833;
+        if (ch == 'G' || ch == 'O' || ch == 'Q' || ch == 'w') return 778;
+        if ('ABCDEHKNRU'.contains(ch)) return 722;
+        if ('SXY'.contains(ch)) return 667;
+        if ('FLTZ'.contains(ch)) return 611;
+        if ('0123456789'.contains(ch)) return 556;
+        if ('bdghnopqu'.contains(ch)) return 611;
+        if ('aceksvxzy'.contains(ch)) return 556;
+        if (ch == 'f' || ch == 'r') return 389;
+        if (ch == 't') return 333;
+        if (ch == '"' || ch == '@') return 474;
+        if (ch == '-' || ch == '(' || ch == ')' || ch == ':' || ch == ';') return 333;
+        if (ch == '.' || ch == ',' || ch == '\'' || ch == '/') return 278;
+        return 556;
     }
 
     private static String formatPdfNumber(Decimal value) {
@@ -504,6 +538,44 @@ public without sharing class ESignatureAuditReportBuilder {
             lines.add(value);
         }
         return lines;
+    }
+
+    private static List<String> wrapLineByWidth(String input, Decimal maxWidth, String fontName, Integer fontSize) {
+        List<String> lines = new List<String>();
+        String value = sanitizePdfText(nullToBlank(input)).trim();
+        if (String.isBlank(value)) {
+            lines.add('');
+            return lines;
+        }
+        if (maxWidth == null || maxWidth <= 0 || approximateTextWidth(value, fontName, fontSize) <= maxWidth) {
+            lines.add(value);
+            return lines;
+        }
+
+        while (!String.isBlank(value)) {
+            Integer breakAt = breakPositionForWidth(value, maxWidth, fontName, fontSize);
+            lines.add(value.substring(0, breakAt).trim());
+            value = value.substring(breakAt).trim();
+        }
+        return lines;
+    }
+
+    private static Integer breakPositionForWidth(String value, Decimal maxWidth, String fontName, Integer fontSize) {
+        Integer lastSpaceAt = -1;
+        for (Integer i = 1; i <= value.length(); i++) {
+            String currentChar = value.substring(i - 1, i);
+            if (currentChar == ' ') {
+                lastSpaceAt = i - 1;
+            }
+            String candidate = value.substring(0, i);
+            if (approximateTextWidth(candidate, fontName, fontSize) > maxWidth) {
+                if (lastSpaceAt > 0) {
+                    return lastSpaceAt;
+                }
+                return Math.max(1, i - 1);
+            }
+        }
+        return value.length();
     }
 
     private static String sanitizePdfText(String input) {
