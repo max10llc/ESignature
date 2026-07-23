@@ -43,6 +43,10 @@
         <value xsi:type="xsd:boolean">true</value>
     </values>
     <values>
+        <field>Include_User_Email_Signature__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
         <field>Org_Wide_Email_Address__c</field>
         <value xsi:type="xsd:string">noreply@kaizonsolutions.com</value>
     </values>

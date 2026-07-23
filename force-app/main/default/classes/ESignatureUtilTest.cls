@@ -181,15 +181,19 @@ private class ESignatureUtilTest {
         ESignature_Setting__mdt settings = new ESignature_Setting__mdt(
             Org_Wide_Email_Address__c = 'orgwide@example.com',
             Default_From_Email__c = 'default@example.com',
-            Email_Logo_URL__c = 'https://example.com/logo.png'
+            Email_Logo_URL__c = 'https://example.com/logo.png',
+            Include_User_Email_Signature__c = true
         );
         System.assertEquals('orgwide@example.com', ESignatureUtil.configuredOrgWideEmailAddress(settings));
         System.assertEquals('https://example.com/logo.png', ESignatureUtil.configuredEmailLogoUrl(settings));
+        System.assertEquals(true, ESignatureUtil.includeUserEmailSignature(settings));
         String logoHtml = ESignatureUtil.emailLogoHtml();
         System.assert(logoHtml.contains('width="252"'), 'Email logo should render at its native width.');
         System.assert(logoHtml.contains('height="73"'), 'Email logo should render at its native height.');
 
         settings.Org_Wide_Email_Address__c = null;
+        settings.Include_User_Email_Signature__c = false;
         System.assertEquals('default@example.com', ESignatureUtil.configuredOrgWideEmailAddress(settings));
+        System.assertEquals(false, ESignatureUtil.includeUserEmailSignature(settings));
     }
 }

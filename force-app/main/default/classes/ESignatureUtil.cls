@@ -28,6 +28,7 @@ public without sharing class ESignatureUtil {
                    Restrict_Editing__c,
                    Restrict_Copying__c,
                    Allow_Low_Quality_Printing__c,
+                   Include_User_Email_Signature__c,
                    Final_Pdf_Owner_Password__c
             FROM ESignature_Setting__mdt
             WHERE DeveloperName = 'Default'
@@ -617,7 +618,9 @@ public without sharing class ESignatureUtil {
             return;
         }
         try {
-            Id orgWideEmailAddressId = orgWideEmailAddressId(configuredOrgWideEmailAddress(getSettings()));
+            ESignature_Setting__mdt settings = getSettings();
+            message.setUseSignature(includeUserEmailSignature(settings));
+            Id orgWideEmailAddressId = orgWideEmailAddressId(configuredOrgWideEmailAddress(settings));
             if (orgWideEmailAddressId != null) {
                 message.setOrgWideEmailAddressId(orgWideEmailAddressId);
             }
@@ -633,6 +636,11 @@ public without sharing class ESignatureUtil {
             settings.Org_Wide_Email_Address__c,
             settings.Default_From_Email__c
         });
+    }
+
+    @TestVisible
+    private static Boolean includeUserEmailSignature(ESignature_Setting__mdt settings) {
+        return settings != null && settings.Include_User_Email_Signature__c == true;
     }
 
     private static Id orgWideEmailAddressId(String emailAddress) {
