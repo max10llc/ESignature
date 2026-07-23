@@ -14,30 +14,11 @@ public without sharing class ESignatureUtil {
     }
 
     public static ESignature_Setting__mdt getSettings() {
-        List<ESignature_Setting__mdt> rows = [
-            SELECT Site_Base_URL__c,
-                   Finalizer_Named_Credential__c,
-                   Finalizer_Mode__c,
-                   Finalizer_Callback_URL__c,
-                   Finalizer_Callback_Secret__c,
-                   Include_Source_PDF_In_Finalizer_Request__c,
-                   Default_From_Email__c,
-                   Org_Wide_Email_Address__c,
-                   Email_Logo_URL__c,
-                   Default_Expiration_Days__c,
-                   Restrict_Editing__c,
-                   Restrict_Copying__c,
-                   Allow_Low_Quality_Printing__c,
-                   Include_User_Email_Signature__c,
-                   Final_Pdf_Owner_Password__c
-            FROM ESignature_Setting__mdt
-            WHERE DeveloperName = 'Default'
-            LIMIT 1
-        ];
-        if (rows.isEmpty()) {
+        ESignature_Setting__mdt settings = ESignature_Setting__mdt.getInstance('Default');
+        if (settings == null) {
             throw new AppException('Missing ESignature_Setting__mdt record named Default.');
         }
-        return rows[0];
+        return settings;
     }
 
     public static String generateToken() {
