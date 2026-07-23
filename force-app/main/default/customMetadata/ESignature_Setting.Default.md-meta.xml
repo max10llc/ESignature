@@ -12,11 +12,11 @@
     </values>
     <values>
         <field>Default_From_Email__c</field>
-        <value xsi:type="xsd:string">noreply@kaizonsolutions.com</value>
+        <value xsi:type="xsd:string">signatures@kaizonsolutions.com</value>
     </values>
     <values>
         <field>Email_Logo_URL__c</field>
-        <value xsi:type="xsd:string">https://tpbrass--partial.sandbox.my.salesforce-sites.com/signatures/resource/Kaizon_Solutions_Logo</value>
+        <value xsi:type="xsd:string">https://tpbrass.my.salesforce-sites.com/signatures/resource/Kaizon_Solutions_Logo</value>
     </values>
     <values>
         <field>Final_Pdf_Owner_Password__c</field>
@@ -48,7 +48,7 @@
     </values>
     <values>
         <field>Org_Wide_Email_Address__c</field>
-        <value xsi:type="xsd:string">noreply@kaizonsolutions.com</value>
+        <value xsi:type="xsd:string">signatures@kaizonsolutions.com</value>
     </values>
     <values>
         <field>Restrict_Copying__c</field>
@@ -60,6 +60,6 @@
     </values>
     <values>
         <field>Site_Base_URL__c</field>
-        <value xsi:type="xsd:string">https://tpbrass--partial.sandbox.my.salesforce-sites.com/signatures</value>
+        <value xsi:type="xsd:string">https://tpbrass.my.salesforce-sites.com/signatures</value>
     </values>
 </CustomMetadata>
