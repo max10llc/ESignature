@@ -163,6 +163,7 @@
         <members>E_Signature_Email_Templates/ESignature_Salesforce_User_Delegated</members>
         <members>E_Signature_Email_Templates/ESignature_Salesforce_User_Email_Opened</members>
         <members>E_Signature_Email_Templates/ESignature_Sent_Salesforce_User</members>
+        <members>E_Signature_Email_Templates/ESignature_Signature_Request_Record_Log</members>
         <members>E_Signature_Email_Templates/ESignature_Signature_Request</members>
         <name>EmailTemplate</name>
     </types>

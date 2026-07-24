@@ -333,7 +333,8 @@ public with sharing class ESignatureSendController {
         message.setSaveAsActivity(false);
         ESignatureUtil.applyConfiguredOrgWideEmailAddress(message);
         Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ message });
-        logSignatureRequestActivityAndEmail(env, documentTitle, content, env.Signer_Email__c);
+        ESignatureUtil.EmailContent loggedContent = buildSignatureRequestRecordLogEmailContent(env, documentTitle);
+        logSignatureRequestActivityAndEmail(env, documentTitle, loggedContent, env.Signer_Email__c);
     }
 
     private static void sendSalesforceUserSentConfirmation(ESignature_Envelope__c env) {
@@ -433,25 +434,54 @@ public with sharing class ESignatureSendController {
         return buildSignatureRequestEmailContent(env, signingUrl, documentTitle, requestMessage).htmlBody;
     }
 
+    @TestVisible
+    private static String buildSignatureRequestRecordLogEmailHtml(ESignature_Envelope__c env, String documentTitle, String requestMessage) {
+        return buildSignatureRequestEmailContent(env, null, documentTitle, requestMessage, false).htmlBody;
+    }
+
     private static ESignatureUtil.EmailContent buildSignatureRequestEmailContent(ESignature_Envelope__c env, String signingUrl, String documentTitle) {
         return buildSignatureRequestEmailContent(env, signingUrl, documentTitle, null);
     }
 
     private static ESignatureUtil.EmailContent buildSignatureRequestEmailContent(ESignature_Envelope__c env, String signingUrl, String documentTitle, String requestMessageOverride) {
+        return buildSignatureRequestEmailContent(env, signingUrl, documentTitle, requestMessageOverride, true);
+    }
+
+    private static ESignatureUtil.EmailContent buildSignatureRequestRecordLogEmailContent(ESignature_Envelope__c env, String documentTitle) {
+        return buildSignatureRequestEmailContent(env, null, documentTitle, null, false);
+    }
+
+    private static ESignatureUtil.EmailContent buildSignatureRequestEmailContent(
+        ESignature_Envelope__c env,
+        String signingUrl,
+        String documentTitle,
+        String requestMessageOverride,
+        Boolean includeSigningAccess
+    ) {
         String signerName = String.isBlank(env.Signer_Name__c) ? 'there' : env.Signer_Name__c;
         String safeSignerName = String.isBlank(env.Signer_Name__c) ? 'there' : ESignatureUtil.escapeHtml(env.Signer_Name__c);
         String resolvedDocumentTitle = String.isBlank(documentTitle) ? 'Document' : documentTitle;
         String safeDocumentTitle = ESignatureUtil.escapeHtml(resolvedDocumentTitle);
-        String safeSigningUrl = ESignatureUtil.escapeHtml(signingUrl);
+        String resolvedSigningUrl = includeSigningAccess == true ? signingUrl : '';
+        String safeSigningUrl = includeSigningAccess == true ? ESignatureUtil.escapeHtml(signingUrl) : '';
         String senderName = String.isBlank(UserInfo.getName()) ? 'The sender' : UserInfo.getName();
         String safeSenderName = ESignatureUtil.escapeHtml(senderName);
         String requestMessage = resolvedRequestMessage(env, requestMessageOverride);
         String safeRequestMessage = multilineSafeHtml(requestMessage);
         String expirationDate = formatDateForEmail(env.Expires_At__c == null ? System.now().addDays(365) : env.Expires_At__c);
-        String emailOpenTrackingUrl = emailOpenTrackingUrl(signingUrl);
+        String emailOpenTrackingUrl = includeSigningAccess == true ? emailOpenTrackingUrl(signingUrl) : '';
         String safeEmailOpenTrackingUrl = ESignatureUtil.escapeHtml(emailOpenTrackingUrl);
         String emailOpenTrackingPixel = emailOpenTrackingPixelHtml(safeEmailOpenTrackingUrl);
         String requestSubject = envelopeRequestSubject(env);
+        String signingAccessHtml = includeSigningAccess == true
+            ? ESignatureUtil.emailButtonRow('Review &amp; Sign Document', safeSigningUrl, '#0176d3')
+                + ESignatureUtil.emailSubtleRow('This link is unique to you and will expire on ' + expirationDate + '.')
+                + ESignatureUtil.emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
+                + emailOpenTrackingPixel
+            : '';
+        String templateDeveloperName = includeSigningAccess == true
+            ? 'ESignature_Signature_Request'
+            : 'ESignature_Signature_Request_Record_Log';
 
         String fallbackSubject = 'Signature requested: ' + resolvedDocumentTitle;
         String fallbackHtml = ESignatureUtil.emailShell(
@@ -459,13 +489,10 @@ public with sharing class ESignatureSendController {
             + ESignatureUtil.emailParagraphRow(safeSenderName + ' has sent you a document that requires your signature:')
             + ESignatureUtil.emailDocumentBlockRow('Document', safeDocumentTitle, '#0176d3')
             + ESignatureUtil.emailParagraphRow(safeRequestMessage)
-            + ESignatureUtil.emailButtonRow('Review &amp; Sign Document', safeSigningUrl, '#0176d3')
-            + ESignatureUtil.emailSubtleRow('This link is unique to you and will expire on ' + expirationDate + '.')
-            + ESignatureUtil.emailSubtleRow('If the button above does not work, copy and paste this URL into your browser:<br/><a href="' + safeSigningUrl + '" style="color:#0176d3;text-decoration:underline;word-break:break-all;">' + safeSigningUrl + '</a>')
-            + emailOpenTrackingPixel
+            + signingAccessHtml
         );
         ESignatureUtil.EmailContent content = ESignatureUtil.renderEmailTemplate(
-            'ESignature_Signature_Request',
+            templateDeveloperName,
             fallbackSubject,
             fallbackHtml,
             new Map<String, String>{
@@ -473,7 +500,7 @@ public with sharing class ESignatureSendController {
                 'SenderName' => senderName,
                 'DocumentTitle' => resolvedDocumentTitle,
                 'RequestMessage' => requestMessage,
-                'SigningUrl' => signingUrl,
+                'SigningUrl' => resolvedSigningUrl,
                 'ExpirationDate' => expirationDate,
                 'EmailOpenTrackingUrl' => emailOpenTrackingUrl
             },

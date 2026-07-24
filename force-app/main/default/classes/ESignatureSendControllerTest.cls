@@ -189,7 +189,11 @@ private class ESignatureSendControllerTest {
         System.assertEquals(false, emailLog.Incoming, 'Email log should be outbound.');
         System.assertEquals('3', emailLog.Status, 'Email log should be marked sent.');
         System.assert(emailLog.TextBody.contains('signer@example.com'), 'Email log should identify the signer.');
-        System.assert(emailLog.HtmlBody.contains('Review &amp; Sign Document'), 'Email log should contain the signer request email body.');
+        System.assert(emailLog.HtmlBody.contains('has sent you a document that requires your signature'), 'Email log should contain the signer request email body.');
+        System.assert(emailLog.HtmlBody.contains('Please review the attached proposal before signing.'), 'Email log should include the sender-entered request message.');
+        System.assert(!emailLog.HtmlBody.contains('Review &amp; Sign Document'), 'Email log should omit the live signer call-to-action.');
+        System.assert(!emailLog.HtmlBody.contains('/apex/ESignaturePage'), 'Email log should omit the live signing URL.');
+        System.assert(!emailLog.HtmlBody.contains('/services/apexrest/ESignature/v1/email-open'), 'Email log should omit the tracking URL because it also carries the signing token.');
         System.assertEquals(0, [
             SELECT COUNT()
             FROM Task
@@ -340,6 +344,20 @@ private class ESignatureSendControllerTest {
             'Special Services Agreement'
         );
         System.assert(defaultHtml.contains('Please review and sign the agreement.'), 'Blank custom messages should fall back to the default request message.');
+
+        String loggedHtml = ESignatureSendController.buildSignatureRequestRecordLogEmailHtml(
+            env,
+            'Special Services Agreement',
+            'Please review the revised scope.\nCall me with any questions.'
+        );
+
+        System.assert(loggedHtml.contains('<table role="presentation" width="100%"'), 'Logged email should use the same table-based shell.');
+        System.assert(loggedHtml.contains('has sent you a document that requires your signature'), 'Logged email should include the original request language.');
+        System.assert(loggedHtml.contains('Special Services Agreement'), 'Logged email should include the document title block.');
+        System.assert(loggedHtml.contains('Please review the revised scope.<br/>Call me with any questions.'), 'Logged email should include the sender-entered request message with line breaks preserved.');
+        System.assert(!loggedHtml.contains('Review &amp; Sign Document'), 'Logged email should not include the signer call-to-action label.');
+        System.assert(!loggedHtml.contains('https://example.com/signatures/apex/ESignaturePage?t=abc123'), 'Logged email should not include the signing URL.');
+        System.assert(!loggedHtml.contains('/services/apexrest/ESignature/v1/email-open'), 'Logged email should not include the tracking pixel URL.');
     }
 
     @IsTest
