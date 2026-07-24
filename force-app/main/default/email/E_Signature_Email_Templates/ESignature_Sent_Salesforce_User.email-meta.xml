@@ -14,10 +14,7 @@ Record: {{RecordName}}
 Record URL:
 {{RecordUrl}}
 
-This link is unique to the signer and will expire on {{ExpirationDate}}.
-
-Signing URL:
-{{SigningUrl}}</textOnly>
+Signer link expires on: {{ExpirationDate}}</textOnly>
     <type>custom</type>
     <uiType>Aloha</uiType>
 </EmailTemplate>

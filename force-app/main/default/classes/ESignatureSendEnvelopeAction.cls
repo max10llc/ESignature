@@ -44,7 +44,7 @@ public with sharing class ESignatureSendEnvelopeAction {
         @InvocableVariable(label='Status')
         public String status;
 
-        @InvocableVariable(label='Signing URL')
+        @InvocableVariable(label='Signing URL' description='Deprecated. This output is no longer populated because signing links are only emailed to signers.')
         public String signingUrl;
 
         @InvocableVariable(label='Signer Email')

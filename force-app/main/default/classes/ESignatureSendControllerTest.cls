@@ -134,11 +134,11 @@ private class ESignatureSendControllerTest {
 
         System.assertEquals(String.valueOf(fixture.envelope.Id), result.envelopeId);
         System.assertEquals('Sent', result.status);
-        System.assert(result.signingUrl.contains('/ESignaturePage?t='), 'Result should include a public signing URL.');
+        System.assertEquals(null, result.signingUrl, 'Result should not expose the public signing URL.');
 
         ESignature_Envelope__c env = [
             SELECT Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
-                   Sent_At__c, Expires_At__c, Public_Signing_URL__c,
+                   Sent_At__c, Expires_At__c, Secure_Token_Hash__c, Public_Signing_URL__c,
                    Request_Message__c, Request_Subject__c,
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
@@ -152,7 +152,8 @@ private class ESignatureSendControllerTest {
         System.assertEquals('Commercial Cleaning Proposal Signature', env.Request_Subject__c);
         System.assertNotEquals(null, env.Sent_At__c);
         System.assertNotEquals(null, env.Expires_At__c);
-        System.assertNotEquals(null, env.Public_Signing_URL__c);
+        System.assertNotEquals(null, env.Secure_Token_Hash__c);
+        System.assertEquals(null, env.Public_Signing_URL__c, 'The raw public signing URL should not be stored on the envelope.');
         System.assertEquals('Send Controller Source', env.Source_File_Title__c);
         System.assertEquals(fixture.field.Content_Version_Id__c, env.Source_ContentVersion_Id__c);
         System.assertEquals(fixture.field.Content_Document_Id__c, env.Source_ContentDocument_Id__c);
@@ -356,7 +357,6 @@ private class ESignatureSendControllerTest {
 
         String html = ESignatureSendController.buildSalesforceUserSentConfirmationEmailHtml(
             env,
-            'https://example.com/signatures/apex/ESignaturePage?t=abc123',
             'Special Services Agreement'
         );
 
@@ -373,6 +373,8 @@ private class ESignatureSendControllerTest {
         System.assert(html.contains('/lightning/r/Account/' + String.valueOf(parent.Id) + '/view'), 'Sender confirmation record link should point to the Lightning parent record route.');
         System.assert(!html.contains('/lightning/r/EmailMessage/'), 'Sender confirmation record link should not be relative to the EmailMessage route.');
         System.assert(!html.contains('{!Opportunity.Id}'), 'Sender confirmation email should not use an Opportunity-only merge field.');
+        System.assert(!html.contains('ESignaturePage?t=abc123'), 'Sender confirmation email should not expose the signing URL.');
+        System.assert(!html.contains('Signing URL'), 'Sender confirmation email should not label or display the signing URL.');
     }
 
     private static DraftFixture createDraftFixture() {

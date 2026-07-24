@@ -28,11 +28,11 @@ private class ESignatureSendEnvelopeActionTest {
         System.assertEquals(String.valueOf(fixture.envelope.Id), responses[0].envelopeId);
         System.assertEquals('Sent', responses[0].status);
         System.assertEquals('flow.signer@example.com', responses[0].signerEmail);
-        System.assert(responses[0].signingUrl.contains('/ESignaturePage?t='), 'Flow action should return the signing URL.');
+        System.assertEquals(null, responses[0].signingUrl, 'Flow action should not return the signing URL.');
 
         ESignature_Envelope__c sent = [
             SELECT Status__c, Signer_Name__c, Signer_Email__c, Signer_Title__c,
-                   Request_Subject__c, Request_Message__c, Public_Signing_URL__c
+                   Request_Subject__c, Request_Message__c, Secure_Token_Hash__c, Public_Signing_URL__c
             FROM ESignature_Envelope__c
             WHERE Id = :fixture.envelope.Id
         ];
@@ -42,7 +42,8 @@ private class ESignatureSendEnvelopeActionTest {
         System.assertEquals('Operations Manager', sent.Signer_Title__c);
         System.assertEquals('Flow-sent signature request', sent.Request_Subject__c);
         System.assertEquals('Please sign this from the Flow action.', sent.Request_Message__c);
-        System.assertEquals(responses[0].signingUrl, sent.Public_Signing_URL__c);
+        System.assertNotEquals(null, sent.Secure_Token_Hash__c);
+        System.assertEquals(null, sent.Public_Signing_URL__c, 'The raw public signing URL should not be stored on the envelope.');
     }
 
     @IsTest

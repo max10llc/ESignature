@@ -294,7 +294,7 @@ private class ESignatureCommandTriggerTest {
         System.assertEquals(null, env.Signer_Title__c);
         System.assertNotEquals(null, env.Sent_At__c);
         System.assertEquals(null, env.Viewed_At__c, 'The delegate should get their own viewed event.');
-        System.assert(env.Public_Signing_URL__c.contains('/ESignaturePage?t='), 'Delegate should receive a fresh signing URL.');
+        System.assertEquals(null, env.Public_Signing_URL__c, 'Delegation should clear any stored public signing URL.');
         source = [SELECT ESignature_Status__c FROM ContentVersion WHERE Id = :source.Id];
         System.assertEquals('Sent', source.ESignature_Status__c, 'Delegating should keep the source file in sent status.');
 

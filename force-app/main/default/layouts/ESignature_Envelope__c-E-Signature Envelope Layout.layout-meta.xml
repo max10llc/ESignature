@@ -89,10 +89,6 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Public_Signing_URL__c</field>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
                 <field>Final_ContentDocument_Id__c</field>
             </layoutItems>
             <layoutItems>
