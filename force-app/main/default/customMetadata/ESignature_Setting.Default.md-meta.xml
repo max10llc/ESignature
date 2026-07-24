@@ -51,6 +51,10 @@
         <value xsi:type="xsd:string">signatures@kaizonsolutions.com</value>
     </values>
     <values>
+        <field>Org_Wide_Email_Address_Id__c</field>
+        <value xsi:type="xsd:string">0D2TS0000000k1F0AQ</value>
+    </values>
+    <values>
         <field>Restrict_Copying__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>

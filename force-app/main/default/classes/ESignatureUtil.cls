@@ -601,11 +601,16 @@ public without sharing class ESignatureUtil {
         try {
             ESignature_Setting__mdt settings = getSettings();
             message.setUseSignature(includeUserEmailSignature(settings));
-            Id orgWideEmailAddressId = orgWideEmailAddressId(configuredOrgWideEmailAddress(settings));
+            Id orgWideEmailAddressId = configuredOrgWideEmailAddressId(settings);
+            if (orgWideEmailAddressId == null) {
+                orgWideEmailAddressId = orgWideEmailAddressId(configuredOrgWideEmailAddress(settings));
+            }
             if (orgWideEmailAddressId != null) {
                 message.setOrgWideEmailAddressId(orgWideEmailAddressId);
             }
-        } catch (Exception ignore) {}
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN, 'Unable to apply configured org-wide email address: ' + e.getMessage());
+        }
     }
 
     @TestVisible
@@ -617,6 +622,18 @@ public without sharing class ESignatureUtil {
             settings.Org_Wide_Email_Address__c,
             settings.Default_From_Email__c
         });
+    }
+
+    @TestVisible
+    private static Id configuredOrgWideEmailAddressId(ESignature_Setting__mdt settings) {
+        if (settings == null || String.isBlank(settings.Org_Wide_Email_Address_Id__c)) {
+            return null;
+        }
+        try {
+            return (Id) settings.Org_Wide_Email_Address_Id__c.trim();
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
     @TestVisible

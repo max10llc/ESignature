@@ -99,6 +99,7 @@
         <members>ESignature_Setting__mdt.Finalizer_Callback_Secret__c</members>
         <members>ESignature_Setting__mdt.Include_Source_PDF_In_Finalizer_Request__c</members>
         <members>ESignature_Setting__mdt.Org_Wide_Email_Address__c</members>
+        <members>ESignature_Setting__mdt.Org_Wide_Email_Address_Id__c</members>
         <members>ESignature_Setting__mdt.Restrict_Copying__c</members>
         <members>ESignature_Setting__mdt.Restrict_Editing__c</members>
         <members>ESignature_Setting__mdt.Site_Base_URL__c</members>
