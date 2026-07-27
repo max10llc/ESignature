@@ -92,6 +92,8 @@
         <members>ESignature_Setting__mdt.Default_Expiration_Days__c</members>
         <members>ESignature_Setting__mdt.Default_From_Email__c</members>
         <members>ESignature_Setting__mdt.Email_Logo_URL__c</members>
+        <members>ESignature_Setting__mdt.Enable_Checkbox_Field__c</members>
+        <members>ESignature_Setting__mdt.Enable_Text_Field__c</members>
         <members>ESignature_Setting__mdt.Final_Pdf_Owner_Password__c</members>
         <members>ESignature_Setting__mdt.Finalizer_Named_Credential__c</members>
         <members>ESignature_Setting__mdt.Finalizer_Mode__c</members>

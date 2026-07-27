@@ -19,6 +19,14 @@
         <value xsi:type="xsd:string">https://tpbrass.my.salesforce-sites.com/signatures/resource/Kaizon_Solutions_Logo</value>
     </values>
     <values>
+        <field>Enable_Checkbox_Field__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Enable_Text_Field__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
         <field>Final_Pdf_Owner_Password__c</field>
         <value xsi:nil="true"/>
     </values>

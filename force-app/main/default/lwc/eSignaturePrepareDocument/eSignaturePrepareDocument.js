@@ -4,6 +4,7 @@ import { FlowAttributeChangeEvent } from 'lightning/flowSupport';
 import { loadScript } from 'lightning/platformResourceLoader';
 import PDF_JS from '@salesforce/resourceUrl/ESignature_PdfJs';
 
+import getFieldAvailability from '@salesforce/apex/ESignaturePrepareController.getFieldAvailability';
 import getPdfDocumentInfo from '@salesforce/apex/ESignaturePrepareController.getPdfDocumentInfo';
 import getPlacements from '@salesforce/apex/ESignaturePrepareController.getPlacements';
 import savePlacements from '@salesforce/apex/ESignaturePrepareController.savePlacements';
@@ -22,6 +23,10 @@ const FIELD_TYPES = [
 ];
 
 const PALETTE_FIELD_TYPES = FIELD_TYPES;
+const FIELD_AVAILABILITY_KEYS = {
+    Checkbox: 'checkboxFieldEnabled',
+    Text: 'textFieldEnabled'
+};
 const MIN_FIELD_WIDTH = 0.025;
 const MIN_FIELD_HEIGHT = 0.025;
 const DRAG_THRESHOLD_PIXELS = 6;
@@ -301,6 +306,8 @@ export default class PdfESignPrepareDocument extends LightningElement {
             if (!this.effectiveParentRecordId) {
                 throw new Error('Parent Record Id is required. Put this component on a record page or pass recordId from Flow.');
             }
+            this.loadingMessage = 'Loading e-signature settings...';
+            await this.loadFieldAvailability();
             if (this.contentDocumentId) {
                 this.selectedContentDocumentId = this.contentDocumentId;
                 await this.loadSelectedPdf();
@@ -347,6 +354,25 @@ export default class PdfESignPrepareDocument extends LightningElement {
             this.isLoading = false;
             this.syncFlowValidationOutputs();
         }
+    }
+
+    async loadFieldAvailability() {
+        const availability = await this.withTimeout(
+            getFieldAvailability(),
+            10000,
+            'Loading e-signature settings'
+        );
+        this.fieldTypes = PALETTE_FIELD_TYPES.filter((fieldType) => {
+            const availabilityKey = FIELD_AVAILABILITY_KEYS[fieldType.value];
+            return !availabilityKey || availability?.[availabilityKey] !== false;
+        });
+        if (this.pendingFieldType && !this.isFieldTypeAvailable(this.pendingFieldType)) {
+            this.pendingFieldType = null;
+        }
+    }
+
+    isFieldTypeAvailable(fieldType) {
+        return this.fieldTypes.some((item) => item.value === fieldType);
     }
 
     initializeRenditionPreview() {
@@ -481,7 +507,8 @@ export default class PdfESignPrepareDocument extends LightningElement {
     }
 
     handlePaletteClick(event) {
-        this.pendingFieldType = event.currentTarget.dataset.fieldType;
+        const fieldType = event.currentTarget.dataset.fieldType;
+        this.pendingFieldType = this.isFieldTypeAvailable(fieldType) ? fieldType : null;
     }
 
     handlePageDragOver(event) {
@@ -508,7 +535,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
     }
 
     addFieldFromEvent(fieldType, event) {
-        if (!fieldType) {
+        if (!fieldType || !this.isFieldTypeAvailable(fieldType)) {
             return;
         }
         const pageShell = event.currentTarget;

@@ -46,6 +46,17 @@ private class ESignaturePrepareControllerTest {
     }
 
     @IsTest
+    static void getFieldAvailabilityReflectsDefaultMetadata() {
+        ESignature_Setting__mdt settings = ESignatureUtil.getSettings();
+
+        ESignaturePrepareController.FieldAvailabilityDTO availability =
+            ESignaturePrepareController.getFieldAvailability();
+
+        System.assertEquals(settings.Enable_Checkbox_Field__c != false, availability.checkboxFieldEnabled);
+        System.assertEquals(settings.Enable_Text_Field__c != false, availability.textFieldEnabled);
+    }
+
+    @IsTest
     static void savePlacementsCreatesDraftForMarkedPdf() {
         Account parent = new Account(Name = 'Prepare Controller Save Parent');
         insert parent;

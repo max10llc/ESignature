@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Enable_Checkbox_Field__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>If checked, users can add Checkbox fields while preparing an e-signature document.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Enable Checkbox Field</label>
+    <type>Checkbox</type>
+</CustomField>

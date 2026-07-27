@@ -38,6 +38,20 @@ public with sharing class ESignaturePrepareController {
         @AuraEnabled public String message;
     }
 
+    public class FieldAvailabilityDTO {
+        @AuraEnabled public Boolean checkboxFieldEnabled;
+        @AuraEnabled public Boolean textFieldEnabled;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static FieldAvailabilityDTO getFieldAvailability() {
+        ESignature_Setting__mdt settings = ESignatureUtil.getSettings();
+        FieldAvailabilityDTO output = new FieldAvailabilityDTO();
+        output.checkboxFieldEnabled = settings.Enable_Checkbox_Field__c != false;
+        output.textFieldEnabled = settings.Enable_Text_Field__c != false;
+        return output;
+    }
+
     @AuraEnabled(cacheable=true)
     public static List<RecordFileDTO> getRecordPdfFiles(Id recordId) {
         if (recordId == null) {
