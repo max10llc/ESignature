@@ -379,6 +379,7 @@ public with sharing class ESignatureSendController {
         emailLog.Incoming = false;
         emailLog.Status = '3';
         emailLog.MessageDate = System.now();
+        emailLog.ESignature_Generated_c__c = true;
         insertEmailLogWithoutBlockingSend(emailLog);
     }
 

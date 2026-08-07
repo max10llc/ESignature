@@ -177,7 +177,8 @@ private class ESignatureSendControllerTest {
             AND Event_Type__c = 'Sent'
         ], 'Sent audit event should be written.');
         EmailMessage emailLog = [
-            SELECT RelatedToId, Subject, ToAddress, Incoming, Status, TextBody, HtmlBody
+            SELECT RelatedToId, Subject, ToAddress, Incoming, Status, TextBody, HtmlBody,
+                   ESignature_Generated_c__c
             FROM EmailMessage
             WHERE RelatedToId = :fixture.parentId
             AND Subject = 'Commercial Cleaning Proposal Signature'
@@ -188,6 +189,7 @@ private class ESignatureSendControllerTest {
         System.assertEquals('signer@example.com', emailLog.ToAddress, 'Email log should be addressed to the signer.');
         System.assertEquals(false, emailLog.Incoming, 'Email log should be outbound.');
         System.assertEquals('3', emailLog.Status, 'Email log should be marked sent.');
+        System.assertEquals(true, emailLog.ESignature_Generated_c__c, 'Package-created email logs should bypass the signatures sender validation rule.');
         System.assert(emailLog.TextBody.contains('signer@example.com'), 'Email log should identify the signer.');
         System.assert(emailLog.HtmlBody.contains('has sent you a document that requires your signature'), 'Email log should contain the signer request email body.');
         System.assert(emailLog.HtmlBody.contains('Please review the attached proposal before signing.'), 'Email log should include the sender-entered request message.');

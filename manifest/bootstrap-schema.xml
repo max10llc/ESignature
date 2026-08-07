@@ -15,6 +15,7 @@
         <members>AccountContactRelation.Full_Name__c</members>
         <members>ContentVersion.ESignature_File__c</members>
         <members>ContentVersion.ESignature_Status__c</members>
+        <members>EmailMessage.ESignature_Generated_c__c</members>
         <members>ESignature_Command__e.Action__c</members>
         <members>ESignature_Command__e.Actor_Email__c</members>
         <members>ESignature_Command__e.Envelope_Id__c</members>

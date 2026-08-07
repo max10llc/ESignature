@@ -54,6 +54,7 @@
         <members>AccountContactRelation.Full_Name__c</members>
         <members>ContentVersion.ESignature_File__c</members>
         <members>ContentVersion.ESignature_Status__c</members>
+        <members>EmailMessage.ESignature_Generated_c__c</members>
         <members>ESignature_Command__e.Action__c</members>
         <members>ESignature_Command__e.Actor_Email__c</members>
         <members>ESignature_Command__e.Envelope_Id__c</members>
@@ -145,6 +146,10 @@
         <members>ESignature_Setting__mdt.Restrict_Editing__c</members>
         <members>ESignature_Setting__mdt.Site_Base_URL__c</members>
         <name>CustomField</name>
+    </types>
+    <types>
+        <members>EmailMessage.VR02_FromOrgWideSignaturesEmail</members>
+        <name>ValidationRule</name>
     </types>
     <types>
         <members>ESignature_Setting.Default</members>
