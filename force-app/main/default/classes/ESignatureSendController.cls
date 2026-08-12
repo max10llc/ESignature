@@ -400,15 +400,12 @@ public with sharing class ESignatureSendController {
 
     private static void insertEmailLogWithoutBlockingSend(EmailMessage emailLog) {
         try {
-            insert emailLog;
-        } catch (DmlException firstFailure) {
-            String fallbackFrom = UserInfo.getUserEmail();
-            if (!String.isBlank(fallbackFrom) && fallbackFrom != emailLog.FromAddress) {
-                try {
-                    emailLog.FromAddress = fallbackFrom;
-                    insert emailLog;
-                } catch (DmlException retryFailure) {}
-            }
+            Database.insert(emailLog, AccessLevel.SYSTEM_MODE);
+        } catch (DmlException failure) {
+            System.debug(
+                LoggingLevel.WARN,
+                'Unable to log e-signature request EmailMessage: ' + failure.getMessage()
+            );
         }
     }
 

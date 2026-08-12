@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>VR02_FromOrgWideSignaturesEmail</fullName>
-    <active>false</active>
+    <active>true</active>
     <description>Prevents the user from sending an email using the wrong email address.</description>
     <errorConditionFormula>AND(
     FromAddress = &apos;signatures@kaizonsolutions.com&apos; ,
