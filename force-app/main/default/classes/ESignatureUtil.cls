@@ -58,7 +58,7 @@ public without sharing class ESignatureUtil {
                    Sent_At__c, Viewed_At__c, Signed_At__c, Expires_At__c, Page_Count__c,
                    Signature_Method__c, Signature_Image_Data_Url__c,
                    Completed_Fields_JSON__c, Completion_Message__c, Request_Message__c,
-                   Decline_Reason__c, Error_Message__c
+                   Decline_Reason__c, Error_Message__c, Cancellation_Reason__c
             FROM ESignature_Envelope__c
             WHERE Secure_Token_Hash__c = :hashValue
             LIMIT 1

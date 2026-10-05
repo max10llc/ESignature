@@ -35,6 +35,7 @@ private class ESignatureSendEnvelopeActionTest {
                    Request_Subject__c, Request_Message__c, Secure_Token_Hash__c, Public_Signing_URL__c
             FROM ESignature_Envelope__c
             WHERE Id = :fixture.envelope.Id
+            WITH SYSTEM_MODE
         ];
         System.assertEquals('Sent', sent.Status__c);
         System.assertEquals('Signer', sent.Signer_Name__c);

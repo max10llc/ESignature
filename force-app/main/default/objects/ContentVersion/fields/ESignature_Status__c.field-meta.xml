@@ -4,6 +4,7 @@
     <description>Tracks the e-signature lifecycle status for this file.</description>
     <label>E-Signature Status</label>
     <required>false</required>
+    <trackHistory>false</trackHistory>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>

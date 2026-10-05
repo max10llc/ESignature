@@ -2,6 +2,29 @@
 
 Salesforce package for preparing PDF signature fields, sending a public signing link, collecting signer input, and finalizing the signed PDF through Power Automate and Azure.
 
+## Sandbox Development
+
+Use this project for both development and releases. The `sandbox-development` Git branch starts from the verified sandbox deployment of production's e-signature metadata on October 5, 2026. The project's default org is `esig-sandbox`; commands below also name it explicitly.
+
+In VS Code, choose **Terminal > Run Task** and select an `ESignature:` task to open the sandbox, retrieve metadata, validate changes, or deploy changes. Validation and deployment run the 14 e-signature test classes. Production deployments remain a separate, deliberate step.
+
+For a new change, create a feature branch from this baseline, edit the local source, validate, and deploy to the sandbox. If changes are made directly in Salesforce Setup, retrieve them into the project and review the Git diff before committing. Retrieval can overwrite local edits to the same metadata, so commit or stash those edits first.
+
+```powershell
+git switch -c feature/my-esignature-change
+sf project retrieve start --manifest manifest/sandbox-development.xml --target-org esig-sandbox
+```
+
+`manifest/sandbox-development.xml` includes the deployed package metadata and its record-page and cancel-action dependencies, but excludes the environment-specific custom metadata record. The Default record under `force-app` is a sanitized reference and is excluded by `.forceignore`. Its actual sandbox values are stored in the Git-ignored `.local/esig-sandbox/customMetadata/ESignature_Setting.Default.md-meta.xml`. Edit these values in the sandbox's Custom Metadata settings, or explicitly deploy that local settings file when a configuration change is intended. Keep production settings separate; retrieve and review the destination's values before a release. Do not copy sandbox URLs or org-specific IDs into production.
+
+The baseline was deployed using the sandbox's `NoTestRun` option. After sandbox email deliverability was enabled on October 5, 2026, the full Apex run and sequential reruns produced 87 passing tests out of 90. The three remaining test methods have since been updated to use explicit system mode only for seeding or verifying restricted signing-URL and email-log fields. All 23 methods in the affected classes passed across sequential runs and targeted reruns. Application code, production metadata, and field permissions remain unchanged. Deployment-time testing initially returned `NO_SINGLE_MAIL_PERMISSION` errors, so the test-class updates were deployed with `NoTestRun` and verified separately. The development tasks still require tests to pass; email permission errors and record locks may require investigation if they recur.
+
+The deleted-source fix was deployed to `esig-sandbox` on October 5, 2026 (deployment `0AfTI00000ErTDV0A3`), with all 94 tests passing across the 14 e-signature test classes.
+
+The same six-component deleted-source fix was deployed to Production on October 5, 2026 (deployment `0AfTS000001ztQP0AY`), after production validation `0AfTS000001ztOn0AI` passed all 94 tests. The release contains the page controller and utility, the deletion handler and trigger, and their page/deletion regression tests. Existing envelope records and environment settings were not migrated or changed.
+
+Deleting a Salesforce source file cancels its unsigned Draft, Sent, Viewed, and Error envelopes in the same transaction. The deletion trigger handles both envelope source references and legacy prepared-field references, and records a cancellation audit. Cached PDFs stop being served, and an already-open signing page rechecks envelope status before accepting a signature. Restoring the file does not reopen the canceled request; send a new request. Signing submission displays Signature Submitted while finalization is pending. Document Complete is shown only after a final file reference exists, and reopening a failed signed request displays a completion error.
+
 ## Salesforce Setup
 
 1. Deploy the metadata in `force-app/main/default` using `manifest/package.xml`.

@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ESignature: Open sandbox",
+      "type": "process",
+      "command": "sf",
+      "args": ["org", "open", "--target-org", "esig-sandbox"],
+      "problemMatcher": []
+    },
+    {
+      "label": "ESignature: Retrieve sandbox metadata",
+      "type": "process",
+      "command": "sf",
+      "args": ["project", "retrieve", "start", "--manifest", "manifest/sandbox-development.xml", "--target-org", "esig-sandbox"],
+      "problemMatcher": []
+    },
+    {
+      "label": "ESignature: Validate sandbox changes",
+      "type": "process",
+      "command": "sf",
+      "args": ["project", "deploy", "start", "--manifest", "manifest/sandbox-development.xml", "--target-org", "esig-sandbox", "--dry-run", "--test-level", "RunSpecifiedTests", "--tests", "ESignatureAuditReportBuilderTest", "ESignatureCallbackResourceTest", "ESignatureCancelEnvelopeActionTest", "ESignatureCommandTriggerTest", "ESignatureEmailOpenResourceTest", "ESignatureFinalizeQueueableTest", "ESignatureOverlayBuilderTest", "ESignaturePageControllerTest", "ESignaturePdfResourceTest", "ESignaturePrepareControllerTest", "ESignatureSendControllerTest", "ESignatureSendEnvelopeActionTest", "ESignatureUtilTest", "ESignatureSourceDeletionHandlerTest"],
+      "problemMatcher": []
+    },
+    {
+      "label": "ESignature: Deploy sandbox changes",
+      "type": "process",
+      "command": "sf",
+      "args": ["project", "deploy", "start", "--manifest", "manifest/sandbox-development.xml", "--target-org", "esig-sandbox", "--test-level", "RunSpecifiedTests", "--tests", "ESignatureAuditReportBuilderTest", "ESignatureCallbackResourceTest", "ESignatureCancelEnvelopeActionTest", "ESignatureCommandTriggerTest", "ESignatureEmailOpenResourceTest", "ESignatureFinalizeQueueableTest", "ESignatureOverlayBuilderTest", "ESignaturePageControllerTest", "ESignaturePdfResourceTest", "ESignaturePrepareControllerTest", "ESignatureSendControllerTest", "ESignatureSendEnvelopeActionTest", "ESignatureUtilTest", "ESignatureSourceDeletionHandlerTest"],
+      "problemMatcher": []
+    }
+  ]
+}

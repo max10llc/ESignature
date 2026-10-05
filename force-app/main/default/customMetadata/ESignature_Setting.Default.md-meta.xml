@@ -1,77 +1,86 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-    <label>Default</label>
-    <protected>false</protected>
-    <values>
-        <field>Allow_Low_Quality_Printing__c</field>
-        <value xsi:type="xsd:boolean">true</value>
-    </values>
-    <values>
-        <field>Default_Expiration_Days__c</field>
-        <value xsi:type="xsd:double">365.0</value>
-    </values>
-    <values>
-        <field>Default_From_Email__c</field>
-        <value xsi:type="xsd:string">signatures@kaizonsolutions.com</value>
-    </values>
-    <values>
-        <field>Email_Logo_URL__c</field>
-        <value xsi:type="xsd:string">https://tpbrass.my.salesforce-sites.com/signatures/resource/Kaizon_Solutions_Logo</value>
-    </values>
-    <values>
-        <field>Enable_Checkbox_Field__c</field>
-        <value xsi:type="xsd:boolean">true</value>
-    </values>
-    <values>
-        <field>Enable_Text_Field__c</field>
-        <value xsi:type="xsd:boolean">true</value>
-    </values>
-    <values>
-        <field>Final_Pdf_Owner_Password__c</field>
-        <value xsi:nil="true"/>
-    </values>
-    <values>
-        <field>Finalizer_Callback_Secret__c</field>
-        <value xsi:type="xsd:string">CHANGE-ME-SANDBOX-ONLY</value>
-    </values>
-    <values>
-        <field>Finalizer_Callback_URL__c</field>
-        <value xsi:nil="true"/>
-    </values>
-    <values>
-        <field>Finalizer_Mode__c</field>
-        <value xsi:type="xsd:string">PowerAutomateAsync</value>
-    </values>
-    <values>
-        <field>Finalizer_Named_Credential__c</field>
-        <value xsi:type="xsd:string">ESignature_PowerAutomateFinalizer</value>
-    </values>
-    <values>
-        <field>Include_Source_PDF_In_Finalizer_Request__c</field>
-        <value xsi:type="xsd:boolean">true</value>
-    </values>
-    <values>
-        <field>Include_User_Email_Signature__c</field>
-        <value xsi:type="xsd:boolean">false</value>
-    </values>
-    <values>
-        <field>Org_Wide_Email_Address__c</field>
-        <value xsi:type="xsd:string">signatures@kaizonsolutions.com</value>
-    </values>
-    <values>
-        <field>Org_Wide_Email_Address_Id__c</field>
-        <value xsi:type="xsd:string">0D2TS0000000k1F0AQ</value>
-    </values>
-    <values>
-        <field>Restrict_Copying__c</field>
-        <value xsi:type="xsd:boolean">true</value>
-    </values>
-    <values>
-        <field>Restrict_Editing__c</field>
-        <value xsi:type="xsd:boolean">true</value>
-    </values>
-    <values>
-        <field>Site_Base_URL__c</field>
-        <value xsi:type="xsd:string">https://tpbrass.my.salesforce-sites.com/signatures</value>
-    </values>
+  <label>Default</label>
+  <protected>false</protected>
+  <values>
+    <field>Allow_Low_Quality_Printing__c</field>
+    <value xsi:type="xsd:boolean">true</value>
+  </values>
+  <values>
+    <field>Default_Expiration_Days__c</field>
+    <value xsi:type="xsd:double">365.0</value>
+  </values>
+  <values>
+    <field>Default_From_Email__c</field>
+    <value xsi:type="xsd:string">signatures@kaizonsolutions.com</value>
+  </values>
+  <values>
+    <field>Email_Logo_URL__c</field>
+    <value xsi:type="xsd:string">https://tpbrass.my.salesforce-sites.com/signatures/resource/Kaizon_Solutions_Logo</value>
+  </values>
+  <values>
+    <field>Enable_Checkbox_Field__c</field>
+    <value xsi:type="xsd:boolean">false</value>
+  </values>
+  <values>
+    <field>Enable_Text_Field__c</field>
+    <value xsi:type="xsd:boolean">false</value>
+  </values>
+  <values>
+    <field>Final_Pdf_Owner_Password__c</field>
+    <value xsi:nil="true">
+    </value>
+  </values>
+  <values>
+    <field>Finalizer_Callback_Secret__c</field>
+    <value xsi:type="xsd:string">
+    </value>
+  </values>
+  <values>
+    <field>Finalizer_Callback_URL__c</field>
+    <value xsi:nil="true">
+    </value>
+  </values>
+  <values>
+    <field>Finalizer_Mode__c</field>
+    <value xsi:type="xsd:string">PowerAutomateAsync</value>
+  </values>
+  <values>
+    <field>Finalizer_Named_Credential__c</field>
+    <value xsi:type="xsd:string">ESignature_PowerAutomateFinalizer</value>
+  </values>
+  <values>
+    <field>Include_Source_PDF_In_Finalizer_Request__c</field>
+    <value xsi:type="xsd:boolean">true</value>
+  </values>
+  <values>
+    <field>Include_User_Email_Signature__c</field>
+    <value xsi:type="xsd:boolean">false</value>
+  </values>
+  <values>
+    <field>Org_Wide_Email_Address_Id__c</field>
+    <value xsi:type="xsd:string">
+    </value>
+  </values>
+  <values>
+    <field>Org_Wide_Email_Address__c</field>
+    <value xsi:type="xsd:string">signatures@kaizonsolutions.com</value>
+  </values>
+  <values>
+    <field>Restrict_Copying__c</field>
+    <value xsi:type="xsd:boolean">true</value>
+  </values>
+  <values>
+    <field>Restrict_Editing__c</field>
+    <value xsi:type="xsd:boolean">true</value>
+  </values>
+  <values>
+    <field>Send_From_Signature_kaizonsoluitons_com__c</field>
+    <value xsi:type="xsd:boolean">false</value>
+  </values>
+  <values>
+    <field>Site_Base_URL__c</field>
+    <value xsi:type="xsd:string">
+    </value>
+  </values>
 </CustomMetadata>

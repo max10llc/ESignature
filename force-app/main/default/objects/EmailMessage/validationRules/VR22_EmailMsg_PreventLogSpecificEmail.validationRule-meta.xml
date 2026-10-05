@@ -5,8 +5,7 @@
     <description>Prevents logging specific emails to a case.</description>
     <errorConditionFormula>AND(
     $Setup.Bypass_Validation_Rule__c.Email_Message__c = True ,
-    CONTAINS( FromAddress , &apos;noreply@kaizonsolutions.com&apos; ),
-    NOT( BEGINS( Subject , &apos;Signature request sent:&apos; ) )
+    CONTAINS( FromAddress , &apos;noreply@kaizonsolutions.com&apos; )
 )</errorConditionFormula>
     <errorMessage>You cannot log this email. [VR22 Email Message]</errorMessage>
 </ValidationRule>
