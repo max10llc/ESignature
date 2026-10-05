@@ -4,5 +4,6 @@
     <defaultValue>false</defaultValue>
     <description>Marks this file as available for E-Signature preparation.</description>
     <label>E-Signature File</label>
+    <trackHistory>false</trackHistory>
     <type>Checkbox</type>
 </CustomField>

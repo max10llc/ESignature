@@ -143,6 +143,7 @@ private class ESignatureSendControllerTest {
                    Source_File_Title__c, Source_ContentVersion_Id__c, Source_ContentDocument_Id__c
             FROM ESignature_Envelope__c
             WHERE Id = :fixture.envelope.Id
+            WITH SYSTEM_MODE
         ];
         System.assertEquals('Sent', env.Status__c);
         System.assertEquals('Derek Hawley', env.Signer_Name__c);
@@ -182,6 +183,7 @@ private class ESignatureSendControllerTest {
             FROM EmailMessage
             WHERE RelatedToId = :fixture.parentId
             AND Subject = 'Commercial Cleaning Proposal Signature'
+            WITH SYSTEM_MODE
             LIMIT 1
         ];
         System.assertEquals(fixture.parentId, emailLog.RelatedToId, 'Signer request should be logged as an email on the parent record.');

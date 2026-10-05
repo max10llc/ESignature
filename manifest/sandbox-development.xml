@@ -161,10 +161,6 @@
     <name>ValidationRule</name>
   </types>
   <types>
-    <members>ESignature_Setting.Default</members>
-    <name>CustomMetadata</name>
-  </types>
-  <types>
     <members>E_Signature_Email_Templates</members>
     <name>EmailFolder</name>
   </types>

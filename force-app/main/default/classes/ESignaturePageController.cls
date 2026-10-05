@@ -39,7 +39,7 @@ public without sharing class ESignaturePageController {
      * outside the guest user's record edit restriction, records the Viewed state.
      */
     public PageReference initializePage() {
-        if (envelope == null) {
+        if (envelope == null || hasError == true || submitted == true) {
             return null;
         }
         if (envelope.Expires_At__c != null && envelope.Expires_At__c < System.now()) {
@@ -61,6 +61,8 @@ public without sharing class ESignaturePageController {
     }
 
     private void loadEnvelope() {
+        hasError = false;
+        submitted = false;
         envelope = ESignatureUtil.findEnvelopeByToken(token);
         if (envelope == null) {
             hasError = true;
@@ -84,12 +86,24 @@ public without sharing class ESignaturePageController {
         }
         if (isCancelledEnvelope()) {
             submitted = true;
-            pageMessage = 'This document has already been cancelled.';
+            pageMessage = envelope.Cancellation_Reason__c == 'The source document was deleted from Salesforce.'
+                ? 'This document is no longer available because the sender deleted it. Please contact the sender for a new signing request.'
+                : 'This document has already been cancelled.';
             return;
         }
         if (normalizedEnvelopeStatus() == 'expired') {
             hasError = true;
             pageMessage = 'This signing link has expired.';
+            return;
+        }
+        if (envelope.Signed_At__c != null || new Set<String>{ 'finalizing', 'signed', 'completed', 'complete' }.contains(normalizedEnvelopeStatus())) {
+            if (normalizedEnvelopeStatus() == 'error') {
+                hasError = true;
+                pageMessage = 'Your signature was submitted, but the document could not be completed. Please contact the sender.';
+            } else {
+                submitted = true;
+                pageMessage = 'Your signature has been submitted. The document is still being processed. You will receive an email when it is complete.';
+            }
             return;
         }
     }
@@ -101,10 +115,19 @@ public without sharing class ESignaturePageController {
     }
 
     public String getTerminalTitle() {
+        if (hasError == true) {
+            return 'Document Unavailable';
+        }
         if (String.isBlank(pageMessage)) {
             return 'Document Status';
         }
         String lowerMessage = pageMessage.toLowerCase();
+        if (lowerMessage.contains('no longer available')) {
+            return 'Document Unavailable';
+        }
+        if (lowerMessage.contains('still being processed')) {
+            return 'Signature Submitted';
+        }
         if (lowerMessage.contains('declin')) {
             return 'Document Declined';
         }
@@ -198,6 +221,9 @@ public without sharing class ESignaturePageController {
     }
 
     public PageReference sign() {
+        // Re-read after a postback: the source may have been deleted while the
+        // signer had the cached PDF open in their browser.
+        loadEnvelope();
         if (!getCanSign()) {
             return null;
         }
@@ -223,7 +249,7 @@ public without sharing class ESignaturePageController {
             payload.put('message', 'Signer completed required fields and submitted signature.');
             publishCommand('Signed', payload, true);
             submitted = true;
-            pageMessage = 'The document is complete and will be emailed to you shortly.';
+            pageMessage = 'Your signature has been submitted. The document is still being processed. You will receive an email when it is complete.';
         } catch (Exception e) {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, e.getMessage()));
         }
@@ -231,6 +257,7 @@ public without sharing class ESignaturePageController {
     }
 
     public PageReference decline() {
+        loadEnvelope();
         if (envelope == null || submitted == true) {
             return null;
         }
@@ -257,6 +284,7 @@ public without sharing class ESignaturePageController {
     }
 
     public PageReference delegateAgreement() {
+        loadEnvelope();
         if (envelope == null || submitted == true || !getCanSign()) {
             return null;
         }
@@ -301,6 +329,7 @@ public without sharing class ESignaturePageController {
     }
 
     public PageReference continueAfterDisclosure() {
+        loadEnvelope();
         if (!getCanSign()) {
             return null;
         }
@@ -388,10 +417,8 @@ public without sharing class ESignaturePageController {
         if (envelope == null) {
             return false;
         }
-        if (envelope.Signed_At__c != null) {
-            return true;
-        }
-        return new Set<String>{ 'signed', 'finalizing', 'completed', 'complete' }.contains(normalizedEnvelopeStatus());
+        return new Set<String>{ 'signed', 'completed', 'complete' }.contains(normalizedEnvelopeStatus()) &&
+            !String.isBlank(envelope.Final_ContentVersion_Id__c);
     }
 
     private Boolean isCancelledEnvelope() {

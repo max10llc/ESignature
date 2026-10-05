@@ -42,7 +42,8 @@ private class ESignaturePageControllerTest {
         Test.stopTest();
 
         System.assertEquals(true, controller.submitted, 'Signer should be submitted when required fields are complete.');
-        System.assertEquals('The document is complete and will be emailed to you shortly.', controller.pageMessage);
+        System.assert(controller.pageMessage.contains('still being processed'));
+        System.assertEquals('Signature Submitted', controller.getTerminalTitle());
     }
 
     @IsTest
@@ -195,12 +196,13 @@ private class ESignaturePageControllerTest {
         ESignaturePageController controller = new ESignaturePageController();
 
         System.assertEquals(true, controller.submitted, 'Already signed envelope should render as submitted.');
-        System.assertEquals('This document has already been completed.', controller.pageMessage);
+        System.assert(controller.pageMessage.contains('still being processed'));
+        System.assertEquals('Signature Submitted', controller.getTerminalTitle());
         System.assertEquals(false, controller.getCanSign(), 'Already signed envelope should not be signable.');
     }
 
     @IsTest
-    static void signedEnvelopeInErrorStatusShowsCompletedMessage() {
+    static void signedEnvelopeInErrorStatusShowsFailureMessage() {
         String token = 'page-signed-error-token';
         ESignature_Envelope__c env = createEnvelope(token, 'Error');
         env.Signed_At__c = System.now();
@@ -209,15 +211,18 @@ private class ESignaturePageControllerTest {
 
         ESignaturePageController controller = new ESignaturePageController();
 
-        System.assertEquals(true, controller.submitted, 'Signed envelopes should stay closed even if finalization is in Error.');
-        System.assertEquals('This document has already been completed.', controller.pageMessage);
+        System.assertEquals(false, controller.submitted, 'Failed finalization must not render completion.');
+        System.assertEquals(true, controller.hasError);
+        System.assert(controller.pageMessage.contains('could not be completed'));
         System.assertEquals(false, controller.getCanSign(), 'Signed envelopes should not become signable again after finalization errors.');
     }
 
     @IsTest
     static void completedEnvelopeStatusShowsSubmittedMessage() {
         String token = 'page-completed-status-token';
-        createEnvelope(token, 'Completed');
+        ESignature_Envelope__c env = createEnvelope(token, 'Completed');
+        env.Final_ContentVersion_Id__c = '068000000000001';
+        update env;
         setSigningPageToken(token);
 
         ESignaturePageController controller = new ESignaturePageController();
@@ -225,6 +230,20 @@ private class ESignaturePageControllerTest {
         System.assertEquals(true, controller.submitted, 'Completed envelopes should render as submitted.');
         System.assertEquals('This document has already been completed.', controller.pageMessage);
         System.assertEquals(false, controller.getCanSign(), 'Completed envelopes should not be signable.');
+        System.assertEquals('Document Complete', controller.getTerminalTitle());
+    }
+
+    @IsTest
+    static void finalizingEnvelopeShowsPendingInsteadOfComplete() {
+        String token = 'page-finalizing-token';
+        ESignature_Envelope__c env = createEnvelope(token, 'Finalizing');
+        env.Signed_At__c = System.now();
+        update env;
+        setSigningPageToken(token);
+        ESignaturePageController controller = new ESignaturePageController();
+        System.assertEquals(false, controller.getCanSign());
+        System.assertEquals('Signature Submitted', controller.getTerminalTitle());
+        System.assert(controller.pageMessage.contains('still being processed'));
     }
 
     @IsTest

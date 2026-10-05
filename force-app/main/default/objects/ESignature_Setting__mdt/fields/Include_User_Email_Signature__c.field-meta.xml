@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Include_User_Email_Signature__c</fullName>
     <defaultValue>false</defaultValue>
-    <description>If checked, e-signature notification emails include the sending user's Salesforce email signature. If unchecked, Salesforce does not append the user's email signature.</description>
+    <description>If checked, e-signature notification emails include the sending user&apos;s Salesforce email signature. If unchecked, Salesforce does not append the user&apos;s email signature.</description>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Include User Email Signature</label>
     <type>Checkbox</type>

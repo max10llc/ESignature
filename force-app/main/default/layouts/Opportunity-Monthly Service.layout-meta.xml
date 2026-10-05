@@ -67,10 +67,6 @@
         <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
-                <field>Contract_Signaure__c</field>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
                 <field>Current_Price__c</field>
             </layoutItems>
             <layoutItems>
@@ -232,14 +228,6 @@
             <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Probability</field>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
-                <field>eSignature_Link__c</field>
-            </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
-                <field>Signed_Contract_URL__c</field>
             </layoutItems>
         </layoutColumns>
         <layoutColumns>

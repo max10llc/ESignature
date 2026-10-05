@@ -263,7 +263,8 @@ private class ESignatureCommandTriggerTest {
             Source_ContentVersion_Id__c = String.valueOf(source.Id),
             Source_ContentDocument_Id__c = String.valueOf(source.ContentDocumentId)
         );
-        insert env;
+        // Seed a legacy URL without granting the test user access to the field.
+        insert as system env;
 
         Map<String, Object> payload = new Map<String, Object>{
             'delegateEmail' => 'delegate@example.com',
@@ -286,6 +287,7 @@ private class ESignatureCommandTriggerTest {
                    Signer_Title__c, Sent_At__c, Viewed_At__c, Public_Signing_URL__c, Error_Message__c
             FROM ESignature_Envelope__c
             WHERE Id = :env.Id
+            WITH SYSTEM_MODE
         ];
         System.assertEquals('Sent', env.Status__c, 'Delegated envelope should be sent to the delegate. Error: ' + env.Error_Message__c);
         System.assertNotEquals(tokenHash, env.Secure_Token_Hash__c, 'Delegation should invalidate the original signer token.');

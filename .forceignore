@@ -5,3 +5,6 @@ node_modules
 .vscode
 **/jsconfig.json
 **/.eslintrc.json
+
+# Environment-specific values are deployed separately from the code baseline.
+force-app/main/default/customMetadata/ESignature_Setting.Default.md-meta.xml

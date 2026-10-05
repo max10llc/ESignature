@@ -3,14 +3,15 @@
     <sharingGuestRules>
         <fullName>Tokenized_Envelopes_To_Signatures_Guest</fullName>
         <accessLevel>Read</accessLevel>
+        <label>Tokenized Envelopes To Signatures Guest</label>
+        <sharedTo>
+            <guestUser>Signatures</guestUser>
+        </sharedTo>
         <criteriaItems>
             <field>Secure_Token_Hash__c</field>
             <operation>notEqual</operation>
             <value></value>
         </criteriaItems>
-        <label>Tokenized Envelopes To Signatures Guest</label>
-        <sharedTo>
-            <guestUser>Signatures</guestUser>
-        </sharedTo>
+        <includeHVUOwnedRecords>false</includeHVUOwnedRecords>
     </sharingGuestRules>
 </SharingRules>

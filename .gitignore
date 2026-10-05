@@ -1,7 +1,8 @@
-﻿# Salesforce local state
+# Salesforce local state
 .sfdx/
 .sf/
 .localdevserver/
+.local/
 
 # Dependencies
 node_modules/
