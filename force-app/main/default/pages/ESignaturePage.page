@@ -88,6 +88,22 @@
         .consent-overlay-actions { position:relative; display:flex; align-items:center; gap:10px; }
         .consent-options-button { flex:1; min-height:36px; border:1px solid #a3a3a3; border-radius:999px; background:#e5e5e5; color:#111827; cursor:pointer; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; }
         .consent-continue-button { flex:1; min-height:36px; border:0; border-radius:999px; background:#0b66da; color:#fff; cursor:pointer; font-size:13px; font-weight:700; }
+        .signing-workspace.consent-required .consent-overlay {
+            outline:2px solid #0b66da;
+            outline-offset:2px;
+            animation:consentAttentionPulse 1.55s ease-in-out infinite;
+        }
+        @keyframes consentAttentionPulse {
+            0% {
+                box-shadow:0 0 0 0 rgba(11,102,218,.75), 0 0 0 7px rgba(11,102,218,.36);
+            }
+            70% {
+                box-shadow:0 0 0 9px rgba(11,102,218,0), 0 0 0 14px rgba(11,102,218,0);
+            }
+            100% {
+                box-shadow:0 0 0 0 rgba(11,102,218,0), 0 0 0 7px rgba(11,102,218,0);
+            }
+        }
         .consent-options-menu { display:none; position:absolute; left:0; bottom:46px; width:255px; background:#fff; border:1px solid #d1d5db; border-radius:4px; box-shadow:0 12px 30px rgba(15,23,42,.22); padding:7px 0; z-index:35; }
         .consent-options-menu.open { display:block; }
         .consent-menu-item { width:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; min-height:34px; padding:7px 13px; border:0; background:#fff; color:#111827; font-size:13px; line-height:1.2; text-align:left; text-decoration:none; cursor:pointer; }
