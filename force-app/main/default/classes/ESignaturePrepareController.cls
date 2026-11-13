@@ -92,7 +92,7 @@ public with sharing class ESignaturePrepareController {
     }
 
     @AuraEnabled(cacheable=true)
-    public static PdfInfoDTO getPdfDocumentInfo(String contentDocumentId) {
+    public static PdfInfoDTO getPdfDocumentInfo(String contentDocumentId, Boolean bypassESignatureFileRequirement) {
         if (String.isBlank(contentDocumentId)) {
             throw new AuraHandledException('Content Document Id is required.');
         }
@@ -110,7 +110,7 @@ public with sharing class ESignaturePrepareController {
         if (String.valueOf(version.FileExtension).toLowerCase() != 'pdf') {
             throw new AuraHandledException('Only PDF files can be prepared for signature.');
         }
-        if (version.ESignature_File__c != true) {
+        if (bypassESignatureFileRequirement != true && version.ESignature_File__c != true) {
             throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
         }
         PdfInfoDTO info = new PdfInfoDTO();
@@ -193,7 +193,7 @@ public with sharing class ESignaturePrepareController {
     }
 
     @AuraEnabled
-    public static SaveResultDTO savePlacements(String parentRecordId, String contentDocumentId, String contentVersionId, String placementsJson) {
+    public static SaveResultDTO savePlacements(String parentRecordId, String contentDocumentId, String contentVersionId, String placementsJson, Boolean bypassESignatureFileRequirement) {
         if (String.isBlank(parentRecordId)) {
             throw new AuraHandledException('Parent Record Id is required.');
         }
@@ -216,7 +216,7 @@ public with sharing class ESignaturePrepareController {
         if (String.valueOf(version.FileExtension).toLowerCase() != 'pdf') {
             throw new AuraHandledException('Only PDF files can be prepared for signature.');
         }
-        if (version.ESignature_File__c != true) {
+        if (bypassESignatureFileRequirement != true && version.ESignature_File__c != true) {
             throw new AuraHandledException('This PDF is not marked as an E-Signature File.');
         }
         Integer pageCount = Integer.valueOf(ESignatureUtil.estimatePageCount(version.VersionData));

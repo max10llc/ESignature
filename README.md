@@ -82,6 +82,8 @@ The secret must exactly match `ESignature_Setting.Default.Finalizer_Callback_Sec
 
 ## Smoke Test
 
+The E-Signature Prepare Document screen component has an input-only Boolean, **Bypass E-Signature File Requirement** (`bypassESignatureFileRequirement`), which defaults to false. Set it to true to load and save placements for a PDF without selecting its `E-Signature File` checkbox. The file must still be a PDF, and the bypass does not change the checkbox. Pass the file's Content Document Id to the component; the supplied `Prepare_ESignature_Document` flow still selects only flagged files in its upstream lookup.
+
 1. Mark a source PDF ContentVersion as `E-Signature File`.
 2. Create an e-signature envelope from Account, Opportunity, or Work Order.
 3. Place signer fields on the PDF.

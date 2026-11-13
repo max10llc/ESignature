@@ -22,7 +22,7 @@ private class ESignaturePrepareControllerTest {
         ContentVersion source = createPdfFile(parent.Id, 'Unmarked PDF File', false);
 
         try {
-            ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId));
+            ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId), false);
             System.assert(false, 'Expected unmarked PDF to be rejected.');
         } catch (AuraHandledException ex) {
             System.assertNotEquals(null, ex.getMessage(), 'The caller should receive a clear AuraHandledException.');
@@ -36,7 +36,7 @@ private class ESignaturePrepareControllerTest {
         ContentVersion source = createPdfFile(parent.Id, 'Marked PDF File', true);
 
         ESignaturePrepareController.PdfInfoDTO info =
-            ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId));
+            ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId), null);
 
         System.assertEquals(String.valueOf(source.ContentDocumentId), info.contentDocumentId);
         System.assertEquals(String.valueOf(source.Id), info.contentVersionId);
@@ -80,7 +80,8 @@ private class ESignaturePrepareControllerTest {
             String.valueOf(parent.Id),
             String.valueOf(source.ContentDocumentId),
             String.valueOf(source.Id),
-            placementsJson
+            placementsJson,
+            false
         );
 
         System.assertNotEquals(null, result.envelopeId, 'Saving placements should create or update a draft envelope.');
@@ -132,7 +133,8 @@ private class ESignaturePrepareControllerTest {
             String.valueOf(parent.Id),
             String.valueOf(source.ContentDocumentId),
             String.valueOf(source.Id),
-            placementJson()
+            placementJson(),
+            null
         );
 
         ESignature_Envelope__c env = [
@@ -175,7 +177,8 @@ private class ESignaturePrepareControllerTest {
             String.valueOf(parent.Id),
             String.valueOf(newSource.ContentDocumentId),
             String.valueOf(newSource.Id),
-            placementJson()
+            placementJson(),
+            false
         );
 
         Map<Id, ESignature_Envelope__c> envelopes = new Map<Id, ESignature_Envelope__c>([
@@ -214,7 +217,8 @@ private class ESignaturePrepareControllerTest {
                 String.valueOf(parent.Id),
                 String.valueOf(source.ContentDocumentId),
                 String.valueOf(source.Id),
-                '[]'
+                '[]',
+                false
             );
             System.assert(false, 'Expected empty placement saves to be rejected.');
         } catch (AuraHandledException ex) {
@@ -227,6 +231,97 @@ private class ESignaturePrepareControllerTest {
             FROM ESignature_Envelope__c
             WHERE Parent_Record_Id__c = :parentId
         ], 'Empty saves should not create draft envelopes.');
+    }
+
+    @IsTest
+    static void bypassAllowsLoadingAndSavingUnmarkedPdf() {
+        Account parent = new Account(Name = 'Prepare Bypass Parent');
+        insert parent;
+        ContentVersion source = createPdfFile(parent.Id, 'Unmarked Bypass PDF', false);
+
+        ESignaturePrepareController.PdfInfoDTO info = ESignaturePrepareController.getPdfDocumentInfo(
+            String.valueOf(source.ContentDocumentId), true
+        );
+        System.assertEquals(String.valueOf(source.Id), info.contentVersionId);
+        System.assertEquals(1, info.pageCount);
+
+        ESignaturePrepareController.SaveResultDTO result = ESignaturePrepareController.savePlacements(
+            String.valueOf(parent.Id), info.contentDocumentId, info.contentVersionId, placementJson(), true
+        );
+        ESignature_Envelope__c draft = [
+            SELECT Status__c, Source_ContentVersion_Id__c FROM ESignature_Envelope__c WHERE Id = :result.envelopeId
+        ];
+        System.assertEquals('Draft', draft.Status__c);
+        System.assertEquals(String.valueOf(source.Id), draft.Source_ContentVersion_Id__c);
+        System.assertEquals(1, ESignaturePrepareController.getPlacements(
+            String.valueOf(parent.Id), info.contentDocumentId
+        ).size());
+        System.assertEquals(false, [SELECT ESignature_File__c FROM ContentVersion WHERE Id = :source.Id].ESignature_File__c,
+            'Bypassing the requirement must not mark the file.');
+    }
+
+    @IsTest
+    static void falseAndNullBypassRejectUnmarkedPdf() {
+        Account parent = new Account(Name = 'Prepare Bypass Disabled Parent');
+        insert parent;
+        ContentVersion source = createPdfFile(parent.Id, 'Unmarked Restricted PDF', false);
+
+        for (Boolean bypass : new List<Boolean>{ false, null }) {
+            try {
+                ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(source.ContentDocumentId), bypass);
+                System.assert(false, 'Unmarked PDF must require an explicit true bypass to load.');
+            } catch (AuraHandledException ex) {
+                System.assertNotEquals(null, ex.getMessage());
+            }
+            try {
+                ESignaturePrepareController.savePlacements(
+                    String.valueOf(parent.Id), String.valueOf(source.ContentDocumentId), String.valueOf(source.Id),
+                    placementJson(), bypass
+                );
+                System.assert(false, 'Unmarked PDF must require an explicit true bypass to save.');
+            } catch (AuraHandledException ex) {
+                System.assertNotEquals(null, ex.getMessage());
+            }
+        }
+        System.assertEquals(0, [SELECT COUNT() FROM ESignature_Envelope__c WHERE Account__c = :parent.Id]);
+    }
+
+    @IsTest
+    static void bypassStillRejectsNonPdfAndMismatchedVersion() {
+        Account parent = new Account(Name = 'Prepare Bypass Validation Parent');
+        insert parent;
+        ContentVersion textFile = new ContentVersion(
+            Title = 'Text File', PathOnClient = 'file.txt', VersionData = Blob.valueOf('Text'),
+            FirstPublishLocationId = parent.Id, ESignature_File__c = false
+        );
+        insert textFile;
+        textFile = [SELECT Id, ContentDocumentId FROM ContentVersion WHERE Id = :textFile.Id];
+        try {
+            ESignaturePrepareController.getPdfDocumentInfo(String.valueOf(textFile.ContentDocumentId), true);
+            System.assert(false, 'Bypass must not allow loading a non-PDF.');
+        } catch (AuraHandledException ex) {
+            System.assertNotEquals(null, ex.getMessage());
+        }
+        try {
+            ESignaturePrepareController.savePlacements(
+                String.valueOf(parent.Id), String.valueOf(textFile.ContentDocumentId), String.valueOf(textFile.Id),
+                placementJson(), true
+            );
+            System.assert(false, 'Bypass must not allow saving a non-PDF.');
+        } catch (AuraHandledException ex) {
+            System.assertNotEquals(null, ex.getMessage());
+        }
+        ContentVersion pdf = createPdfFile(parent.Id, 'Unmarked Mismatch PDF', false);
+        try {
+            ESignaturePrepareController.savePlacements(
+                String.valueOf(parent.Id), String.valueOf(textFile.ContentDocumentId), String.valueOf(pdf.Id),
+                placementJson(), true
+            );
+            System.assert(false, 'Bypass must not allow a version from another document.');
+        } catch (AuraHandledException ex) {
+            System.assertNotEquals(null, ex.getMessage());
+        }
+        System.assertEquals(0, [SELECT COUNT() FROM ESignature_Envelope__c WHERE Account__c = :parent.Id]);
     }
 
     private static String placementJson() {

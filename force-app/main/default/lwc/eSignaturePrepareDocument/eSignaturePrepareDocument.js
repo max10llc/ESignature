@@ -45,6 +45,7 @@ export default class PdfESignPrepareDocument extends LightningElement {
     @api recordId;
     @api parentRecordId;
     @api contentDocumentId;
+    @api bypassESignatureFileRequirement = false;
     @api height = DEFAULT_VIEWER_HEIGHT;
     @api
     get cancel() {
@@ -335,7 +336,10 @@ export default class PdfESignPrepareDocument extends LightningElement {
             }
             this.loadingMessage = 'Loading PDF information...';
             this.pdfInfo = await this.withTimeout(
-                getPdfDocumentInfo({ contentDocumentId: this.activeContentDocumentId }),
+                getPdfDocumentInfo({
+                    contentDocumentId: this.activeContentDocumentId,
+                    bypassESignatureFileRequirement: this.toBoolean(this.bypassESignatureFileRequirement)
+                }),
                 20000,
                 'Loading PDF information'
             );
@@ -883,7 +887,8 @@ export default class PdfESignPrepareDocument extends LightningElement {
                 parentRecordId: this.effectiveParentRecordId,
                 contentDocumentId: this.activeContentDocumentId,
                 contentVersionId: this.pdfInfo.contentVersionId,
-                placementsJson: JSON.stringify(placements)
+                placementsJson: JSON.stringify(placements),
+                bypassESignatureFileRequirement: this.toBoolean(this.bypassESignatureFileRequirement)
             });
             this.preparedEnvelopeId = result?.envelopeId || null;
             this.lastSavedPlacementSignature = this.getPlacementSignature();
