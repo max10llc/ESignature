@@ -399,6 +399,55 @@ private class ESignatureSendControllerTest {
         System.assert(!html.contains('Signing URL'), 'Sender confirmation email should not label or display the signing URL.');
     }
 
+    @IsTest
+    static void sendEnvelopeLogsRequestOnCaseActivity() {
+        DraftFixture fixture = createDraftFixture();
+        Case parent = new Case(Subject = 'Case signature request', Status = 'New', Origin = 'Web');
+        insert parent;
+        fixture.envelope.Parent_Record_Id__c = String.valueOf(parent.Id);
+        fixture.envelope.Parent_Object_Api_Name__c = 'Case';
+        update fixture.envelope;
+        fixture.field.Parent_Record_Id__c = String.valueOf(parent.Id);
+        update fixture.field;
+
+        Test.startTest();
+        ESignatureSendController.SendResultDTO result = ESignatureSendController.sendEnvelope(
+            String.valueOf(fixture.envelope.Id), 'Case Signer', 'case.signer@example.com', 'Manager', 30,
+            'Please sign the Case document.', 'Case document signature request'
+        );
+        Test.stopTest();
+
+        System.assertEquals('Sent', result.status);
+        ESignature_Envelope__c sentEnvelope = [
+            SELECT Case__c FROM ESignature_Envelope__c WHERE Id = :fixture.envelope.Id
+        ];
+        System.assertEquals(parent.Id, sentEnvelope.Case__c);
+        List<EmailMessage> emails = [
+            SELECT Id, ParentId, ActivityId, IsClientManaged, Subject, ToAddress, Status, Incoming, HtmlBody, ESignature_Generated_c__c
+            FROM EmailMessage
+            WHERE ParentId = :parent.Id AND ESignature_Generated_c__c = true
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(1, emails.size(), 'The Case must have exactly one signature-request email log.');
+        EmailMessage emailLog = emails[0];
+        System.assertEquals(parent.Id, emailLog.ParentId);
+        System.assertEquals('Case document signature request', emailLog.Subject);
+        System.assertEquals('case.signer@example.com', emailLog.ToAddress);
+        System.assertEquals('3', emailLog.Status);
+        System.assertEquals(false, emailLog.Incoming);
+        System.assert(emailLog.HtmlBody.contains('Please sign the Case document.'));
+        System.assert(!emailLog.HtmlBody.contains('/apex/ESignaturePage'), 'The Case log must not expose signing access.');
+        System.assertEquals(true, emailLog.IsClientManaged);
+        System.assertNotEquals(null, emailLog.ActivityId, 'The email log must have an activity for the Case timeline.');
+        Task emailActivity = [
+            SELECT WhatId, TaskSubtype, Status FROM Task WHERE Id = :emailLog.ActivityId
+            WITH SYSTEM_MODE
+        ];
+        System.assertEquals(parent.Id, emailActivity.WhatId, 'The email activity must belong to the Case.');
+        System.assertEquals('Email', emailActivity.TaskSubtype);
+        System.assertEquals('Completed', emailActivity.Status);
+    }
+
     private static DraftFixture createDraftFixture() {
         Account parent = new Account(Name = 'Send Controller Parent');
         insert parent;

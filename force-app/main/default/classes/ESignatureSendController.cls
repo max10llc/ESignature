@@ -370,7 +370,13 @@ public with sharing class ESignatureSendController {
             + ' to ' + signerDisplay + '.';
 
         EmailMessage emailLog = new EmailMessage();
-        emailLog.RelatedToId = parentId;
+        if (parentId.getSObjectType() == Case.SObjectType) {
+            emailLog.ParentId = parentId;
+            // Ensure an email activity is created regardless of Email-to-Case routing settings.
+            emailLog.IsClientManaged = true;
+        } else {
+            emailLog.RelatedToId = parentId;
+        }
         emailLog.Subject = loggedSentEmailSubject(env, content, 'Signature request sent');
         emailLog.HtmlBody = content == null ? null : content.htmlBody;
         emailLog.TextBody = emailLogDescription;
