@@ -604,7 +604,7 @@ public without sharing class ESignatureAuditReportBuilder {
         return '';
     }
 
-    private static String auditTimeZoneSid(ESignature_Envelope__c env) {
+    public static String auditTimeZoneSid(ESignature_Envelope__c env) {
         String senderTimeZone = env == null || env.Sender_User__r == null ? null : env.Sender_User__r.TimeZoneSidKey;
         if (String.isNotBlank(senderTimeZone)) {
             return senderTimeZone;
@@ -617,7 +617,7 @@ public without sharing class ESignatureAuditReportBuilder {
         return value == null ? '' : value.format(AUDIT_DATE_FORMAT, timeZoneSid);
     }
 
-    private static String formatDateTime(Datetime value, String timeZoneSid) {
+    public static String formatDateTime(Datetime value, String timeZoneSid) {
         return value == null ? '' : value.format(AUDIT_DATE_TIME_FORMAT, timeZoneSid);
     }
 

@@ -84,6 +84,10 @@ The secret must exactly match `ESignature_Setting.Default.Finalizer_Callback_Sec
 
 The E-Signature Prepare Document screen component has an input-only Boolean, **Bypass E-Signature File Requirement** (`bypassESignatureFileRequirement`), which defaults to false. Set it to true to load and save placements for a PDF without selecting its `E-Signature File` checkbox. The file must still be a PDF, and the bypass does not change the checkbox. Pass the file's Content Document Id to the component; the supplied `Prepare_ESignature_Document` flow still selects only flagged files in its upstream lookup.
 
+Finalized signature overlays include a blue underline and the signer's typed name with the recorded signing timestamp beneath it. The timestamp uses the same format and timezone as the final audit report: the envelope sender's Salesforce timezone, falling back to the running user's timezone when no sender is available. The caption sits at the bottom of the signature placement, with the full-size signature raised above it so the caption does not extend below the document's signature baseline. New typed and drawn captures align their ink to the bottom of the original canvas without resizing it; the PDF renderer bottom-aligns signature images two points above the blue line. Existing Name, Title, Date, and Initials fields retain their placement.
+
+Run `node scripts/tests/signature-ink-alignment.cjs` to check signature capture padding and size preservation in local headless Chrome. Set `CHROME_PATH` if Chrome is installed outside the default Windows location.
+
 1. Mark a source PDF ContentVersion as `E-Signature File`.
 2. Create an e-signature envelope from Account, Opportunity, or Work Order.
 3. Place signer fields on the PDF.

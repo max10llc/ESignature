@@ -1034,6 +1034,33 @@ function canvasToTransparentPng(sourceCanvas) {
     canvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
     return canvas.toDataURL('image/png');
 }
+function bottomAlignSignatureInk(sourceCanvas) {
+    var width = sourceCanvas.width;
+    var height = sourceCanvas.height;
+    var data = sourceCanvas.getContext('2d').getImageData(0, 0, width, height).data;
+    var bottomInkRow = -1;
+    for (var y = height - 1; y >= 0 && bottomInkRow < 0; y--) {
+        for (var x = 0; x < width; x++) {
+            var offset = (y * width + x) * 4;
+            if (data[offset + 3] > 8 && Math.min(data[offset], data[offset + 1], data[offset + 2]) < 245) {
+                bottomInkRow = y;
+                break;
+            }
+        }
+    }
+    if (bottomInkRow < 0) { return sourceCanvas; }
+    var shift = Math.max(0, height - bottomInkRow - 3);
+    if (!shift) { return sourceCanvas; }
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    // Translate only: retain the original pixel dimensions and ink size.
+    ctx.drawImage(sourceCanvas, 0, shift);
+    return canvas;
+}
 function cropCanvasToInk(sourceCanvas, padding) {
     var width = sourceCanvas.width;
     var height = sourceCanvas.height;
@@ -1085,7 +1112,7 @@ function typedSignatureToJpeg(value) {
         fontSize -= 4;
     } while (ctx.measureText(value).width > canvas.width - 80 && fontSize > 38);
     ctx.fillText(value, canvas.width / 2, canvas.height / 2);
-    return canvas.toDataURL('image/jpeg', 0.82);
+    return canvasToSignatureJpeg(bottomAlignSignatureInk(canvas), null, null, 0.82);
 }
 function typedInitialsToJpeg(value) {
     var canvas = document.createElement('canvas');
@@ -1330,7 +1357,7 @@ function applySignatureDialog() {
             return false;
         }
         if (!signerName) { alert('The signer name is missing from this request.'); return false; }
-        var drawnDataUrl = canvasToSignatureJpeg(signaturePadCanvas, 420, 120, 0.82);
+        var drawnDataUrl = canvasToSignatureJpeg(bottomAlignSignatureInk(signaturePadCanvas), 420, 120, 0.82);
         var drawnPreviewDataUrl = canvasToTransparentPng(signaturePadCanvas);
         setTypedName(signerName);
         field.value = signerName;

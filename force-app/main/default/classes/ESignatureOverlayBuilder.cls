@@ -2,6 +2,11 @@ public without sharing class ESignatureOverlayBuilder {
     private static final Decimal DEFAULT_PAGE_WIDTH = 612;
     private static final Decimal DEFAULT_PAGE_HEIGHT = 792;
     private static final Decimal INITIALS_IMAGE_SCALE = 1.30;
+    // Helvetica glyph widths for printable ASCII, in thousandths of an em.
+    private static final List<String> CAPTION_GLYPH_WIDTHS = ('278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,'
+        + '556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,'
+        + '667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,'
+        + '278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584').split(',');
 
     private class SignatureImageResource {
         public String hexData;
@@ -110,7 +115,8 @@ public without sharing class ESignatureOverlayBuilder {
 
     private static ESignature_Envelope__c loadEnvelope(Id envelopeId) {
         List<ESignature_Envelope__c> rows = [
-            SELECT Id, Signer_Name__c, Signer_Title__c, Signed_At__c, Signature_Image_Data_Url__c
+            SELECT Id, Signer_Name__c, Signer_Title__c, Signed_At__c, Signature_Image_Data_Url__c,
+                   Sender_User__r.TimeZoneSidKey
             FROM ESignature_Envelope__c
             WHERE Id = :envelopeId
             LIMIT 1
@@ -225,7 +231,7 @@ public without sharing class ESignatureOverlayBuilder {
             initialsImagesByField.put(field.Id, initialsImage);
             images.add(initialsImage);
         }
-        String content = buildContentStream(fields, signatureImage, initialsImagesByField);
+        String content = buildContentStream(fields, signatureImage, initialsImagesByField, env);
         String pdf = buildPdfDocument(content, pageWidth, pageHeight, images);
         return Blob.valueOf(pdf);
     }
@@ -233,7 +239,8 @@ public without sharing class ESignatureOverlayBuilder {
     private static String buildContentStream(
         List<ESignature_Field__c> fields,
         SignatureImageResource signatureImage,
-        Map<Id, SignatureImageResource> initialsImagesByField
+        Map<Id, SignatureImageResource> initialsImagesByField,
+        ESignature_Envelope__c env
     ) {
         List<String> lines = new List<String>();
         for (ESignature_Field__c field : fields) {
@@ -266,8 +273,20 @@ public without sharing class ESignatureOverlayBuilder {
                 }
             }
 
-            if (isFieldType(typeValue, 'Signature') && signatureImage != null) {
-                lines.add(imageDraw(signatureImage, x, y, width, height));
+            if (isFieldType(typeValue, 'Signature')) {
+                // Keep the caption at the placement's baseline and raise the full-size signature above it.
+                Decimal captionFontSize = minDecimal(7, height * 0.20);
+                Decimal captionY = y;
+                Decimal ruleY = captionY + captionFontSize + 3;
+                Decimal signatureY = ruleY + 2;
+                if (signatureImage != null) {
+                    lines.add(imageDraw(signatureImage, x, signatureY, width, height, 1, true));
+                } else {
+                    Decimal signatureFontSize = fontSizeFor(typeValue, width, height, value);
+                    lines.add(textLine('F2', signatureFontSize, centeredTextX(x, width, signatureFontSize, value),
+                        signatureY + (signatureFontSize * 0.21), value));
+                }
+                lines.add(signatureAnnotation(env, value, x, captionY, width, ruleY, captionFontSize));
                 continue;
             }
 
@@ -281,6 +300,35 @@ public without sharing class ESignatureOverlayBuilder {
             lines.add(textLine(fontName, fontSize, textX, textY, value));
         }
         return String.join(lines, '\n');
+    }
+
+    private static String signatureAnnotation(
+        ESignature_Envelope__c env, String signatureValue, Decimal x, Decimal y,
+        Decimal width, Decimal ruleY, Decimal fontSize
+    ) {
+        String signerName = normalizeText(env == null ? null : env.Signer_Name__c);
+        String caption = String.isBlank(signerName) ? signatureValue : signerName;
+        if (env != null && env.Signed_At__c != null) {
+            caption += ' (' + ESignatureAuditReportBuilder.formatDateTime(
+                env.Signed_At__c, ESignatureAuditReportBuilder.auditTimeZoneSid(env)
+            ) + ')';
+        }
+        // Horizontal scaling keeps long captions on one line without extending into adjacent fields.
+        Decimal textWidth = captionTextWidth(fontSize, caption);
+        Decimal horizontalScale = textWidth > width ? (width / textWidth) * 100 : 100;
+        return 'q 0 0.48 1 RG 0 0.48 1 rg 0.7 w '
+            + fmt(x) + ' ' + fmt(ruleY) + ' m ' + fmt(x + width) + ' ' + fmt(ruleY) + ' l S\n'
+            + 'BT /F1 ' + fmt(fontSize) + ' Tf ' + fmt(horizontalScale) + ' Tz '
+            + fmt(x) + ' ' + fmt(y + 1) + ' Td (' + pdfEscape(caption) + ') Tj ET Q';
+    }
+
+    private static Decimal captionTextWidth(Decimal fontSize, String value) {
+        Decimal units = 0;
+        for (Integer i = 0; i < value.length(); i++) {
+            Integer code = value.charAt(i);
+            units += code >= 32 && code <= 126 ? Decimal.valueOf(CAPTION_GLYPH_WIDTHS[code - 32]) : 1000;
+        }
+        return (units / 1000) * fontSize;
     }
 
     private static String buildPdfDocument(
@@ -346,6 +394,10 @@ public without sharing class ESignatureOverlayBuilder {
     }
 
     private static String imageDraw(SignatureImageResource image, Decimal x, Decimal y, Decimal width, Decimal height, Decimal scale) {
+        return imageDraw(image, x, y, width, height, scale, false);
+    }
+
+    private static String imageDraw(SignatureImageResource image, Decimal x, Decimal y, Decimal width, Decimal height, Decimal scale, Boolean bottomAligned) {
         Integer safeImageWidth = image.width == null || image.width < 1 ? 1 : image.width;
         Integer safeImageHeight = image.height == null || image.height < 1 ? 1 : image.height;
         Decimal imageWidth = Decimal.valueOf(String.valueOf(safeImageWidth));
@@ -361,7 +413,7 @@ public without sharing class ESignatureOverlayBuilder {
         drawWidth *= safeScale;
         drawHeight *= safeScale;
         Decimal drawX = x + ((width - drawWidth) / 2);
-        Decimal drawY = y + ((height - drawHeight) / 2);
+        Decimal drawY = bottomAligned == true ? y : y + ((height - drawHeight) / 2);
         return 'q /SignatureMultiply gs ' + fmt(drawWidth) + ' 0 0 ' + fmt(drawHeight) + ' ' + fmt(drawX) + ' ' + fmt(drawY) + ' cm /' + image.pdfName + ' Do Q';
     }
 
